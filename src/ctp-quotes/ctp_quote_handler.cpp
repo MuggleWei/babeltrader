@@ -1,6 +1,7 @@
 #include "ctp_quote_handler.h"
 
 #include <iostream>
+#include <thread>
 
 #include "glog/logging.h"
 #include "rapidjson/writer.h"

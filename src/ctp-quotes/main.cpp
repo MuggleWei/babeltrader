@@ -10,6 +10,9 @@
 
 #if WIN32
 #include <windows.h>
+#else
+#include <sys/stat.h>
+#include <sys/types.h>
 #endif
 
 int main(int argc, char *argv[])
@@ -21,6 +24,7 @@ int main(int argc, char *argv[])
 #if WIN32
 	CreateDirectoryA("./log/", NULL);
 #else
+	mkdir("./log/", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 #endif
 	google::SetLogDestination(google::GLOG_INFO, "./log/BabelTrader-CTP-Quote.INFO.");
 	google::SetLogDestination(google::GLOG_WARNING, "./log/BabelTrader-CTP-Quote.WARNING.");
