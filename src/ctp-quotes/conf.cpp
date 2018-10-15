@@ -41,6 +41,10 @@ bool LoadConfig(const std::string &file_path, CTPQuoteConf &conf)
 		conf.user_id = doc["user_id"].GetString();
 		conf.password = doc["password"].GetString();
 		conf.addr = doc["quote_addr"].GetString();
+		conf.trade_ip = doc["trade_listen_ip"].GetString();
+		conf.trade_port = doc["trade_listen_port"].GetInt();
+		conf.quote_ip = doc["quote_listen_ip"].GetString();
+		conf.quote_port = doc["quote_listen_port"].GetInt();
 		auto topics = doc["default_sub_topics"].GetArray();
 		for (auto i = 0; i < topics.Size(); i++) {
 			conf.default_sub_topics.push_back(topics[i].GetString());

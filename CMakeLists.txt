@@ -125,6 +125,7 @@ function(add_serv name folder)
 		${CMAKE_CURRENT_LIST_DIR}/thirdparty/muggleCC
 		${CMAKE_CURRENT_LIST_DIR}/thirdparty/glog/src
 		${CMAKE_BINARY_DIR}/thirdparty/glog/
+		${CMAKE_CURRENT_LIST_DIR}/src
 	)
 
 	file(GLOB tmp_h ${folder}/*.h)

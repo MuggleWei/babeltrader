@@ -1,13 +1,18 @@
-#ifndef CTP_QUOTE_SPI_H_
-#define CTP_QUOTE_SPI_H_
+#ifndef CTP_QUOTE_HANDLER_H_
+#define CTP_QUOTE_HANDLER_H_
 
 #include "ThostFtdcMdApi.h"
+
 #include "conf.h"
+#include "ws_service.h"
+#include "http_service.h"
 
 class CTPQuoteHandler : public CThostFtdcMdSpi
 {
 public:
-	CTPQuoteHandler(CThostFtdcMdApi *api, CTPQuoteConf &conf);
+	CTPQuoteHandler(CTPQuoteConf &conf);
+
+	void run();
 
 public:
 	////////////////////////////////////////
@@ -31,8 +36,21 @@ public:
 	virtual void OnRtnForQuoteRsp(CThostFtdcForQuoteRspField *pForQuoteRsp) override;
 
 private:
+	void RunAPI();
+	void RunService();
+
+	void OutputMarketData(CThostFtdcDepthMarketDataField *pDepthMarketData);
+	std::string SerializeMarketData(CThostFtdcDepthMarketDataField *pDepthMarketData);
+
+	void SplitInstrument(const char *instrument, std::string &symbol, std::string &contract);
+
+private:
 	CThostFtdcMdApi *api_;
 	CTPQuoteConf &conf_;
+
+	uWS::Hub uws_hub_;
+	WsService ws_service_;
+	HttpService http_service_;
 
 	int req_id_;
 };

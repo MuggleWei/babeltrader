@@ -1,4 +1,4 @@
-#include "ctp_quote_spi.h"
+#include "ctp_quote_handler.h"
 
 #include <iostream>
 
@@ -6,11 +6,71 @@
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
 
-CTPQuoteHandler::CTPQuoteHandler(CThostFtdcMdApi *api, CTPQuoteConf &conf)
-	: api_(api)
+void runService(uWS::Hub &h, const std::string &ip, int port)
+{
+	WsService ws_service;
+	HttpService http_service;
+
+	// ws
+	h.onConnection([&ws_service](uWS::WebSocket<uWS::SERVER> *ws, uWS::HttpRequest req) {
+		ws_service.onConnection(ws, req);
+	});
+	h.onMessage([&ws_service](uWS::WebSocket<uWS::SERVER> *ws, char *message, size_t length, uWS::OpCode opCode) {
+		ws_service.onMessage(ws, message, length, opCode);
+	});
+	h.onDisconnection([&ws_service](uWS::WebSocket<uWS::SERVER> *ws, int code, char *message, size_t length) {
+	});
+
+	// rest
+	h.onHttpRequest([&http_service](uWS::HttpResponse *res, uWS::HttpRequest req, char *data, size_t length, size_t remainingBytes) {
+		http_service.onMessage(res, req, data, length, remainingBytes);
+	});
+
+	if (!h.listen(ip.c_str(), port, nullptr, uS::ListenOptions::REUSE_PORT)) {
+		LOG(INFO) << "Failed to listen" << std::endl;
+		exit(-1);
+	}
+	h.run();
+}
+
+CTPQuoteHandler::CTPQuoteHandler(CTPQuoteConf &conf)
+	: api_(nullptr)
 	, conf_(conf)
 	, req_id_(1)
 {}
+
+void CTPQuoteHandler::run()
+{
+	// init ctp api
+	RunAPI();
+
+	// run service
+	RunService();
+
+//	auto broadcast_thread = std::thread([&h] {
+//		rapidjson::StringBuffer s;
+//		rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+//
+//		writer.StartObject();
+//		writer.Key("msg");
+//		writer.String("notify");
+//
+//		writer.Key("data");
+//		writer.StartObject();
+//		writer.Key("msg");
+//		writer.String("it's uWebSockets");
+//		writer.EndObject();
+//
+//		writer.EndObject();
+//
+//		std::string msg = s.GetString();
+//		while (true) {
+//			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+//			std::cout << msg << std::endl;
+//			h.getDefaultGroup<uWS::SERVER>().broadcast(msg.c_str(), msg.size(), uWS::OpCode::TEXT);
+//		}
+//	});
+}
 
 void CTPQuoteHandler::OnFrontConnected()
 {
@@ -40,6 +100,11 @@ void CTPQuoteHandler::OnFrontDisconnected(int nReason)
 	writer.String("disconnected");
 	writer.EndObject();
 	LOG(INFO) << s.GetString();
+
+	// reconnect
+	auto old_api = api_;
+	RunAPI();
+	old_api->Release();
 }
 void CTPQuoteHandler::OnHeartBeatWarning(int nTimeLapse)
 {
@@ -216,6 +281,59 @@ void CTPQuoteHandler::OnRspUnSubForQuoteRsp(CThostFtdcSpecificInstrumentField *p
 
 void CTPQuoteHandler::OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDepthMarketData)
 {
+#ifndef NDEBUG
+	OutputMarketData(pDepthMarketData);
+#endif
+
+	std::string json_str = SerializeMarketData(pDepthMarketData);
+
+	// TODO: broadcast to all clients
+	LOG(INFO) << json_str;
+}
+void CTPQuoteHandler::OnRtnForQuoteRsp(CThostFtdcForQuoteRspField *pForQuoteRsp) {}
+
+
+void CTPQuoteHandler::RunAPI()
+{
+	api_ = CThostFtdcMdApi::CreateFtdcMdApi();
+	LOG(INFO) << "CTP quotes API version:" << api_->GetApiVersion() << std::endl;
+
+	char addr[256] = { 0 };
+	strncpy(addr, conf_.addr.c_str(), sizeof(addr) - 1);
+
+	api_->RegisterSpi(this);
+	api_->RegisterFront(addr);
+	api_->Init();
+}
+void CTPQuoteHandler::RunService()
+{
+	auto loop_thread = std::thread([&] {
+		uws_hub_.onConnection([&](uWS::WebSocket<uWS::SERVER> *ws, uWS::HttpRequest req) {
+			ws_service_.onConnection(ws, req);
+		});
+		uws_hub_.onMessage([&](uWS::WebSocket<uWS::SERVER> *ws, char *message, size_t length, uWS::OpCode opCode) {
+			ws_service_.onMessage(ws, message, length, opCode);
+		});
+		uws_hub_.onDisconnection([&](uWS::WebSocket<uWS::SERVER> *ws, int code, char *message, size_t length) {
+		});
+
+		// rest
+		uws_hub_.onHttpRequest([&](uWS::HttpResponse *res, uWS::HttpRequest req, char *data, size_t length, size_t remainingBytes) {
+			http_service_.onMessage(res, req, data, length, remainingBytes);
+		});
+
+		if (!uws_hub_.listen(conf_.quote_ip.c_str(), conf_.quote_port, nullptr, uS::ListenOptions::REUSE_PORT)) {
+			LOG(INFO) << "Failed to listen" << std::endl;
+			exit(-1);
+		}
+		uws_hub_.run();
+	});
+
+	loop_thread.join();
+}
+
+void CTPQuoteHandler::OutputMarketData(CThostFtdcDepthMarketDataField *pDepthMarketData)
+{
 	rapidjson::StringBuffer s;
 	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
 
@@ -318,4 +436,125 @@ void CTPQuoteHandler::OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDept
 	writer.EndObject();
 	LOG(INFO) << s.GetString();
 }
-void CTPQuoteHandler::OnRtnForQuoteRsp(CThostFtdcForQuoteRspField *pForQuoteRsp) {}
+std::string CTPQuoteHandler::SerializeMarketData(CThostFtdcDepthMarketDataField *pDepthMarketData)
+{
+	// split instrument into symbol and contract
+	std::string symbol, contract;
+	SplitInstrument(pDepthMarketData->InstrumentID, symbol, contract);
+
+	// get update time
+	time(nullptr);
+
+	// serialize
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("quote");
+	
+	{
+		// quote data
+		writer.Key("data");
+		writer.StartObject();
+		writer.Key("market");
+		writer.String("CTP");
+		writer.Key("exchange_id");
+		writer.String(pDepthMarketData->ExchangeID);
+		writer.Key("type");
+		writer.String("future");
+		writer.Key("symbol");
+		writer.String(symbol.c_str());
+		writer.Key("contract");
+		writer.String(contract.c_str());
+		writer.Key("contract_id");
+		writer.String(contract.c_str());
+		writer.Key("info1");
+		writer.String("marketdata");
+
+		{
+			// inner data
+			writer.Key("data");
+			writer.StartObject();
+			writer.Key("last");
+			writer.Double(pDepthMarketData->LastPrice);
+			writer.Key("vol");
+			writer.Int(pDepthMarketData->Volume);
+			writer.Key("ts");
+			writer.Int64(1000 * time(nullptr));
+
+			writer.Key("bids");
+			writer.StartArray();
+			writer.StartArray();
+			writer.Double(pDepthMarketData->BidPrice1);
+			writer.Int(pDepthMarketData->BidVolume1);
+			writer.EndArray();
+			writer.StartArray();
+			writer.Double(pDepthMarketData->BidPrice2);
+			writer.Int(pDepthMarketData->BidVolume2);
+			writer.EndArray();
+			writer.StartArray();
+			writer.Double(pDepthMarketData->BidPrice3);
+			writer.Int(pDepthMarketData->BidVolume3);
+			writer.EndArray();
+			writer.StartArray();
+			writer.Double(pDepthMarketData->BidPrice4);
+			writer.Int(pDepthMarketData->BidVolume4);
+			writer.EndArray();
+			writer.StartArray();
+			writer.Double(pDepthMarketData->BidPrice5);
+			writer.Int(pDepthMarketData->BidVolume5);
+			writer.EndArray();
+			writer.EndArray();  // bids
+
+			writer.Key("asks");
+			writer.StartArray();
+			writer.StartArray();
+			writer.Double(pDepthMarketData->AskPrice1);
+			writer.Int(pDepthMarketData->AskVolume1);
+			writer.EndArray();
+			writer.StartArray();
+			writer.Double(pDepthMarketData->AskPrice2);
+			writer.Int(pDepthMarketData->AskVolume2);
+			writer.EndArray();
+			writer.StartArray();
+			writer.Double(pDepthMarketData->AskPrice3);
+			writer.Int(pDepthMarketData->AskVolume3);
+			writer.EndArray();
+			writer.StartArray();
+			writer.Double(pDepthMarketData->AskPrice4);
+			writer.Int(pDepthMarketData->AskVolume4);
+			writer.EndArray();
+			writer.StartArray();
+			writer.Double(pDepthMarketData->AskPrice5);
+			writer.Int(pDepthMarketData->AskVolume5);
+			writer.EndArray();
+			writer.EndArray();  // bids
+
+			writer.EndObject(); // inner data
+		}
+
+		writer.EndObject(); // quote data
+	}
+	
+
+	writer.EndObject(); // object
+
+	return std::string(s.GetString());
+}
+
+void CTPQuoteHandler::SplitInstrument(const char *instrument, std::string &symbol, std::string &contract)
+{
+	char buf[64] = { 0 };
+	const char *p = instrument;
+	while (*p) {
+		if (*p >= '0' && *p <= '9') {
+			break;
+		}
+		p++;
+	}
+	auto len = p - instrument;
+	strncpy(buf, instrument, len);
+	symbol = buf;
+	contract = p;
+}
