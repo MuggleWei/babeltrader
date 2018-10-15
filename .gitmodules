@@ -1,0 +1,12 @@
+[submodule "thirdparty/libuv"]
+	path = thirdparty/libuv
+	url = https://github.com/libuv/libuv.git
+[submodule "thirdparty/uWebSockets"]
+	path = thirdparty/uWebSockets
+	url = https://github.com/uNetworking/uWebSockets.git
+[submodule "thirdparty/rapidjson"]
+	path = thirdparty/rapidjson
+	url = https://github.com/Tencent/rapidjson.git
+[submodule "thirdparty/muggleCC"]
+	path = thirdparty/muggleCC
+	url = https://github.com/MuggleWei/muggleCC.git

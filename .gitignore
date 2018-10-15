@@ -1,0 +1,12 @@
+# cmake directory
+build/
+
+# vim
+*~
+*.swp
+/compile_commands.json
+
+# vscode
+.vscode/
+
+/config/
