@@ -95,6 +95,14 @@ install(
     PUBLIC_HEADER DESTINATION include/uWS
 )
 
+# glog
+set(WITH_GFLAGS OFF CACHE BOOL "glog with gflags") 
+set(BUILD_TESTING OFF CACHE BOOL "glog build testting") 
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/thirdparty/glog)
+set_target_properties(glog
+	PROPERTIES FOLDER "thirdparty/google"
+)
+
 # muggleCC
 set(MUGGLE_BUILD_ONLY_C OFF)
 set(MUGGLE_BUILD_EXAMPLE OFF)
@@ -115,6 +123,8 @@ function(add_serv name folder)
 		${CMAKE_BINARY_DIR}/thirdparty/uWS/include/
 		${CMAKE_CURRENT_LIST_DIR}/thirdparty/rapidjson/include
 		${CMAKE_CURRENT_LIST_DIR}/thirdparty/muggleCC
+		${CMAKE_CURRENT_LIST_DIR}/thirdparty/glog/src
+		${CMAKE_BINARY_DIR}/thirdparty/glog/
 	)
 
 	file(GLOB tmp_h ${folder}/*.h)
@@ -124,9 +134,9 @@ function(add_serv name folder)
 	else()
 		add_executable(${name} ${tmp_cpp})
 	endif(WIN32)
-	add_dependencies(${name} uWS)
+	add_dependencies(${name} uWS glog)
 	target_include_directories(${name} PRIVATE ${dependencies_inc})
-	target_link_libraries(${name} uWS)
+	target_link_libraries(${name} uWS glog)
 endfunction(add_serv)
 
 # include and link directories

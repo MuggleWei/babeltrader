@@ -4,9 +4,7 @@
 #include <chrono>
 
 #include "uWS/uWS.h"
-#include "rapidjson/writer.h"
-#include "rapidjson/stringbuffer.h"
-#include "muggle/muggle_cc.h"
+#include "glog/logging.h"
 
 #include "conf.h"
 #include "ws_service.h"
@@ -41,6 +39,19 @@ void runService(uWS::Hub &h)
 
 int main(int argc, char *argv[])
 {
+	// init glog
+	fLI::FLAGS_max_log_size = 100;
+	fLI::FLAGS_logbufsecs = 0;
+	fLS::FLAGS_log_dir = "./log";
+#if WIN32
+	CreateDirectoryA("./log/", NULL);
+#else
+#endif
+	google::SetLogDestination(google::GLOG_INFO, "./log/BabelTrader-CTP-Quote.INFO.");
+	google::SetLogDestination(google::GLOG_WARNING, "./log/BabelTrader-CTP-Quote.WARNING.");
+	google::SetLogDestination(google::GLOG_ERROR, "./log/BabelTrader-CTP-Quote.ERROR.");
+	google::InitGoogleLogging(argv[0]);
+
 	// load config
 	CTPQuoteConf conf;
 	auto ret = LoadConfig("./config/ctp_conf.json", conf);

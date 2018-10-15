@@ -1,8 +1,8 @@
 #include "conf.h"
 
 #include <stdlib.h>
-#include <iostream>
 
+#include "glog/logging.h"
 #include "rapidjson/document.h"
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
@@ -46,7 +46,7 @@ bool LoadConfig(const std::string &file_path, CTPQuoteConf &conf)
 			conf.default_sub_topics.push_back(topics[i].GetString());
 		}
 	} catch (std::exception e) {
-		std::cerr << e.what() << std::endl;
+		LOG(ERROR) << e.what();
 		ret = false;
 	}
 
