@@ -1,13 +1,24 @@
 #ifndef CTP_QUOTE_HANDLER_H_
 #define CTP_QUOTE_HANDLER_H_
 
+#include <map>
+#include <thread>
+
 #include "ThostFtdcMdApi.h"
 
+#include "common/common_struct.h"
+#include "common/ws_service.h"
+#include "common/http_service.h"
+#include "common/quote_service.h"
 #include "conf.h"
-#include "ws_service.h"
-#include "http_service.h"
 
-class CTPQuoteHandler : public CThostFtdcMdSpi
+struct CTPKlineCache
+{
+	int64_t accu_vol;
+	Kline kline;
+};
+
+class CTPQuoteHandler : public QuoteService, CThostFtdcMdSpi
 {
 public:
 	CTPQuoteHandler(CTPQuoteConf &conf);
@@ -16,7 +27,13 @@ public:
 
 public:
 	////////////////////////////////////////
-	// spi function
+	// quote service virtual function
+	virtual std::vector<SubUnsubMsg> GetSubTopics(std::vector<bool> &vec_b) override;
+	virtual void SubTopic(const SubUnsubMsg &msg) override;
+	virtual void UnsubTopic(const SubUnsubMsg &msg) override;
+
+	////////////////////////////////////////
+	// spi virtual function
 	virtual void OnFrontConnected() override;
 	virtual void OnFrontDisconnected(int nReason) override;
 	virtual void OnHeartBeatWarning(int nTimeLapse) override;
@@ -39,12 +56,21 @@ private:
 	void RunAPI();
 	void RunService();
 
+	void OutputFrontConnected();
+	void OutputFrontDisconnected();
+	void OutputRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
+	void OutputRspUserLogout(CThostFtdcUserLogoutField *pUserLogout, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
+	void OutputRspSubMarketData(CThostFtdcSpecificInstrumentField *pSpecificInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
+	void OutputRspUnsubMarketData(CThostFtdcSpecificInstrumentField *pSpecificInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
 	void OutputMarketData(CThostFtdcDepthMarketDataField *pDepthMarketData);
+
 	std::string SerializeMarketData(CThostFtdcDepthMarketDataField *pDepthMarketData);
 
 	void SplitInstrument(const char *instrument, std::string &symbol, std::string &contract);
 
 	int64_t GetUpdateTimeMs(CThostFtdcDepthMarketDataField *pDepthMarketData);
+
+	void SubTopics();
 
 private:
 	CThostFtdcMdApi *api_;
@@ -55,6 +81,10 @@ private:
 	HttpService http_service_;
 
 	int req_id_;
+
+	std::mutex topic_mtx_;
+	std::map<std::string, bool> sub_topics_;	
+	std::map<std::string, CTPKlineCache> topic_klines_;
 };
 
 #endif

@@ -2,6 +2,11 @@
 
 #include <iostream>
 
+WsService::WsService(QuoteService *quote_service, TradeService *trade_service)
+	: quote_(quote_service)
+	, trade_(trade_service)
+{}
+
 void WsService::onConnection(uWS::WebSocket<uWS::SERVER> *ws, uWS::HttpRequest &req)
 {
 	std::cout << "ws connection: " << ws->getAddress().address << ":" << ws->getAddress().port << ", url: " << req.getUrl().toString() << std::endl;

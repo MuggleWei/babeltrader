@@ -114,20 +114,38 @@ set_target_properties(muggleCC
 	FOLDER "thirdparty/muggle"
 )
 
+# dependencies
+set(dependencies_inc
+	${OPENSSL_INCLUDE_DIR}
+	${ZLIB_INCLUDE_DIR}
+	${CMAKE_CURRENT_LIST_DIR}/thirdparty/libuv/include
+	${CMAKE_BINARY_DIR}/thirdparty/uWS/include/
+	${CMAKE_CURRENT_LIST_DIR}/thirdparty/rapidjson/include
+	${CMAKE_CURRENT_LIST_DIR}/thirdparty/muggleCC
+	${CMAKE_CURRENT_LIST_DIR}/thirdparty/glog/src
+	${CMAKE_BINARY_DIR}/thirdparty/glog/
+	${CMAKE_CURRENT_LIST_DIR}/src
+)
+
+# common
+file(GLOB common_h ${CMAKE_CURRENT_LIST_DIR}/src/common/*.h)
+file(GLOB common_cpp ${CMAKE_CURRENT_LIST_DIR}/src/common/*.cpp)
+if (WIN32)
+	add_library(BabelTrader-Common STATIC
+		${common_h}
+		${common_cpp}
+	)
+else()
+	add_library(BabelTrader-Common STATIC
+		${common_cpp}
+	)
+endif()
+target_include_directories(BabelTrader-Common PRIVATE ${dependencies_inc})
+target_link_libraries(BabelTrader-Common uWS glog)
+
+
 # utils function
 function(add_serv name folder)
-	set(dependencies_inc
-		${OPENSSL_INCLUDE_DIR}
-		${ZLIB_INCLUDE_DIR}
-		${CMAKE_CURRENT_LIST_DIR}/thirdparty/libuv/include
-		${CMAKE_BINARY_DIR}/thirdparty/uWS/include/
-		${CMAKE_CURRENT_LIST_DIR}/thirdparty/rapidjson/include
-		${CMAKE_CURRENT_LIST_DIR}/thirdparty/muggleCC
-		${CMAKE_CURRENT_LIST_DIR}/thirdparty/glog/src
-		${CMAKE_BINARY_DIR}/thirdparty/glog/
-		${CMAKE_CURRENT_LIST_DIR}/src
-	)
-
 	file(GLOB tmp_h ${folder}/*.h)
 	file(GLOB tmp_cpp ${folder}/*.cpp)
 	if (WIN32)
@@ -137,7 +155,7 @@ function(add_serv name folder)
 	endif(WIN32)
 	add_dependencies(${name} uWS glog)
 	target_include_directories(${name} PRIVATE ${dependencies_inc})
-	target_link_libraries(${name} uWS glog)
+	target_link_libraries(${name} uWS glog BabelTrader-Common)
 endfunction(add_serv)
 
 # include and link directories

@@ -1,88 +1,69 @@
 #include "ctp_quote_handler.h"
 
-#include <iostream>
-#include <thread>
-
 #include "glog/logging.h"
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
-
-void runService(uWS::Hub &h, const std::string &ip, int port)
-{
-	WsService ws_service;
-	HttpService http_service;
-
-	// ws
-	h.onConnection([&ws_service](uWS::WebSocket<uWS::SERVER> *ws, uWS::HttpRequest req) {
-		ws_service.onConnection(ws, req);
-	});
-	h.onMessage([&ws_service](uWS::WebSocket<uWS::SERVER> *ws, char *message, size_t length, uWS::OpCode opCode) {
-		ws_service.onMessage(ws, message, length, opCode);
-	});
-	h.onDisconnection([&ws_service](uWS::WebSocket<uWS::SERVER> *ws, int code, char *message, size_t length) {
-	});
-
-	// rest
-	h.onHttpRequest([&http_service](uWS::HttpResponse *res, uWS::HttpRequest req, char *data, size_t length, size_t remainingBytes) {
-		http_service.onMessage(res, req, data, length, remainingBytes);
-	});
-
-	if (!h.listen(ip.c_str(), port, nullptr, uS::ListenOptions::REUSE_PORT)) {
-		LOG(INFO) << "Failed to listen" << std::endl;
-		exit(-1);
-	}
-	h.run();
-}
 
 CTPQuoteHandler::CTPQuoteHandler(CTPQuoteConf &conf)
 	: api_(nullptr)
 	, conf_(conf)
 	, req_id_(1)
+	, ws_service_(this, nullptr)
+	, http_service_(this, nullptr)
 {}
 
 void CTPQuoteHandler::run()
 {
+	// load sub topics
+	for (auto topic : conf_.default_sub_topics) {
+		sub_topics_[topic] = false;
+	}
+
 	// init ctp api
 	RunAPI();
 
 	// run service
 	RunService();
+}
 
-//	auto broadcast_thread = std::thread([&h] {
-//		rapidjson::StringBuffer s;
-//		rapidjson::Writer<rapidjson::StringBuffer> writer(s);
-//
-//		writer.StartObject();
-//		writer.Key("msg");
-//		writer.String("notify");
-//
-//		writer.Key("data");
-//		writer.StartObject();
-//		writer.Key("msg");
-//		writer.String("it's uWebSockets");
-//		writer.EndObject();
-//
-//		writer.EndObject();
-//
-//		std::string msg = s.GetString();
-//		while (true) {
-//			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-//			std::cout << msg << std::endl;
-//			h.getDefaultGroup<uWS::SERVER>().broadcast(msg.c_str(), msg.size(), uWS::OpCode::TEXT);
-//		}
-//	});
+std::vector<SubUnsubMsg> CTPQuoteHandler::GetSubTopics(std::vector<bool> &vec_b)
+{
+	std::vector<SubUnsubMsg> topics;
+	vec_b.clear();
+
+	std::unique_lock<std::mutex> lock(topic_mtx_);
+	for (auto it = sub_topics_.begin(); it != sub_topics_.end(); ++it) {
+		SubUnsubMsg msg;
+		msg.market = "ctp";
+		msg.exchange = "";
+		msg.type = "future";
+		SplitInstrument(it->first.c_str(), msg.symbol, msg.contract);
+		msg.contract_id = msg.contract;
+		msg.info1 = "marketdata";
+		topics.push_back(msg);
+		vec_b.push_back(it->second);
+
+		msg.info1 = "kline";
+		msg.info2 = "1m";
+		topics.push_back(msg);
+		vec_b.push_back(it->second);
+	}
+
+	return std::move(topics);
+}
+void CTPQuoteHandler::SubTopic(const SubUnsubMsg &msg)
+{
+	// TODO:
+}
+void CTPQuoteHandler::UnsubTopic(const SubUnsubMsg &msg)
+{
+	// TODO:
 }
 
 void CTPQuoteHandler::OnFrontConnected()
 {
-	rapidjson::StringBuffer s;
-	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
-
-	writer.StartObject();
-	writer.Key("msg");
-	writer.String("connected");
-	writer.EndObject();
-	LOG(INFO) << s.GetString();
+	// output
+	OutputFrontConnected();
 
 	// user login
 	CThostFtdcReqUserLoginField req_user_login = { 0 };
@@ -93,14 +74,16 @@ void CTPQuoteHandler::OnFrontConnected()
 }
 void CTPQuoteHandler::OnFrontDisconnected(int nReason)
 {
-	rapidjson::StringBuffer s;
-	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+	// output
+	OutputFrontDisconnected();
 
-	writer.StartObject();
-	writer.Key("msg");
-	writer.String("disconnected");
-	writer.EndObject();
-	LOG(INFO) << s.GetString();
+	// set sub topics flag
+	{
+		std::unique_lock<std::mutex> lock(topic_mtx_);
+		for (auto it = sub_topics_.begin(); it != sub_topics_.end(); ++it) {
+			it->second = false;
+		}
+	}
 
 	// reconnect
 	auto old_api = api_;
@@ -122,6 +105,140 @@ void CTPQuoteHandler::OnHeartBeatWarning(int nTimeLapse)
 }
 
 void CTPQuoteHandler::OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+{
+	// output
+	OutputRspUserLogin(pRspUserLogin, pRspInfo, nRequestID, bIsLast);
+
+	// sub topics
+	SubTopics();
+}
+void CTPQuoteHandler::OnRspUserLogout(CThostFtdcUserLogoutField *pUserLogout, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+{
+	// output
+	OutputRspUserLogout(pUserLogout, pRspInfo, nRequestID, bIsLast);
+}
+
+void CTPQuoteHandler::OnRspError(CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("on_error");
+	writer.Key("req_id");
+	writer.Int(nRequestID);
+	writer.Key("error_id");
+	writer.Int(pRspInfo->ErrorID);
+	writer.Key("error_msg");
+	writer.String(pRspInfo->ErrorMsg);
+
+	writer.EndObject();
+	LOG(INFO) << s.GetString();
+}
+
+void CTPQuoteHandler::OnRspSubMarketData(CThostFtdcSpecificInstrumentField *pSpecificInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+{
+	// output
+	OutputRspSubMarketData(pSpecificInstrument, pRspInfo, nRequestID, bIsLast);
+
+	// set topic flag
+	if (pRspInfo->ErrorID == 0) {
+		std::unique_lock<std::mutex> lock(topic_mtx_);
+		sub_topics_[pSpecificInstrument->InstrumentID] = true;
+	}
+}
+void CTPQuoteHandler::OnRspUnSubMarketData(CThostFtdcSpecificInstrumentField *pSpecificInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+{
+	// output
+	OutputRspUnsubMarketData(pSpecificInstrument, pRspInfo, nRequestID, bIsLast);
+
+	// delete topics
+	if (pRspInfo->ErrorID == 0) {
+		std::unique_lock<std::mutex> lock(topic_mtx_);
+		sub_topics_.erase(pSpecificInstrument->InstrumentID);
+		topic_klines_.erase(pSpecificInstrument->InstrumentID);
+	}
+}
+
+void CTPQuoteHandler::OnRspSubForQuoteRsp(CThostFtdcSpecificInstrumentField *pSpecificInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast) {}
+void CTPQuoteHandler::OnRspUnSubForQuoteRsp(CThostFtdcSpecificInstrumentField *pSpecificInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast) {}
+
+void CTPQuoteHandler::OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDepthMarketData)
+{
+	std::string json_str = SerializeMarketData(pDepthMarketData);
+#ifndef NDEBUG
+	OutputMarketData(pDepthMarketData);
+	LOG(INFO) << json_str;
+#endif
+
+	uws_hub_.getDefaultGroup<uWS::SERVER>().broadcast(json_str.c_str(), json_str.size(), uWS::OpCode::TEXT);
+}
+void CTPQuoteHandler::OnRtnForQuoteRsp(CThostFtdcForQuoteRspField *pForQuoteRsp) {}
+
+
+void CTPQuoteHandler::RunAPI()
+{
+	api_ = CThostFtdcMdApi::CreateFtdcMdApi();
+	LOG(INFO) << "CTP quotes API version:" << api_->GetApiVersion();
+
+	char addr[256] = { 0 };
+	strncpy(addr, conf_.addr.c_str(), sizeof(addr) - 1);
+
+	api_->RegisterSpi(this);
+	api_->RegisterFront(addr);
+	api_->Init();
+}
+void CTPQuoteHandler::RunService()
+{
+	auto loop_thread = std::thread([&] {
+		uws_hub_.onConnection([&](uWS::WebSocket<uWS::SERVER> *ws, uWS::HttpRequest req) {
+			ws_service_.onConnection(ws, req);
+		});
+		uws_hub_.onMessage([&](uWS::WebSocket<uWS::SERVER> *ws, char *message, size_t length, uWS::OpCode opCode) {
+			ws_service_.onMessage(ws, message, length, opCode);
+		});
+		uws_hub_.onDisconnection([&](uWS::WebSocket<uWS::SERVER> *ws, int code, char *message, size_t length) {
+		});
+
+		// rest
+		uws_hub_.onHttpRequest([&](uWS::HttpResponse *res, uWS::HttpRequest req, char *data, size_t length, size_t remainingBytes) {
+			http_service_.onMessage(res, req, data, length, remainingBytes);
+		});
+
+		if (!uws_hub_.listen(conf_.quote_ip.c_str(), conf_.quote_port, nullptr, uS::ListenOptions::REUSE_PORT)) {
+			LOG(INFO) << "Failed to listen";
+			exit(-1);
+		}
+		uws_hub_.run();
+	});
+
+	loop_thread.join();
+}
+
+void CTPQuoteHandler::OutputFrontConnected()
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("connected");
+	writer.EndObject();
+	LOG(INFO) << s.GetString();
+}
+void CTPQuoteHandler::OutputFrontDisconnected()
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("disconnected");
+	writer.EndObject();
+	LOG(INFO) << s.GetString();
+}
+void CTPQuoteHandler::OutputRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
 	rapidjson::StringBuffer s;
 	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
@@ -168,29 +285,8 @@ void CTPQuoteHandler::OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin,
 
 	writer.EndObject();
 	LOG(INFO) << s.GetString();
-
-	// sub default topics
-	char buf[16][64];
-	char* topics[16];
-	for (int i = 0; i < 16; i++) {
-		topics[i] = buf[i];
-	}
-
-	int cnt = 0;
-	for (auto topic : conf_.default_sub_topics) {
-		memset(buf[cnt], 0, sizeof(buf[cnt]));
-		strncpy(buf[cnt++], topic.c_str(), sizeof(buf[0]) - 1);
-		if (cnt == 16) {
-			api_->SubscribeMarketData(topics, cnt);
-			cnt = 0;
-		}
-	}
-
-	if (cnt != 0) {
-		api_->SubscribeMarketData(topics, cnt);
-	}
 }
-void CTPQuoteHandler::OnRspUserLogout(CThostFtdcUserLogoutField *pUserLogout, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+void CTPQuoteHandler::OutputRspUserLogout(CThostFtdcUserLogoutField *pUserLogout, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
 	rapidjson::StringBuffer s;
 	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
@@ -208,27 +304,7 @@ void CTPQuoteHandler::OnRspUserLogout(CThostFtdcUserLogoutField *pUserLogout, CT
 	writer.EndObject();
 	LOG(INFO) << s.GetString();
 }
-
-void CTPQuoteHandler::OnRspError(CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
-{
-	rapidjson::StringBuffer s;
-	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
-
-	writer.StartObject();
-	writer.Key("msg");
-	writer.String("on_error");
-	writer.Key("req_id");
-	writer.Int(nRequestID);
-	writer.Key("error_id");
-	writer.Int(pRspInfo->ErrorID);
-	writer.Key("error_msg");
-	writer.String(pRspInfo->ErrorMsg);
-
-	writer.EndObject();
-	LOG(INFO) << s.GetString();
-}
-
-void CTPQuoteHandler::OnRspSubMarketData(CThostFtdcSpecificInstrumentField *pSpecificInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+void CTPQuoteHandler::OutputRspSubMarketData(CThostFtdcSpecificInstrumentField *pSpecificInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
 	rapidjson::StringBuffer s;
 	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
@@ -252,7 +328,7 @@ void CTPQuoteHandler::OnRspSubMarketData(CThostFtdcSpecificInstrumentField *pSpe
 	writer.EndObject();
 	LOG(INFO) << s.GetString();
 }
-void CTPQuoteHandler::OnRspUnSubMarketData(CThostFtdcSpecificInstrumentField *pSpecificInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+void CTPQuoteHandler::OutputRspUnsubMarketData(CThostFtdcSpecificInstrumentField *pSpecificInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
 	rapidjson::StringBuffer s;
 	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
@@ -276,62 +352,6 @@ void CTPQuoteHandler::OnRspUnSubMarketData(CThostFtdcSpecificInstrumentField *pS
 	writer.EndObject();
 	LOG(INFO) << s.GetString();
 }
-
-void CTPQuoteHandler::OnRspSubForQuoteRsp(CThostFtdcSpecificInstrumentField *pSpecificInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast) {}
-void CTPQuoteHandler::OnRspUnSubForQuoteRsp(CThostFtdcSpecificInstrumentField *pSpecificInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast) {}
-
-void CTPQuoteHandler::OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDepthMarketData)
-{
-	std::string json_str = SerializeMarketData(pDepthMarketData);
-#ifndef NDEBUG
-	OutputMarketData(pDepthMarketData);
-	LOG(INFO) << json_str;
-#endif
-
-	uws_hub_.getDefaultGroup<uWS::SERVER>().broadcast(json_str.c_str(), json_str.size(), uWS::OpCode::TEXT);
-}
-void CTPQuoteHandler::OnRtnForQuoteRsp(CThostFtdcForQuoteRspField *pForQuoteRsp) {}
-
-
-void CTPQuoteHandler::RunAPI()
-{
-	api_ = CThostFtdcMdApi::CreateFtdcMdApi();
-	LOG(INFO) << "CTP quotes API version:" << api_->GetApiVersion() << std::endl;
-
-	char addr[256] = { 0 };
-	strncpy(addr, conf_.addr.c_str(), sizeof(addr) - 1);
-
-	api_->RegisterSpi(this);
-	api_->RegisterFront(addr);
-	api_->Init();
-}
-void CTPQuoteHandler::RunService()
-{
-	auto loop_thread = std::thread([&] {
-		uws_hub_.onConnection([&](uWS::WebSocket<uWS::SERVER> *ws, uWS::HttpRequest req) {
-			ws_service_.onConnection(ws, req);
-		});
-		uws_hub_.onMessage([&](uWS::WebSocket<uWS::SERVER> *ws, char *message, size_t length, uWS::OpCode opCode) {
-			ws_service_.onMessage(ws, message, length, opCode);
-		});
-		uws_hub_.onDisconnection([&](uWS::WebSocket<uWS::SERVER> *ws, int code, char *message, size_t length) {
-		});
-
-		// rest
-		uws_hub_.onHttpRequest([&](uWS::HttpResponse *res, uWS::HttpRequest req, char *data, size_t length, size_t remainingBytes) {
-			http_service_.onMessage(res, req, data, length, remainingBytes);
-		});
-
-		if (!uws_hub_.listen(conf_.quote_ip.c_str(), conf_.quote_port, nullptr, uS::ListenOptions::REUSE_PORT)) {
-			LOG(INFO) << "Failed to listen" << std::endl;
-			exit(-1);
-		}
-		uws_hub_.run();
-	});
-
-	loop_thread.join();
-}
-
 void CTPQuoteHandler::OutputMarketData(CThostFtdcDepthMarketDataField *pDepthMarketData)
 {
 	rapidjson::StringBuffer s;
@@ -436,6 +456,7 @@ void CTPQuoteHandler::OutputMarketData(CThostFtdcDepthMarketDataField *pDepthMar
 	writer.EndObject();
 	LOG(INFO) << s.GetString();
 }
+
 std::string CTPQuoteHandler::SerializeMarketData(CThostFtdcDepthMarketDataField *pDepthMarketData)
 {
 	// split instrument into symbol and contract
@@ -577,4 +598,30 @@ int64_t CTPQuoteHandler::GetUpdateTimeMs(CThostFtdcDepthMarketDataField *pDepthM
 
 	time_t utc_sec = mktime(&time_info);
 	return (int64_t)utc_sec * 1000 + (int64_t)pDepthMarketData->UpdateMillisec;
+}
+
+void CTPQuoteHandler::SubTopics()
+{
+	char buf[16][64];
+	char* topics[16];
+	for (int i = 0; i < 16; i++) {
+		topics[i] = buf[i];
+	}
+
+	std::unique_lock<std::mutex> lock(topic_mtx_);
+	int cnt = 0;
+	for (auto it = sub_topics_.begin(); it != sub_topics_.end(); ++it) {
+		if (it->second == false) {
+			memset(buf[cnt], 0, sizeof(buf[cnt]));
+			strncpy(buf[cnt++], it->first.c_str(), sizeof(buf[0]) - 1);
+			if (cnt == 16) {
+				api_->SubscribeMarketData(topics, cnt);
+				cnt = 0;
+			}
+		}
+	}
+
+	if (cnt != 0) {
+		api_->SubscribeMarketData(topics, cnt);
+	}
 }
