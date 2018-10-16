@@ -44,6 +44,8 @@ private:
 
 	void SplitInstrument(const char *instrument, std::string &symbol, std::string &contract);
 
+	int64_t GetUpdateTimeMs(CThostFtdcDepthMarketDataField *pDepthMarketData);
+
 private:
 	CThostFtdcMdApi *api_;
 	CTPQuoteConf &conf_;
