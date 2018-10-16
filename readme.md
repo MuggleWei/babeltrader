@@ -43,7 +43,7 @@ clientn ------> |==========================| ---> BabelTrader服务n ---> APIn s
 构建：进入工程的根目录，运行 build.sh
 
 #### Windows
-先安装好 vcpkg (https://github.com/Microsoft/vcpkg.git)，并在环境变量中，设置VCPKG_ROOT为vcpkg所在目录。
+先安装好 vcpkg (https://github.com/Microsoft/vcpkg.git), 并在环境变量中, 设置VCPKG_ROOT为vcpkg所在目录。
 
 安装依赖项：vcpkg.exe install openssl:x64-windows zlib:x64-windows
 首次构建前: 进入根目录，运行 git submodule update --init
