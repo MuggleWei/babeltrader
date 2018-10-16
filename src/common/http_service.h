@@ -4,6 +4,7 @@
 #include "uWS/uWS.h"
 #include "common/quote_service.h"
 #include "common/trade_service.h"
+#include "common/common_struct.h"
 
 class HttpService
 {
@@ -14,6 +15,13 @@ public:
 
 private:
 	void GetSubtopics(uWS::HttpResponse *res);
+	void SubTopic(uWS::HttpResponse *res, uWS::HttpRequest &req, char *data, size_t length, size_t remainingBytes);
+	void UnsubTopic(uWS::HttpResponse *res, uWS::HttpRequest &req, char *data, size_t length, size_t remainingBytes);
+
+	bool OnRestSubunsub(uWS::HttpResponse *res, uWS::HttpRequest &req, char *data, size_t length, size_t remainingBytes, SubUnsubMsg &msg);
+
+	void RestReturn(uWS::HttpResponse *res, int err_id, const char *err_msg);
+	bool ParseSubunsubMsg(const char *data, size_t length, SubUnsubMsg& msg, std::string &err_msg);
 
 private:
 	QuoteService *quote_;
