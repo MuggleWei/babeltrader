@@ -282,14 +282,13 @@ void CTPQuoteHandler::OnRspUnSubForQuoteRsp(CThostFtdcSpecificInstrumentField *p
 
 void CTPQuoteHandler::OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDepthMarketData)
 {
+	std::string json_str = SerializeMarketData(pDepthMarketData);
 #ifndef NDEBUG
 	OutputMarketData(pDepthMarketData);
+	LOG(INFO) << json_str;
 #endif
 
-	std::string json_str = SerializeMarketData(pDepthMarketData);
-
-	// TODO: broadcast to all clients
-	LOG(INFO) << json_str;
+	uws_hub_.getDefaultGroup<uWS::SERVER>().broadcast(json_str.c_str(), json_str.size(), uWS::OpCode::TEXT);
 }
 void CTPQuoteHandler::OnRtnForQuoteRsp(CThostFtdcForQuoteRspField *pForQuoteRsp) {}
 
