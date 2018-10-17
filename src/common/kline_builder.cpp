@@ -68,10 +68,11 @@ bool KlineBuilder::updateMarketData(int64_t cur_local_sec, const std::string &ke
 	// update kline
 	if (minute_update)
 	{
+		auto end_vol = cache.kline.vol;
 		kline = cache.kline;
 		kline.vol = cache.kline.vol - cache.start_vol;
 
-		cache.start_vol = md.vol;
+		cache.start_vol = end_vol;
 		cache.kline.ts = md.ts;
 		cache.kline.open = md.last;
 		cache.kline.high = md.last;
@@ -84,6 +85,7 @@ bool KlineBuilder::updateMarketData(int64_t cur_local_sec, const std::string &ke
 
 	cache.kline.close = md.last;
 	cache.kline.ts = md.ts;
+	cache.kline.vol = md.vol;
 
 	if (val_update)
 	{

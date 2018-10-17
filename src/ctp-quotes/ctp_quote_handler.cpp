@@ -55,11 +55,35 @@ std::vector<Quote> CTPQuoteHandler::GetSubTopics(std::vector<bool> &vec_b)
 }
 void CTPQuoteHandler::SubTopic(const Quote &msg)
 {
-	// TODO:
+	auto instrument = msg.symbol + msg.contract;
+	std::unique_lock<std::mutex> lock(topic_mtx_);
+	if (sub_topics_.find(instrument) != sub_topics_.end()) {
+		return;
+	}
+
+	sub_topics_[instrument] = false;
+
+	char buf[2][64];
+	char* topics[2];
+	topics[0] = buf[0];
+	strncpy(buf[0], instrument.c_str(), 64-1);
+
+	api_->SubscribeMarketData(topics, 1);
 }
 void CTPQuoteHandler::UnsubTopic(const Quote &msg)
 {
-	// TODO:
+	auto instrument = msg.symbol + msg.contract;
+	std::unique_lock<std::mutex> lock(topic_mtx_);
+	if (sub_topics_.find(instrument) == sub_topics_.end()) {
+		return;
+	}
+
+	char buf[2][64];
+	char* topics[2];
+	topics[0] = buf[0];
+	strncpy(buf[0], instrument.c_str(), 64 - 1);
+
+	api_->UnSubscribeMarketData(topics, 1);
 }
 
 void CTPQuoteHandler::OnFrontConnected()
@@ -184,6 +208,8 @@ void CTPQuoteHandler::OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDept
 	int64_t sec = (int64_t)time(nullptr);
 	Kline kline;
 	if (kline_builder_.updateMarketData(sec, pDepthMarketData->InstrumentID, md, kline)) {
+		quote.info1 = "kline";
+		quote.info2 = "1m";
 		BroadcastKline(quote, kline);
 	}
 }
