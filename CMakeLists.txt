@@ -188,7 +188,7 @@ endif()
 # BabelTrader-XTP-Quote
 add_serv(BabelTrader-XTP-Quote ${CMAKE_CURRENT_LIST_DIR}/src/xtp-quotes)
 target_include_directories(BabelTrader-XTP-Quote PRIVATE ${CMAKE_CURRENT_LIST_DIR}/thirdparty/xtp/include)
-target_link_libraries(BabelTrader-XTP-Quote thostmduserapi)
+target_link_libraries(BabelTrader-XTP-Quote xtpquoteapi)
 if (WIN32)
 	add_custom_command(
 		TARGET BabelTrader-XTP-Quote

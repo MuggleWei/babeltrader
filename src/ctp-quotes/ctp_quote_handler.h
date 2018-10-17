@@ -3,6 +3,7 @@
 
 #include <map>
 #include <thread>
+#include <vector>
 
 #include "ThostFtdcMdApi.h"
 
@@ -12,12 +13,6 @@
 #include "common/quote_service.h"
 #include "common/kline_builder.h"
 #include "conf.h"
-
-struct CTPKlineCache
-{
-	int64_t accu_vol;
-	Kline kline;
-};
 
 class CTPQuoteHandler : public QuoteService, CThostFtdcMdSpi
 {
@@ -78,7 +73,7 @@ private:
 
 private:
 	CThostFtdcMdApi *api_;
-	CTPQuoteConf &conf_;
+	CTPQuoteConf conf_;
 
 	uWS::Hub uws_hub_;
 	WsService ws_service_;
