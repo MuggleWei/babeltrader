@@ -29,15 +29,15 @@ GET http://127.0.0.1:6888/topics/get
 ```
 返回值说明:
 ```
-market: 市场API - 例如: ctp, xtp, ib, bitmex, okex
-exchange: 交易所 - 例如：SHFE, SSE, NYMEX, bitmex, okex
-type: 主题类型 - spot(现货), future(期货), option(期权)
-symbol: 符号 - 例如: rb, CL, btc, btc_usdt
-contract: 合约类型 - 例如: 1901, this_week
-contract_id: 合约id - 例如: 1901, 20181901
-info1: 主题信息 - ticker, depth, marketdata, kline
-info2: 附加信息 - 1m, 1h
-subed: 是否已经处于订阅状态
+market(string): 市场API - 例如: ctp, xtp, ib, bitmex, okex
+exchange(string): 交易所 - 例如：SHFE, SSE, NYMEX, bitmex, okex
+type(string): 主题类型 - spot(现货), future(期货), option(期权)
+symbol(string): 符号 - 例如: rb, CL, btc, btc_usdt
+contract(string): 合约类型 - 例如: 1901, this_week
+contract_id(string): 合约id - 例如: 1901, 20181901
+info1(string): 主题信息 - ticker, depth, marketdata, kline
+info2(string): 附加信息 - 例如: 1m, 1h
+subed(int): 是否已经处于订阅状态
 ```
 注意：
 1. contract和contract_id的存在是因为某些虚拟货币交易所，以周或季度来区分合约，例如：okex的2018年12月季度合约为例，contract为quarter, contract_id为20181228，但是在传统交易所，这两个字段是冗余重复的
@@ -71,8 +71,8 @@ Post http://127.0.0.1:6888/topics/unsub
 ```
 返回值说明:
 ```
-err_id: 错误编号, 0为操作成功
-err_msg: 错误说明
+err_id(int): 错误编号, 0为操作成功
+err_msg(string): 错误说明
 ```
 注意：
 1. 即使err_id为0，也不一定保证订阅成功，订阅的结果，由ws广播推送
