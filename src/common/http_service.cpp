@@ -53,7 +53,7 @@ void HttpService::GetSubtopics(uWS::HttpResponse *res)
 	writer.Key("data");
 	writer.StartArray();
 	for (auto idx = 0; idx < topics.size(); ++idx) {
-		const SubUnsubMsg &msg = topics[idx];
+		const Quote &msg = topics[idx];
 
 		writer.StartObject();
 		writer.Key("market");
@@ -84,7 +84,7 @@ void HttpService::GetSubtopics(uWS::HttpResponse *res)
 }
 void HttpService::SubTopic(uWS::HttpResponse *res, uWS::HttpRequest &req, char *data, size_t length, size_t remainingBytes)
 {
-	SubUnsubMsg msg;
+	Quote msg;
 	auto ret = OnRestSubunsub(res, req, data, length, remainingBytes, msg);
 	if (ret) {
 		quote_->SubTopic(msg);
@@ -92,14 +92,14 @@ void HttpService::SubTopic(uWS::HttpResponse *res, uWS::HttpRequest &req, char *
 }
 void HttpService::UnsubTopic(uWS::HttpResponse *res, uWS::HttpRequest &req, char *data, size_t length, size_t remainingBytes)
 {
-	SubUnsubMsg msg;
+	Quote msg;
 	auto ret = OnRestSubunsub(res, req, data, length, remainingBytes, msg);
 	if (ret) {
 		quote_->UnsubTopic(msg);
 	}
 }
 
-bool HttpService::OnRestSubunsub(uWS::HttpResponse *res, uWS::HttpRequest &req, char *data, size_t length, size_t remainingBytes, SubUnsubMsg &msg)
+bool HttpService::OnRestSubunsub(uWS::HttpResponse *res, uWS::HttpRequest &req, char *data, size_t length, size_t remainingBytes, Quote &msg)
 {
 	if (remainingBytes) {
 		return false;
@@ -126,7 +126,7 @@ void HttpService::RestReturn(uWS::HttpResponse *res, int err_id, const char *err
 {
 	res->end(err_msg, strlen(err_msg));
 }
-bool HttpService::ParseSubunsubMsg(const char *data, size_t length, SubUnsubMsg& msg, std::string &err_msg)
+bool HttpService::ParseSubunsubMsg(const char *data, size_t length, Quote& msg, std::string &err_msg)
 {
 	char buf[1024];
 

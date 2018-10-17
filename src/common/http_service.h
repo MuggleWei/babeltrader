@@ -18,10 +18,10 @@ private:
 	void SubTopic(uWS::HttpResponse *res, uWS::HttpRequest &req, char *data, size_t length, size_t remainingBytes);
 	void UnsubTopic(uWS::HttpResponse *res, uWS::HttpRequest &req, char *data, size_t length, size_t remainingBytes);
 
-	bool OnRestSubunsub(uWS::HttpResponse *res, uWS::HttpRequest &req, char *data, size_t length, size_t remainingBytes, SubUnsubMsg &msg);
+	bool OnRestSubunsub(uWS::HttpResponse *res, uWS::HttpRequest &req, char *data, size_t length, size_t remainingBytes, Quote &msg);
 
 	void RestReturn(uWS::HttpResponse *res, int err_id, const char *err_msg);
-	bool ParseSubunsubMsg(const char *data, size_t length, SubUnsubMsg& msg, std::string &err_msg);
+	bool ParseSubunsubMsg(const char *data, size_t length, Quote& msg, std::string &err_msg);
 
 private:
 	QuoteService *quote_;

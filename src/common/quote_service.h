@@ -8,9 +8,9 @@
 class QuoteService
 {
 public:
-	virtual std::vector<SubUnsubMsg> GetSubTopics(std::vector<bool> &vec_b) = 0;
-	virtual void SubTopic(const SubUnsubMsg &msg) = 0;
-	virtual void UnsubTopic(const SubUnsubMsg &msg) = 0;
+	virtual std::vector<Quote> GetSubTopics(std::vector<bool> &vec_b) = 0;
+	virtual void SubTopic(const Quote &msg) = 0;
+	virtual void UnsubTopic(const Quote &msg) = 0;
 };
 
 #endif

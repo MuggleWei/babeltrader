@@ -4,6 +4,8 @@
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
 
+#include "common/serialization.h"
+
 CTPQuoteHandler::CTPQuoteHandler(CTPQuoteConf &conf)
 	: api_(nullptr)
 	, conf_(conf)
@@ -26,14 +28,14 @@ void CTPQuoteHandler::run()
 	RunService();
 }
 
-std::vector<SubUnsubMsg> CTPQuoteHandler::GetSubTopics(std::vector<bool> &vec_b)
+std::vector<Quote> CTPQuoteHandler::GetSubTopics(std::vector<bool> &vec_b)
 {
-	std::vector<SubUnsubMsg> topics;
+	std::vector<Quote> topics;
 	vec_b.clear();
 
 	std::unique_lock<std::mutex> lock(topic_mtx_);
 	for (auto it = sub_topics_.begin(); it != sub_topics_.end(); ++it) {
-		SubUnsubMsg msg;
+		Quote msg;
 		msg.market = "ctp";
 		msg.exchange = "";
 		msg.type = "future";
@@ -51,11 +53,11 @@ std::vector<SubUnsubMsg> CTPQuoteHandler::GetSubTopics(std::vector<bool> &vec_b)
 
 	return std::move(topics);
 }
-void CTPQuoteHandler::SubTopic(const SubUnsubMsg &msg)
+void CTPQuoteHandler::SubTopic(const Quote &msg)
 {
 	// TODO:
 }
-void CTPQuoteHandler::UnsubTopic(const SubUnsubMsg &msg)
+void CTPQuoteHandler::UnsubTopic(const Quote &msg)
 {
 	// TODO:
 }
@@ -166,13 +168,28 @@ void CTPQuoteHandler::OnRspUnSubForQuoteRsp(CThostFtdcSpecificInstrumentField *p
 
 void CTPQuoteHandler::OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDepthMarketData)
 {
-	std::string json_str = SerializeMarketData(pDepthMarketData);
 #ifndef NDEBUG
 	OutputMarketData(pDepthMarketData);
-	LOG(INFO) << json_str;
 #endif
 
-	uws_hub_.getDefaultGroup<uWS::SERVER>().broadcast(json_str.c_str(), json_str.size(), uWS::OpCode::TEXT);
+	// convert to common struct
+	Quote quote;
+	MarketData md;
+	ConvertMarketData(pDepthMarketData, quote, md);
+
+	// serialize
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	SerializeQuoteBegin(writer, quote);
+	SerializeMarketData(writer, md);
+	SerializeQuoteEnd(writer, quote);
+
+#ifndef NDEBUG
+	LOG(INFO) << s.GetString();
+#endif
+
+	uws_hub_.getDefaultGroup<uWS::SERVER>().broadcast(s.GetString(), s.GetLength(), uWS::OpCode::TEXT);
 }
 void CTPQuoteHandler::OnRtnForQuoteRsp(CThostFtdcForQuoteRspField *pForQuoteRsp) {}
 
@@ -457,111 +474,46 @@ void CTPQuoteHandler::OutputMarketData(CThostFtdcDepthMarketDataField *pDepthMar
 	LOG(INFO) << s.GetString();
 }
 
-std::string CTPQuoteHandler::SerializeMarketData(CThostFtdcDepthMarketDataField *pDepthMarketData)
+void CTPQuoteHandler::ConvertMarketData(CThostFtdcDepthMarketDataField *pDepthMarketData, Quote &quote, MarketData &md)
 {
 	// split instrument into symbol and contract
 	std::string symbol, contract;
 	SplitInstrument(pDepthMarketData->InstrumentID, symbol, contract);
 
 	// get update time
-	int64_t ts =  GetUpdateTimeMs(pDepthMarketData);
+	int64_t ts = GetUpdateTimeMs(pDepthMarketData);
 
-	// serialize
-	rapidjson::StringBuffer s;
-	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+	quote.market = "ctp";
+	quote.exchange = pDepthMarketData->ExchangeID;
+	quote.type = "future";
+	quote.symbol = std::move(symbol);
+	quote.contract = std::move(contract);
+	quote.contract_id = quote.contract;
+	quote.info1 = "marketdata";
 
-	writer.StartObject();
-	writer.Key("msg");
-	writer.String("quote");
-	
-	{
-		// quote data
-		writer.Key("data");
-		writer.StartObject();
-		writer.Key("market");
-		writer.String("CTP");
-		writer.Key("exchange_id");
-		writer.String(pDepthMarketData->ExchangeID);
-		writer.Key("type");
-		writer.String("future");
-		writer.Key("symbol");
-		writer.String(symbol.c_str());
-		writer.Key("contract");
-		writer.String(contract.c_str());
-		writer.Key("contract_id");
-		writer.String(contract.c_str());
-		writer.Key("info1");
-		writer.String("marketdata");
-
-		{
-			// inner data
-			writer.Key("data");
-			writer.StartObject();
-			writer.Key("last");
-			writer.Double(pDepthMarketData->LastPrice);
-			writer.Key("vol");
-			writer.Int(pDepthMarketData->Volume);
-			writer.Key("ts");
-			writer.Int64(ts);
-
-			writer.Key("bids");
-			writer.StartArray();
-			writer.StartArray();
-			writer.Double(pDepthMarketData->BidPrice1);
-			writer.Int(pDepthMarketData->BidVolume1);
-			writer.EndArray();
-			writer.StartArray();
-			writer.Double(pDepthMarketData->BidPrice2);
-			writer.Int(pDepthMarketData->BidVolume2);
-			writer.EndArray();
-			writer.StartArray();
-			writer.Double(pDepthMarketData->BidPrice3);
-			writer.Int(pDepthMarketData->BidVolume3);
-			writer.EndArray();
-			writer.StartArray();
-			writer.Double(pDepthMarketData->BidPrice4);
-			writer.Int(pDepthMarketData->BidVolume4);
-			writer.EndArray();
-			writer.StartArray();
-			writer.Double(pDepthMarketData->BidPrice5);
-			writer.Int(pDepthMarketData->BidVolume5);
-			writer.EndArray();
-			writer.EndArray();  // bids
-
-			writer.Key("asks");
-			writer.StartArray();
-			writer.StartArray();
-			writer.Double(pDepthMarketData->AskPrice1);
-			writer.Int(pDepthMarketData->AskVolume1);
-			writer.EndArray();
-			writer.StartArray();
-			writer.Double(pDepthMarketData->AskPrice2);
-			writer.Int(pDepthMarketData->AskVolume2);
-			writer.EndArray();
-			writer.StartArray();
-			writer.Double(pDepthMarketData->AskPrice3);
-			writer.Int(pDepthMarketData->AskVolume3);
-			writer.EndArray();
-			writer.StartArray();
-			writer.Double(pDepthMarketData->AskPrice4);
-			writer.Int(pDepthMarketData->AskVolume4);
-			writer.EndArray();
-			writer.StartArray();
-			writer.Double(pDepthMarketData->AskPrice5);
-			writer.Int(pDepthMarketData->AskVolume5);
-			writer.EndArray();
-			writer.EndArray();  // bids
-
-			writer.EndObject(); // inner data
-		}
-
-		writer.EndObject(); // quote data
-	}
-	
-
-	writer.EndObject(); // object
-
-	return std::string(s.GetString());
+	md.ts = ts;
+	md.last = pDepthMarketData->LastPrice;
+	md.bids.push_back({ pDepthMarketData->BidPrice1, pDepthMarketData->BidVolume1 });
+	md.bids.push_back({ pDepthMarketData->BidPrice2, pDepthMarketData->BidVolume2 });
+	md.bids.push_back({ pDepthMarketData->BidPrice3, pDepthMarketData->BidVolume3 });
+	md.bids.push_back({ pDepthMarketData->BidPrice4, pDepthMarketData->BidVolume4 });
+	md.bids.push_back({ pDepthMarketData->BidPrice5, pDepthMarketData->BidVolume5 });
+	md.asks.push_back({ pDepthMarketData->AskPrice1, pDepthMarketData->AskVolume1 });
+	md.asks.push_back({ pDepthMarketData->AskPrice2, pDepthMarketData->AskVolume2 });
+	md.asks.push_back({ pDepthMarketData->AskPrice3, pDepthMarketData->AskVolume3 });
+	md.asks.push_back({ pDepthMarketData->AskPrice4, pDepthMarketData->AskVolume4 });
+	md.asks.push_back({ pDepthMarketData->AskPrice5, pDepthMarketData->AskVolume5 });
+	md.vol = pDepthMarketData->Volume;
+	md.pre_settlement = pDepthMarketData->PreSettlementPrice;
+	md.pre_close = pDepthMarketData->PreClosePrice;
+	md.pre_open_interest = pDepthMarketData->PreOpenInterest;
+	md.settlement = pDepthMarketData->SettlementPrice;
+	md.close = pDepthMarketData->ClosePrice;
+	md.open_interest = pDepthMarketData->OpenInterest;
+	md.upper_limit = pDepthMarketData->UpperLimitPrice;
+	md.lower_limit = pDepthMarketData->LowerLimitPrice;
+	md.trading_day = pDepthMarketData->TradingDay;
+	md.action_day = pDepthMarketData->ActionDay;
 }
 
 void CTPQuoteHandler::SplitInstrument(const char *instrument, std::string &symbol, std::string &contract)

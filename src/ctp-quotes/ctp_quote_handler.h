@@ -28,9 +28,9 @@ public:
 public:
 	////////////////////////////////////////
 	// quote service virtual function
-	virtual std::vector<SubUnsubMsg> GetSubTopics(std::vector<bool> &vec_b) override;
-	virtual void SubTopic(const SubUnsubMsg &msg) override;
-	virtual void UnsubTopic(const SubUnsubMsg &msg) override;
+	virtual std::vector<Quote> GetSubTopics(std::vector<bool> &vec_b) override;
+	virtual void SubTopic(const Quote &msg) override;
+	virtual void UnsubTopic(const Quote &msg) override;
 
 	////////////////////////////////////////
 	// spi virtual function
@@ -64,7 +64,7 @@ private:
 	void OutputRspUnsubMarketData(CThostFtdcSpecificInstrumentField *pSpecificInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
 	void OutputMarketData(CThostFtdcDepthMarketDataField *pDepthMarketData);
 
-	std::string SerializeMarketData(CThostFtdcDepthMarketDataField *pDepthMarketData);
+	void ConvertMarketData(CThostFtdcDepthMarketDataField *pDepthMarketData, Quote &quote, MarketData &md);
 
 	void SplitInstrument(const char *instrument, std::string &symbol, std::string &contract);
 

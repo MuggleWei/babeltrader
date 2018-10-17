@@ -3,18 +3,9 @@
 
 #include <stdint.h>
 #include <string>
+#include <vector>
 
-struct Kline
-{
-	int64_t ts;
-	double open;
-	double high;
-	double low;
-	double close;
-	double vol;
-};
-
-struct SubUnsubMsg
+struct Quote
 {
 	std::string market;			// e.g. okex, bitmex, CTP, XTP, IB ...
 	std::string exchange;		// e.g. okex, bitmex, SHFE, SSE, NYMEX ...
@@ -24,6 +15,41 @@ struct SubUnsubMsg
 	std::string contract_id;	// e.g. 20180928, 1901 ...
 	std::string info1;			// e.g. ticker, depth, kline, marketdata
 	std::string info2;			// e.g. 1m, 1h
+};
+
+struct PriceVol
+{
+	double price;
+	int vol;
+};
+
+struct MarketData
+{
+	int64_t ts;
+	double last;
+	std::vector<PriceVol> bids;
+	std::vector<PriceVol> asks;
+	double vol;
+	double pre_settlement;
+	double pre_close;
+	double pre_open_interest;
+	double settlement;
+	double close;
+	double open_interest;
+	double upper_limit;
+	double lower_limit;
+	std::string trading_day;
+	std::string action_day;
+};
+
+struct Kline
+{
+	int64_t ts;
+	double open;
+	double high;
+	double low;
+	double close;
+	double vol;
 };
 
 #endif
