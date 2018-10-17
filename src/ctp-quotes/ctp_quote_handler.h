@@ -10,6 +10,7 @@
 #include "common/ws_service.h"
 #include "common/http_service.h"
 #include "common/quote_service.h"
+#include "common/kline_builder.h"
 #include "conf.h"
 
 struct CTPKlineCache
@@ -66,6 +67,9 @@ private:
 
 	void ConvertMarketData(CThostFtdcDepthMarketDataField *pDepthMarketData, Quote &quote, MarketData &md);
 
+	void BroadcastMarketData(const Quote &quote, const MarketData &md);
+	void BroadcastKline(const Quote &quote, const Kline &kline);
+
 	void SplitInstrument(const char *instrument, std::string &symbol, std::string &contract);
 
 	int64_t GetUpdateTimeMs(CThostFtdcDepthMarketDataField *pDepthMarketData);
@@ -83,8 +87,8 @@ private:
 	int req_id_;
 
 	std::mutex topic_mtx_;
-	std::map<std::string, bool> sub_topics_;	
-	std::map<std::string, CTPKlineCache> topic_klines_;
+	std::map<std::string, bool> sub_topics_;
+	KlineBuilder kline_builder_;
 };
 
 #endif

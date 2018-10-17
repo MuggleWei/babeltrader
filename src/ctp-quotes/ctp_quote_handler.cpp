@@ -148,6 +148,7 @@ void CTPQuoteHandler::OnRspSubMarketData(CThostFtdcSpecificInstrumentField *pSpe
 	if (pRspInfo->ErrorID == 0) {
 		std::unique_lock<std::mutex> lock(topic_mtx_);
 		sub_topics_[pSpecificInstrument->InstrumentID] = true;
+		kline_builder_.add(pSpecificInstrument->InstrumentID);
 	}
 }
 void CTPQuoteHandler::OnRspUnSubMarketData(CThostFtdcSpecificInstrumentField *pSpecificInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
@@ -159,7 +160,7 @@ void CTPQuoteHandler::OnRspUnSubMarketData(CThostFtdcSpecificInstrumentField *pS
 	if (pRspInfo->ErrorID == 0) {
 		std::unique_lock<std::mutex> lock(topic_mtx_);
 		sub_topics_.erase(pSpecificInstrument->InstrumentID);
-		topic_klines_.erase(pSpecificInstrument->InstrumentID);
+		kline_builder_.del(pSpecificInstrument->InstrumentID);
 	}
 }
 
@@ -177,19 +178,14 @@ void CTPQuoteHandler::OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDept
 	MarketData md;
 	ConvertMarketData(pDepthMarketData, quote, md);
 
-	// serialize
-	rapidjson::StringBuffer s;
-	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+	BroadcastMarketData(quote, md);
 
-	SerializeQuoteBegin(writer, quote);
-	SerializeMarketData(writer, md);
-	SerializeQuoteEnd(writer, quote);
-
-#ifndef NDEBUG
-	LOG(INFO) << s.GetString();
-#endif
-
-	uws_hub_.getDefaultGroup<uWS::SERVER>().broadcast(s.GetString(), s.GetLength(), uWS::OpCode::TEXT);
+	// try update kline
+	int64_t sec = (int64_t)time(nullptr);
+	Kline kline;
+	if (kline_builder_.updateMarketData(sec, pDepthMarketData->InstrumentID, md, kline)) {
+		BroadcastKline(quote, kline);
+	}
 }
 void CTPQuoteHandler::OnRtnForQuoteRsp(CThostFtdcForQuoteRspField *pForQuoteRsp) {}
 
@@ -514,6 +510,38 @@ void CTPQuoteHandler::ConvertMarketData(CThostFtdcDepthMarketDataField *pDepthMa
 	md.lower_limit = pDepthMarketData->LowerLimitPrice;
 	md.trading_day = pDepthMarketData->TradingDay;
 	md.action_day = pDepthMarketData->ActionDay;
+}
+
+void CTPQuoteHandler::BroadcastMarketData(const Quote &quote, const MarketData &md)
+{
+	// serialize
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	SerializeQuoteBegin(writer, quote);
+	SerializeMarketData(writer, md);
+	SerializeQuoteEnd(writer, quote);
+
+#ifndef NDEBUG
+	LOG(INFO) << s.GetString();
+#endif
+
+	uws_hub_.getDefaultGroup<uWS::SERVER>().broadcast(s.GetString(), s.GetLength(), uWS::OpCode::TEXT);
+}
+void CTPQuoteHandler::BroadcastKline(const Quote &quote, const Kline &kline)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	SerializeQuoteBegin(writer, quote);
+	SerializeKline(writer, kline);
+	SerializeQuoteEnd(writer, quote);
+
+#ifndef NDEBUG
+	LOG(INFO) << s.GetString();
+#endif
+
+	uws_hub_.getDefaultGroup<uWS::SERVER>().broadcast(s.GetString(), s.GetLength(), uWS::OpCode::TEXT);
 }
 
 void CTPQuoteHandler::SplitInstrument(const char *instrument, std::string &symbol, std::string &contract)
