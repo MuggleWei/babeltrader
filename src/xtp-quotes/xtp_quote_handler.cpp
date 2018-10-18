@@ -4,6 +4,8 @@
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
 
+#include "common/serialization.h"
+
 const char *exchange_SSE = "SSE";
 const char *exchange_SZSE = "SZSE";
 const char *exchange_UNKNOWN = "UNKNOWN";
@@ -59,11 +61,40 @@ std::vector<Quote> XTPQuoteHandler::GetSubTopics(std::vector<bool> &vec_b)
 }
 void XTPQuoteHandler::SubTopic(const Quote &msg)
 {
-	// TODO:
+	{
+		std::unique_lock<std::mutex> lock(topic_mtx_);
+		if (sub_topics_.find(msg.symbol) != sub_topics_.end() && sub_topics_[msg.symbol] == true) {
+			return;
+		}
+
+		sub_topics_[msg.symbol] = false;
+		topic_exchange_[msg.symbol] = GetExchangeType(msg.exchange);
+	}
+
+	char buf[2][64];
+	char* topics[2];
+	topics[0] = buf[0];
+	strncpy(buf[0], msg.symbol.c_str(), 64 - 1);
+
+	api_->SubscribeMarketData(topics, 1, GetExchangeType(msg.exchange));
 }
 void XTPQuoteHandler::UnsubTopic(const Quote &msg)
 {
-	// TODO:
+	XTP_EXCHANGE_TYPE exhange_type = XTP_EXCHANGE_UNKNOWN;
+	{
+		std::unique_lock<std::mutex> lock(topic_mtx_);
+		if (sub_topics_.find(msg.symbol) == sub_topics_.end()) {
+			return;
+		}
+		exhange_type = topic_exchange_[msg.symbol];
+	}
+
+	char buf[2][64];
+	char* topics[2];
+	topics[0] = buf[0];
+	strncpy(buf[0], msg.symbol.c_str(), 64 - 1);
+
+	api_->UnSubscribeMarketData(topics, 1, exhange_type);
 }
 
 
@@ -102,11 +133,29 @@ void XTPQuoteHandler::OnError(XTPRI *error_info)
 
 void XTPQuoteHandler::OnSubMarketData(XTPST *ticker, XTPRI *error_info, bool is_last)
 {
+	// output
 	OutputRspSubMarketData(ticker, error_info, is_last);
 
-	// TODO: 
+	// set topic flag
+	if (error_info->error_id == 0) {
+		std::unique_lock<std::mutex> lock(topic_mtx_);
+		sub_topics_[ticker->ticker] = true;
+		kline_builder_.add(ticker->ticker);
+	}
 }
-void XTPQuoteHandler::OnUnSubMarketData(XTPST *ticker, XTPRI *error_info, bool is_last) {}
+void XTPQuoteHandler::OnUnSubMarketData(XTPST *ticker, XTPRI *error_info, bool is_last)
+{
+	// output
+	OutputRspUnsubMarketData(ticker, error_info, is_last);
+
+	// delete topics
+	if (error_info->error_id == 0) {
+		std::unique_lock<std::mutex> lock(topic_mtx_);
+		sub_topics_.erase(ticker->ticker);
+		topic_exchange_.erase(ticker->ticker);
+		kline_builder_.del(ticker->ticker);
+	}
+}
 void XTPQuoteHandler::OnSubOrderBook(XTPST *ticker, XTPRI *error_info, bool is_last) {}
 void XTPQuoteHandler::OnUnSubOrderBook(XTPST *ticker, XTPRI *error_info, bool is_last) {}
 void XTPQuoteHandler::OnSubTickByTick(XTPST *ticker, XTPRI *error_info, bool is_last) {}
@@ -119,7 +168,30 @@ void XTPQuoteHandler::OnUnSubscribeAllOrderBook(XTP_EXCHANGE_TYPE exchange_id, X
 void XTPQuoteHandler::OnSubscribeAllTickByTick(XTP_EXCHANGE_TYPE exchange_id, XTPRI *error_info) {}
 void XTPQuoteHandler::OnUnSubscribeAllTickByTick(XTP_EXCHANGE_TYPE exchange_id, XTPRI *error_info) {}
 
-void XTPQuoteHandler::OnDepthMarketData(XTPMD *market_data, int64_t bid1_qty[], int32_t bid1_count, int32_t max_bid1_count, int64_t ask1_qty[], int32_t ask1_count, int32_t max_ask1_count) {}
+void XTPQuoteHandler::OnDepthMarketData(XTPMD *market_data, int64_t bid1_qty[], int32_t bid1_count, int32_t max_bid1_count, int64_t ask1_qty[], int32_t ask1_count, int32_t max_ask1_count)
+{
+#ifndef NDEBUG
+	OutputMarketData(market_data, bid1_qty, bid1_count, max_bid1_count, ask1_qty, ask1_count, max_ask1_count);
+#endif
+
+	// convert to common struct
+	Quote quote;
+	MarketData md;
+
+	ConvertMarketData(market_data, quote, md);
+
+	BroadcastMarketData(quote, md);
+
+	// try update kline
+	int64_t sec = (int64_t)time(nullptr);
+	Kline kline;
+	if (kline_builder_.updateMarketData(sec, market_data->ticker, md, kline)) {
+		quote.info1 = "kline";
+		quote.info2 = "1m";
+		BroadcastKline(quote, kline);
+	}
+
+}
 void XTPQuoteHandler::OnOrderBook(XTPOB *order_book) {}
 void XTPQuoteHandler::OnTickByTick(XTPTBT *tbt_data) {}
 
@@ -203,6 +275,220 @@ void XTPQuoteHandler::OutputRspSubMarketData(XTPST *ticker, XTPRI *error_info, b
 
 	writer.EndObject();
 	LOG(INFO) << s.GetString();
+}
+void XTPQuoteHandler::OutputRspUnsubMarketData(XTPST *ticker, XTPRI *error_info, bool is_last)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("rspunsubmarketdata");
+	writer.Key("error_id");
+	writer.Int(error_info->error_id);
+	writer.Key("error_msg");
+	writer.String(error_info->error_msg);
+
+	writer.Key("data");
+	writer.StartObject();
+	writer.Key("exhange");
+	writer.String(ConvertExchangeType2Str(ticker->exchange_id));
+	writer.Key("symbol");
+	writer.String(ticker->ticker);
+	writer.EndObject();
+
+	writer.EndObject();
+	LOG(INFO) << s.GetString();
+}
+void XTPQuoteHandler::OutputMarketData(XTPMD *market_data, int64_t bid1_qty[], int32_t bid1_count, int32_t max_bid1_count, int64_t ask1_qty[], int32_t ask1_count, int32_t max_ask1_count)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("marketdata");
+	writer.Key("data");
+	writer.StartObject();
+
+	{
+		writer.Key("exchange_id");
+		writer.String(ConvertExchangeType2Str(market_data->exchange_id));
+		writer.Key("ticker");
+		writer.String(market_data->ticker);
+		writer.Key("last_price");
+		writer.Double(market_data->last_price);
+		writer.Key("pre_close_price");
+		writer.Double(market_data->pre_close_price);
+		writer.Key("open_price");
+		writer.Double(market_data->open_price);
+		writer.Key("high_price");
+		writer.Double(market_data->high_price);
+		writer.Key("low_price");
+		writer.Double(market_data->low_price);
+		writer.Key("close_price");
+		writer.Double(market_data->close_price);
+
+		writer.Key("pre_total_long_positon");
+		writer.Int64(market_data->pre_total_long_positon);
+		writer.Key("total_long_positon");
+		writer.Int64(market_data->total_long_positon);
+		writer.Key("pre_settl_price");
+		writer.Double(market_data->pre_settl_price);
+		writer.Key("settl_price");
+		writer.Double(market_data->settl_price);
+
+		writer.Key("upper_limit_price");
+		writer.Double(market_data->upper_limit_price);
+		writer.Key("lower_limit_price");
+		writer.Double(market_data->lower_limit_price);
+		writer.Key("pre_delta");
+		writer.Double(market_data->pre_delta);
+		writer.Key("curr_delta");
+		writer.Double(market_data->curr_delta);
+
+		writer.Key("data_time");
+		writer.Int64(market_data->data_time);
+
+		writer.Key("qty");
+		writer.Int64(market_data->qty);
+
+		writer.Key("turnover");
+		writer.Double(market_data->turnover);
+		writer.Key("avg_price");
+		writer.Double(market_data->avg_price);
+
+		writer.Key("bid");
+		writer.StartArray();
+		for (int i = 0; i < 10; i++) {
+			writer.Double(market_data->bid[i]);
+		}
+		writer.EndArray();
+
+		writer.Key("ask");
+		writer.StartArray();
+		for (int i = 0; i < 10; i++) {
+			writer.Double(market_data->ask[i]);
+		}
+		writer.EndArray();
+
+		writer.Key("bid_qty");
+		writer.StartArray();
+		for (int i = 0; i < 10; i++) {
+			writer.Int64(market_data->bid_qty[i]);
+		}
+		writer.EndArray();
+
+		writer.Key("ask_qty");
+		writer.StartArray();
+		for (int i = 0; i < 10; i++) {
+			writer.Int64(market_data->ask_qty[i]);
+		}
+		writer.EndArray();
+
+		writer.Key("trades_count");
+		writer.Int64(market_data->trades_count);
+	}
+	
+	writer.EndObject(); // data
+
+	writer.EndObject(); // object
+
+	LOG(INFO) << s.GetString();
+}
+
+void XTPQuoteHandler::ConvertMarketData(XTPMD *market_data, Quote &quote, MarketData &md)
+{
+	quote.market = "xtp";
+	quote.exchange = ConvertExchangeType2Str(market_data->exchange_id);
+	switch (market_data->data_type)
+	{
+	case XTP_MARKETDATA_OPTION: quote.type = "option"; break;
+	default: quote.type = "spot"; break;
+	}
+	quote.symbol = market_data->ticker;
+	quote.contract = "";
+	quote.contract_id = "";
+	quote.info1 = "marketdata";
+	quote.info2 = "";
+
+	md.ts = GetUpdateTimeMs(market_data);
+	md.last = market_data->last_price;
+	for (int i = 0; i < 10; i++) {
+		md.bids.push_back({ market_data->bid[i], market_data->bid_qty[i] });
+		md.asks.push_back({ market_data->ask[i], market_data->ask_qty[i] });
+	}
+	md.vol = market_data->qty;
+	md.turnover = market_data->turnover;
+	md.avg_price = market_data->avg_price;
+	md.pre_settlement = market_data->pre_settl_price;
+	md.pre_close = market_data->pre_close_price;
+	md.pre_open_interest = market_data->pre_total_long_positon;
+	md.settlement = market_data->settl_price;
+	md.close = market_data->close_price;
+	md.open_interest = market_data->total_long_positon;
+	md.upper_limit = market_data->upper_limit_price;
+	md.lower_limit = market_data->lower_limit_price;
+	md.open = market_data->open_price;
+	md.high = market_data->high_price;
+	md.low = market_data->low_price;
+	md.trading_day = "";
+	md.action_day = "";
+}
+
+void XTPQuoteHandler::BroadcastMarketData(const Quote &quote, const MarketData &md)
+{
+	// serialize
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	SerializeQuoteBegin(writer, quote);
+	SerializeMarketData(writer, md);
+	SerializeQuoteEnd(writer, quote);
+
+#ifndef NDEBUG
+	LOG(INFO) << s.GetString();
+#endif
+
+	uws_hub_.getDefaultGroup<uWS::SERVER>().broadcast(s.GetString(), s.GetLength(), uWS::OpCode::TEXT);
+}
+void XTPQuoteHandler::BroadcastKline(const Quote &quote, const Kline &kline)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	SerializeQuoteBegin(writer, quote);
+	SerializeKline(writer, kline);
+	SerializeQuoteEnd(writer, quote);
+
+#ifndef NDEBUG
+	LOG(INFO) << s.GetString();
+#endif
+
+	uws_hub_.getDefaultGroup<uWS::SERVER>().broadcast(s.GetString(), s.GetLength(), uWS::OpCode::TEXT);
+}
+
+int64_t XTPQuoteHandler::GetUpdateTimeMs(XTPMD *market_data)
+{
+	struct tm time_info = { 0 };
+
+	int64_t year = market_data->data_time / 10000000000000;
+	int64_t month = (market_data->data_time / 100000000000) % 100;
+	int64_t day = (market_data->data_time / 1000000000) % 100;
+	int64_t hour = (market_data->data_time / 10000000) % 100;
+	int64_t minute = (market_data->data_time / 100000) % 100;
+	int64_t sec = (market_data->data_time / 1000) % 100;
+	int64_t mill = market_data->data_time % 1000;
+
+	time_info.tm_year = year - 1900;
+	time_info.tm_mon = month - 1;
+	time_info.tm_mday = day;
+	time_info.tm_hour = hour;
+	time_info.tm_min = minute;
+	time_info.tm_sec = sec;
+
+	time_t utc_sec = mktime(&time_info);
+	return (int64_t)utc_sec * 1000 + mill;
 }
 
 void XTPQuoteHandler::SubTopics()

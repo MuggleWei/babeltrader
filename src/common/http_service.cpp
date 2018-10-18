@@ -124,7 +124,17 @@ bool HttpService::OnRestSubunsub(uWS::HttpResponse *res, uWS::HttpRequest &req, 
 
 void HttpService::RestReturn(uWS::HttpResponse *res, int err_id, const char *err_msg)
 {
-	res->end(err_msg, strlen(err_msg));
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("error_id");
+	writer.Int(err_id);
+	writer.Key("error_msg");
+	writer.String(err_msg);
+	writer.EndObject();
+
+	res->end(s.GetString(), s.GetLength());
 }
 bool HttpService::ParseSubunsubMsg(const char *data, size_t length, Quote& msg, std::string &err_msg)
 {
@@ -140,18 +150,31 @@ bool HttpService::ParseSubunsubMsg(const char *data, size_t length, Quote& msg, 
 		return false;
 	}
 
-	if (!d.HasMember("market") || !d["market"].IsString()) {
-		snprintf(buf, sizeof(buf) - 1, "%s: can't find field 'market'",
-			BABELTRADER_ERR_MSG[BABELTRADER_ERR_HTTPREQ_FAILED_PARSE - BABELTRADER_ERR_BEGIN]);
-		err_msg = buf;
-		return false;
+	if (!d.HasMember("market") || !d["market"].IsString())
+	{
+		msg.market = "";
+	}
+	else
+	{
+		msg.market = d["market"].GetString();
 	}
 
-	if (!d.HasMember("type") || !d["type"].IsString()) {
-		snprintf(buf, sizeof(buf) - 1, "%s: can't find field 'type'",
-			BABELTRADER_ERR_MSG[BABELTRADER_ERR_HTTPREQ_FAILED_PARSE - BABELTRADER_ERR_BEGIN]);
-		err_msg = buf;
-		return false;
+	if (!d.HasMember("exchange") || !d["exchange"].IsString()) 
+	{
+		msg.exchange = "";
+	}
+	else
+	{
+		msg.exchange = d["exchange"].GetString();
+	}
+
+	if (!d.HasMember("type") || !d["type"].IsString())
+	{
+		msg.type = "";
+	}
+	else
+	{
+		msg.type = d["type"].GetString();
 	}
 
 	if (!d.HasMember("symbol") || !d["symbol"].IsString()) {
@@ -160,18 +183,46 @@ bool HttpService::ParseSubunsubMsg(const char *data, size_t length, Quote& msg, 
 		err_msg = buf;
 		return false;
 	}
-
-	if (!d.HasMember("contract") || !d["contract"].IsString()) {
-		snprintf(buf, sizeof(buf) - 1, "%s: can't find field 'contract'",
-			BABELTRADER_ERR_MSG[BABELTRADER_ERR_HTTPREQ_FAILED_PARSE - BABELTRADER_ERR_BEGIN]);
-		err_msg = buf;
-		return false;
+	else
+	{
+		msg.symbol = d["symbol"].GetString();
 	}
 
-	msg.market = d["market"].GetString();
-	msg.type = d["type"].GetString();
-	msg.symbol = d["symbol"].GetString();
-	msg.contract = d["contract"].GetString();
+	if (!d.HasMember("contract") || !d["contract"].IsString())
+	{
+		msg.contract = "";
+	}
+	else
+	{
+		msg.contract = d["contract"].GetString();
+	}
+
+	if (!d.HasMember("contract_id") || !d["contract_id"].IsString())
+	{
+		msg.contract_id = "";
+	}
+	else
+	{
+		msg.contract_id = d["contract_id"].GetString();
+	}
+
+	if (!d.HasMember("info1") || !d["info1"].IsString()) 
+	{
+		msg.info1 = "";
+	}
+	else
+	{
+		msg.info1 = d["info1"].GetString();
+	}
+
+	if (!d.HasMember("info2") || !d["info2"].IsString())
+	{
+		msg.info2 = "";
+	}
+	else
+	{
+		msg.info2 = d["info2"].GetString();
+	}
 
 	return true;
 }

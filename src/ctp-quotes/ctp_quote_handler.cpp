@@ -56,12 +56,15 @@ std::vector<Quote> CTPQuoteHandler::GetSubTopics(std::vector<bool> &vec_b)
 void CTPQuoteHandler::SubTopic(const Quote &msg)
 {
 	auto instrument = msg.symbol + msg.contract;
-	std::unique_lock<std::mutex> lock(topic_mtx_);
-	if (sub_topics_.find(instrument) != sub_topics_.end()) {
-		return;
-	}
+	{
+		std::unique_lock<std::mutex> lock(topic_mtx_);
+		if (sub_topics_.find(instrument) != sub_topics_.end() && sub_topics_[instrument] == true) {
+			return;
+		}
 
-	sub_topics_[instrument] = false;
+		sub_topics_[instrument] = false;
+	}
+	
 
 	char buf[2][64];
 	char* topics[2];
@@ -73,9 +76,11 @@ void CTPQuoteHandler::SubTopic(const Quote &msg)
 void CTPQuoteHandler::UnsubTopic(const Quote &msg)
 {
 	auto instrument = msg.symbol + msg.contract;
-	std::unique_lock<std::mutex> lock(topic_mtx_);
-	if (sub_topics_.find(instrument) == sub_topics_.end()) {
-		return;
+	{
+		std::unique_lock<std::mutex> lock(topic_mtx_);
+		if (sub_topics_.find(instrument) == sub_topics_.end()) {
+			return;
+		}
 	}
 
 	char buf[2][64];
@@ -526,6 +531,8 @@ void CTPQuoteHandler::ConvertMarketData(CThostFtdcDepthMarketDataField *pDepthMa
 	md.asks.push_back({ pDepthMarketData->AskPrice4, pDepthMarketData->AskVolume4 });
 	md.asks.push_back({ pDepthMarketData->AskPrice5, pDepthMarketData->AskVolume5 });
 	md.vol = pDepthMarketData->Volume;
+	md.turnover = pDepthMarketData->Turnover;
+	md.avg_price = pDepthMarketData->AveragePrice;
 	md.pre_settlement = pDepthMarketData->PreSettlementPrice;
 	md.pre_close = pDepthMarketData->PreClosePrice;
 	md.pre_open_interest = pDepthMarketData->PreOpenInterest;
@@ -534,6 +541,9 @@ void CTPQuoteHandler::ConvertMarketData(CThostFtdcDepthMarketDataField *pDepthMa
 	md.open_interest = pDepthMarketData->OpenInterest;
 	md.upper_limit = pDepthMarketData->UpperLimitPrice;
 	md.lower_limit = pDepthMarketData->LowerLimitPrice;
+	md.open = pDepthMarketData->OpenPrice;
+	md.high = pDepthMarketData->HighestPrice;
+	md.low = pDepthMarketData->LowestPrice;
 	md.trading_day = pDepthMarketData->TradingDay;
 	md.action_day = pDepthMarketData->ActionDay;
 }

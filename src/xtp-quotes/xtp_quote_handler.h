@@ -57,6 +57,15 @@ private:
 
 	void OutputFrontDisconnected();
 	void OutputRspSubMarketData(XTPST *ticker, XTPRI *error_info, bool is_last);
+	void OutputRspUnsubMarketData(XTPST *ticker, XTPRI *error_info, bool is_last);
+	void OutputMarketData(XTPMD *market_data, int64_t bid1_qty[], int32_t bid1_count, int32_t max_bid1_count, int64_t ask1_qty[], int32_t ask1_count, int32_t max_ask1_count);
+
+	void ConvertMarketData(XTPMD *market_data, Quote &quote, MarketData &md);
+
+	void BroadcastMarketData(const Quote &quote, const MarketData &md);
+	void BroadcastKline(const Quote &quote, const Kline &kline);
+
+	int64_t GetUpdateTimeMs(XTPMD *market_data);
 
 	void SubTopics();
 

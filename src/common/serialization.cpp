@@ -64,6 +64,10 @@ void SerializeMarketData(rapidjson::Writer<rapidjson::StringBuffer> &writer, con
 	writer.EndArray();
 	writer.Key("vol");
 	writer.Double(md.vol);
+	writer.Key("turnover");
+	writer.Double(md.turnover);
+	writer.Key("avg_price");
+	writer.Double(md.avg_price);
 	writer.Key("pre_settlement");
 	writer.Double(md.pre_settlement);
 	writer.Key("pre_close");
@@ -80,6 +84,12 @@ void SerializeMarketData(rapidjson::Writer<rapidjson::StringBuffer> &writer, con
 	writer.Double(md.upper_limit);
 	writer.Key("lower_limit");
 	writer.Double(md.lower_limit);
+	writer.Key("open");
+	writer.Double(md.open);
+	writer.Key("high");
+	writer.Double(md.high);
+	writer.Key("low");
+	writer.Double(md.low);
 	writer.Key("trading_day");
 	writer.String(md.trading_day.c_str());
 	writer.Key("action_day");

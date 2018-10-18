@@ -18,7 +18,7 @@ BabelTrade的设计目的是, 统一上手API接口, 并不做订阅过滤分发
     "msg": "quote",
     "data": {
         "market":"ctp",
-        "exchange_id":"",
+        "exchange":"",
         "type":"future",
         "symbol":"rb",
         "contract":"1901",
@@ -55,6 +55,8 @@ data: 根据info1, 对应不同的类型
     "bids":[[4180.0,990], ...],
     "asks":[[4181.0,13], ...],
     "vol":3188636.0,
+    "turnover":13328498480.0,
+    "avg_price":4180.0,
     "pre_settlement":4137.0,
     "pre_close":4117.0,
     "pre_open_interest":2692326.0,
@@ -63,6 +65,9 @@ data: 根据info1, 对应不同的类型
     "open_interest":2848774.0,
     "upper_limit":4426.0,
     "lower_limit":3847.0,
+    "open":4176.0,
+    "high":4198.0,
+    "low":4162.0,
     "trading_day":"20181017",
     "action_day":"20181017"
 }
@@ -75,6 +80,8 @@ last(double): 最新价格
 bids(array): 价,量, 按顺序为买1, 买2 ... 买n, 注意使用时需要判断vol的数量, 为0时, 加个为无效数据
 asks(array): 价,量, 按顺序为卖1, 卖2 ... 卖n, 注意使用时需要判断vol的数量, 为0时, 加个为无效数据
 vol(double): 本交易日的累计量
+turnover(double): 本交易日的成交金额
+avg_price(double): 本交易日的均价
 pre_settlement(double): 前一交易日结算价
 pre_close(double): 前一交易日收盘价
 pre_open_interest(double): 前一交易日未平仓量
@@ -83,6 +90,9 @@ close(double): 当前交易日收盘价
 open_interest(double): 当前交易日未平仓量
 upper_limit(double): 涨停价
 lower_limit(double): 跌停价
+open(double):开盘价
+high(double):当前交易日最高价
+low(double):当前交易日最低价
 trading_day(string): 交易日
 action_day(string): 日期, 注意, 这里不一定是utc时间, 可能是当地时间, CTP使用的就是东八区时间
 ```

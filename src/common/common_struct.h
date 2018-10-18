@@ -20,7 +20,7 @@ struct Quote
 struct PriceVol
 {
 	double price;
-	int vol;
+	int64_t vol;
 };
 
 struct MarketData
@@ -30,6 +30,8 @@ struct MarketData
 	std::vector<PriceVol> bids;
 	std::vector<PriceVol> asks;
 	double vol;
+	double turnover;
+	double avg_price;
 	double pre_settlement;
 	double pre_close;
 	double pre_open_interest;
@@ -38,6 +40,9 @@ struct MarketData
 	double open_interest;
 	double upper_limit;
 	double lower_limit;
+	double open;
+	double high;
+	double low;
 	std::string trading_day;
 	std::string action_day;
 };
