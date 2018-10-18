@@ -47,8 +47,13 @@ bool KlineBuilder::updateMarketData(int64_t cur_local_sec, const std::string &ke
 	struct tm last_tm, curr_tm;
 	time_t last_system_ts = cache.kline.ts / 1000;
 	time_t curr_system_ts = md.ts / 1000;
+#if WIN32
 	localtime_s(&last_tm, &last_system_ts);
 	localtime_s(&curr_tm, &curr_system_ts);
+#else
+	localtime_r(&last_system_ts, &last_tm);
+	localtime_r(&curr_system_ts, &curr_tm);
+#endif
 	if (last_tm.tm_min != curr_tm.tm_min ||
 		last_tm.tm_hour != curr_tm.tm_hour) {
 		minute_update = true;

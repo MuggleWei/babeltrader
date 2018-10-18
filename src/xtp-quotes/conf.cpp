@@ -20,7 +20,7 @@ bool LoadConfig(const std::string &file_path, XTPQuoteConf &conf)
 	bool ret = true;
 	try {
 		fseek(fp, 0, SEEK_END);
-		long cnt = ftell(fp);
+		auto cnt = ftell(fp);
 		fseek(fp, 0, SEEK_SET);
 
 		buf = (char*)malloc((size_t)cnt + 1);
@@ -55,7 +55,7 @@ bool LoadConfig(const std::string &file_path, XTPQuoteConf &conf)
 		conf.quote_port = doc["quote_listen_port"].GetInt();
 		auto topics = doc["default_sub_topics"].GetArray();
 		for (auto i = 0; i < topics.Size(); i++) {
-			auto &topic = topics[i].GetArray();
+			const auto &topic = topics[i].GetArray();
 			Quote quote;
 			quote.exchange = topic[0].GetString();
 			quote.symbol = topic[1].GetString();
