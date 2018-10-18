@@ -208,7 +208,10 @@ void XTPQuoteHandler::RunAPI()
 		conf_.user_id.c_str(), conf_.password.c_str(), 
 		(XTP_PROTOCOL_TYPE)conf_.quote_protocol);
 	if (ret != 0) {
-		LOG(INFO) << "Failed to login";
+		auto ri = api_->GetApiLastError();
+		LOG(INFO) << "Failed to login "
+			<< "(" << ri->error_id << ") "
+			<< ri->error_msg;
 		exit(-1);
 	}
 
