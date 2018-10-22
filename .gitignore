@@ -9,6 +9,14 @@ build/
 # vscode
 .vscode/
 
+# private config
 /config/
 
+# python
 venv/
+
+# jetbrain
+.idea/
+
+/demo/java/*.iml
+/demo/java/target/

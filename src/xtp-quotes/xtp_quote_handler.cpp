@@ -227,6 +227,7 @@ void XTPQuoteHandler::RunService()
 			ws_service_.onMessage(ws, message, length, opCode);
 		});
 		uws_hub_.onDisconnection([&](uWS::WebSocket<uWS::SERVER> *ws, int code, char *message, size_t length) {
+			ws_service_.onDisconnection(ws, code, message, length);
 		});
 
 		// rest
