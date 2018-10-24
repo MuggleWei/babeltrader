@@ -185,6 +185,19 @@ if (WIN32)
 	set_target_properties(BabelTrader-CTP-Quote PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "$(OutDir)")
 endif()
 
+# BabelTrader-CTP-Trader
+add_serv(BabelTrader-CTP-Trade ${CMAKE_CURRENT_LIST_DIR}/src/ctp-trade)
+target_include_directories(BabelTrader-CTP-Trade PRIVATE ${CMAKE_CURRENT_LIST_DIR}/thirdparty/ctp/include)
+target_link_libraries(BabelTrader-CTP-Trade thosttraderapi)
+if (WIN32)
+	add_custom_command(
+		TARGET BabelTrader-CTP-Trade
+		PRE_LINK
+		COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_LIST_DIR}/thirdparty/ctp/lib/win64/thosttraderapi.dll $(OutDir)
+	)
+	set_target_properties(BabelTrader-CTP-Trade PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "$(OutDir)")
+endif()
+
 # BabelTrader-XTP-Quote
 add_serv(BabelTrader-XTP-Quote ${CMAKE_CURRENT_LIST_DIR}/src/xtp-quotes)
 target_include_directories(BabelTrader-XTP-Quote PRIVATE ${CMAKE_CURRENT_LIST_DIR}/thirdparty/xtp/include)

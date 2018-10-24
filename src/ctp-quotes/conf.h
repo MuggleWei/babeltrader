@@ -10,8 +10,6 @@ struct CTPQuoteConf
 	std::string user_id;
 	std::string password;
 	std::string addr;
-	std::string trade_ip;
-	int trade_port;
 	std::string quote_ip;
 	int quote_port;
 	std::vector<std::string> default_sub_topics;

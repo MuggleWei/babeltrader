@@ -52,8 +52,10 @@ private:
 	void RunAPI();
 	void RunService();
 
+	void DoLogin();
+
 	void OutputFrontConnected();
-	void OutputFrontDisconnected();
+	void OutputFrontDisconnected(int reason);
 	void OutputRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
 	void OutputRspUserLogout(CThostFtdcUserLogoutField *pUserLogout, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
 	void OutputRspSubMarketData(CThostFtdcSpecificInstrumentField *pSpecificInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);

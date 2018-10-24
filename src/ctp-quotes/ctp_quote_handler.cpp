@@ -97,16 +97,12 @@ void CTPQuoteHandler::OnFrontConnected()
 	OutputFrontConnected();
 
 	// user login
-	CThostFtdcReqUserLoginField req_user_login = { 0 };
-	strncpy(req_user_login.BrokerID, conf_.broker_id.c_str(), sizeof(req_user_login.BrokerID) - 1);
-	strncpy(req_user_login.UserID, conf_.user_id.c_str(), sizeof(req_user_login.UserID) - 1);
-	strncpy(req_user_login.Password, conf_.password.c_str(), sizeof(req_user_login.Password) - 1);
-	api_->ReqUserLogin(&req_user_login, req_id_++);
+	DoLogin();
 }
 void CTPQuoteHandler::OnFrontDisconnected(int nReason)
 {
 	// output
-	OutputFrontDisconnected();
+	OutputFrontDisconnected(nReason);
 
 	// set sub topics flag
 	{
@@ -119,6 +115,7 @@ void CTPQuoteHandler::OnFrontDisconnected(int nReason)
 	// reconnect
 	auto old_api = api_;
 	RunAPI();
+	old_api->RegisterSpi(nullptr);
 	old_api->Release();
 }
 void CTPQuoteHandler::OnHeartBeatWarning(int nTimeLapse)
@@ -141,7 +138,13 @@ void CTPQuoteHandler::OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin,
 	OutputRspUserLogin(pRspUserLogin, pRspInfo, nRequestID, bIsLast);
 
 	// sub topics
-	SubTopics();
+	if (pRspInfo->ErrorID == 0) {
+		SubTopics();
+	}
+	else {
+		LOG(ERROR) << "failed to login";
+		exit(-1);
+	}
 }
 void CTPQuoteHandler::OnRspUserLogout(CThostFtdcUserLogoutField *pUserLogout, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
@@ -261,6 +264,15 @@ void CTPQuoteHandler::RunService()
 	loop_thread.join();
 }
 
+void CTPQuoteHandler::DoLogin()
+{
+	CThostFtdcReqUserLoginField req_user_login = { 0 };
+	strncpy(req_user_login.BrokerID, conf_.broker_id.c_str(), sizeof(req_user_login.BrokerID) - 1);
+	strncpy(req_user_login.UserID, conf_.user_id.c_str(), sizeof(req_user_login.UserID) - 1);
+	strncpy(req_user_login.Password, conf_.password.c_str(), sizeof(req_user_login.Password) - 1);
+	api_->ReqUserLogin(&req_user_login, req_id_++);
+}
+
 void CTPQuoteHandler::OutputFrontConnected()
 {
 	rapidjson::StringBuffer s;
@@ -272,7 +284,7 @@ void CTPQuoteHandler::OutputFrontConnected()
 	writer.EndObject();
 	LOG(INFO) << s.GetString();
 }
-void CTPQuoteHandler::OutputFrontDisconnected()
+void CTPQuoteHandler::OutputFrontDisconnected(int reason)
 {
 	rapidjson::StringBuffer s;
 	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
@@ -280,6 +292,11 @@ void CTPQuoteHandler::OutputFrontDisconnected()
 	writer.StartObject();
 	writer.Key("msg");
 	writer.String("disconnected");
+	writer.Key("data");
+	writer.StartObject();
+	writer.Key("reason");
+	writer.Int(reason);
+	writer.EndObject();
 	writer.EndObject();
 	LOG(INFO) << s.GetString();
 }
