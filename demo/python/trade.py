@@ -10,7 +10,7 @@ addr = "127.0.0.1:8001"
 
 def insert_order(ws, user_id, client_order_id,
                  market, exchange, type, symbol, contract, contract_id,
-                 order_type, dir, price, amount, total_price, ts):
+                 order_type, order_flag1, dir, price, amount, total_price, ts):
     utc_ts = datetime.utcfromtimestamp(ts)
     ts_str = utc_ts.strftime("%Y%m%d-%H%M%S")
 
@@ -18,7 +18,7 @@ def insert_order(ws, user_id, client_order_id,
         "msg": "insert_order",
         "data": {
             "user_id": user_id,
-            "order_id": str(user_id) + ts_str,
+            "order_id": str(user_id) + '-' + ts_str,
             "extra_order_id": "",
             "outside_id": "",
             "client_order_id": client_order_id,
@@ -29,6 +29,7 @@ def insert_order(ws, user_id, client_order_id,
             "contract": contract,
             "contract_id": contract_id,
             "order_type": order_type,
+            "order_flag1": order_flag1,
             "dir": dir,
             "price": price,
             "amount": amount,
@@ -46,14 +47,15 @@ if __name__ == '__main__':
             user_id="weidaizi",
             client_order_id="20181024-1624-000001",
             market="ctp",
-            exchange="",
+            exchange="SHFE",
             type="future",
             symbol="rb",
             contract="1901",
             contract_id="1901",
             order_type="limit",
+            order_flag1="speculation", # speculation, hedge, arbitrage
             dir="open_long",
-            price=4190,
+            price=4205,
             amount=1,
             total_price=0,
             ts=ts
