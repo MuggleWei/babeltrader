@@ -35,6 +35,9 @@ public:
 	virtual void OnRspUserLogout(CThostFtdcUserLogoutField *pUserLogout, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast) override;
 
 	virtual void OnRspOrderInsert(CThostFtdcInputOrderField *pInputOrder, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast) override;
+	virtual void OnErrRtnOrderInsert(CThostFtdcInputOrderField *pInputOrder, CThostFtdcRspInfoField *pRspInfo) override;
+	virtual void OnRtnOrder(CThostFtdcOrderField *pOrder) override;
+	virtual void OnRtnTrade(CThostFtdcTradeField *pTrade) override;
 
 private:
 	void RunAPI();
@@ -52,12 +55,23 @@ private:
 	void OutputRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
 	void OutputRspUserLogout(CThostFtdcUserLogoutField *pUserLogout, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
 	void OutputRspOrderInsert(CThostFtdcInputOrderField *pInputOrder, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
+	void OutputErrRtnOrderInsert(CThostFtdcInputOrderField *pInputOrder, CThostFtdcRspInfoField *pRspInfo);
+	void OutputRtnOrder(CThostFtdcOrderField *pOrder);
+	void OutputRtnTrade(CThostFtdcTradeField *pTrade);
 
 	void SerializeCTPInputOrder(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcInputOrderField *pInputOrder);
+	void SerializeCTPOrder(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcOrderField *pOrder);
+	void SerializeCTPTrade(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcTradeField *pTrade);
 
 	char getOrderType(const char *order_type);
 	char getOrderFlag1(const char *order_flag1);
 	bool getOrderDir(const char *order_dir, char& action, char& dir);
+
+	void ConvertInsertOrderJson2CTP(rapidjson::Value &msg, CThostFtdcInputOrderField &req);
+	void ConvertInsertOrderCTP2Json(CThostFtdcInputOrderField &req, rapidjson::Writer<rapidjson::StringBuffer> &writer);
+
+	void FillConnectionInfo(const char *tradeing_day, const char *login_time, int front_id, int session_id);
+	void ClearConnectionInfo();
 
 private:
 	CThostFtdcTraderApi *api_;
@@ -69,6 +83,12 @@ private:
 
 	int req_id_;
 	int order_ref_;
+
+	// connection info
+	std::string ctp_tradeing_day_;
+	std::string ctp_login_time_;
+	int ctp_front_id_;
+	int ctp_session_id_;
 };
 
 #endif
