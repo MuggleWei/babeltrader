@@ -71,7 +71,7 @@ void CTPTradeHandler::InsertOrder(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Va
 	}
 	else
 	{
-		req.CombHedgeFlag[0] = THOST_FTDC_ECIDT_Speculation;
+		req.CombHedgeFlag[0] = THOST_FTDC_HF_Speculation;
 	}
 
 	if (req.OrderPriceType == THOST_FTDC_OPT_LimitPrice) {
@@ -106,6 +106,11 @@ void CTPTradeHandler::InsertOrder(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Va
 	req.StopPrice = 0;
 	req.ForceCloseReason = THOST_FTDC_FCC_NotForceClose;
 	req.IsAutoSuspend = 0;
+
+	if (api_ == nullptr)
+	{
+		throw std::runtime_error("trade api not ready yet");
+	}
 
 	api_->ReqOrderInsert(&req, req_id_++);
 }
@@ -230,6 +235,24 @@ void CTPTradeHandler::DoLogin()
 	strncpy(req_user_login.Password, conf_.password.c_str(), sizeof(req_user_login.Password) - 1);
 	// api_->ReqUserLogin(&req_user_login, req_id_++);
 	api_->ReqUserLogin2(&req_user_login, req_id_++);
+}
+
+void CTPTradeHandler::OutputOrderInsert(CThostFtdcInputOrderField *req)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("raw_orderinsert");
+
+	writer.Key("data");
+	writer.StartObject();
+	SerializeCTPInputOrder(writer, req);
+	writer.EndObject();
+
+	writer.EndObject();
+	LOG(INFO) << s.GetString();
 }
 
 void CTPTradeHandler::OutputFrontConnected()
@@ -459,7 +482,41 @@ void CTPTradeHandler::SerializeCTPInputOrder(rapidjson::Writer<rapidjson::String
 	writer.Key("ForceCloseReason");
 	writer.String(buf);
 
+	writer.Key("IsAutoSuspend");
+	writer.Int(pInputOrder->IsAutoSuspend);
 
+	writer.Key("BusinessUnit");
+	writer.String(pInputOrder->BusinessUnit);
+
+	writer.Key("RequestID");
+	writer.Int(pInputOrder->RequestID);
+
+	writer.Key("UserForceClose");
+	writer.Int(pInputOrder->UserForceClose);
+
+	writer.Key("IsSwapOrder");
+	writer.Int(pInputOrder->IsSwapOrder);
+
+	writer.Key("ExchangeID");
+	writer.String(pInputOrder->ExchangeID);
+
+	writer.Key("InvestUnitID");
+	writer.String(pInputOrder->InvestUnitID);
+
+	writer.Key("AccountID");
+	writer.String(pInputOrder->AccountID);
+
+	writer.Key("CurrencyID");
+	writer.String(pInputOrder->CurrencyID);
+
+	writer.Key("ClientID");
+	writer.String(pInputOrder->ClientID);
+
+	writer.Key("IPAddress");
+	writer.String(pInputOrder->IPAddress);
+
+	writer.Key("MacAddress");
+	writer.String(pInputOrder->MacAddress);
 }
 
 char CTPTradeHandler::getOrderType(const char *order_type)
@@ -486,15 +543,15 @@ char CTPTradeHandler::getOrderFlag1(const char *order_flag1)
 
 	if (strncmp(order_flag1, of_spec, sizeof(of_spec) - 1) == 0)
 	{
-		return THOST_FTDC_ECIDT_Speculation;
+		return THOST_FTDC_HF_Speculation;
 	}
 	else if (strncmp(order_flag1, of_hedge, sizeof(of_hedge) - 1) == 0)
 	{
-		return THOST_FTDC_ECIDT_Hedge;
+		return THOST_FTDC_HF_Hedge;
 	}
 	else if (strncmp(order_flag1, of_arbitrage, sizeof(of_arbitrage) - 1) == 0)
 	{
-		return THOST_FTDC_ECIDT_Arbitrage;
+		return THOST_FTDC_HF_Arbitrage;
 	}
 
 	return (char)0;
@@ -526,7 +583,7 @@ bool CTPTradeHandler::getOrderDir(const char *order_dir, char& action, char& dir
 		return false;
 	}
 
-	if (strncmp(order_dir, od_open, sizeof(od_open) - 1) == 0)
+	if (strncmp(order_dir, od_open, split_pos) == 0)
 	{
 		action = THOST_FTDC_OF_Open;
 	}
@@ -534,11 +591,11 @@ bool CTPTradeHandler::getOrderDir(const char *order_dir, char& action, char& dir
 	{
 		action = THOST_FTDC_OF_Close;
 	}
-	else if (strncmp(order_dir, od_closetoday, sizeof(od_closetoday) - 1) == 0)
+	else if (strncmp(order_dir, od_closetoday, split_pos) == 0)
 	{
 		action = THOST_FTDC_OF_CloseToday;
 	}
-	else if (strncmp(order_dir, od_closeyesterday, sizeof(od_closeyesterday) - 1) == 0)
+	else if (strncmp(order_dir, od_closeyesterday, split_pos) == 0)
 	{
 		action = THOST_FTDC_OF_CloseYesterday;
 	}
@@ -549,11 +606,25 @@ bool CTPTradeHandler::getOrderDir(const char *order_dir, char& action, char& dir
 
 	if (strncmp(p+1, od_long, sizeof(od_long) - 1) == 0)
 	{
-		dir = THOST_FTDC_D_Buy;
+		if (action == THOST_FTDC_OF_Open)
+		{
+			dir = THOST_FTDC_D_Buy;
+		}
+		else
+		{
+			dir = THOST_FTDC_D_Sell;
+		}
 	}
 	else if (strncmp(p + 1, od_short, sizeof(od_short) - 1) == 0)
 	{
-		dir = THOST_FTDC_D_Sell;
+		if (action == THOST_FTDC_OF_Open)
+		{
+			dir = THOST_FTDC_D_Sell;
+		}
+		else
+		{
+			dir = THOST_FTDC_D_Buy;
+		}
 	}
 	else
 	{

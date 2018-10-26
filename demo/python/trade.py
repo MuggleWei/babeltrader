@@ -55,7 +55,7 @@ if __name__ == '__main__':
             order_type="limit",
             order_flag1="speculation", # speculation, hedge, arbitrage
             dir="open_long",
-            price=4205,
+            price=4300,
             amount=1,
             total_price=0,
             ts=ts

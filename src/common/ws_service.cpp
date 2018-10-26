@@ -105,29 +105,45 @@ void WsService::Dispatch(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Document &d
 		}
 		else
 		{
+			char buf[256] = { 0 };
+			snprintf(buf, sizeof(buf), "rec_%s", doc["msg"].GetString());
 			OnClientMsgError(ws, doc,
 				BABELTRADER_ERR_WSREQ_NOT_HANDLE,
-				BABELTRADER_ERR_MSG[BABELTRADER_ERR_WSREQ_NOT_HANDLE - BABELTRADER_ERR_BEGIN]);
+				BABELTRADER_ERR_MSG[BABELTRADER_ERR_WSREQ_NOT_HANDLE - BABELTRADER_ERR_BEGIN], buf);
 		}
 	}
 	catch (std::exception &e)
 	{
+		// get receive message name
+		char buf[256] = { 0 };
+		if (doc["msg"].IsString())
+		{
+			snprintf(buf, sizeof(buf), "rec_%s", doc["msg"].GetString());
+		}
+		else
+		{
+			snprintf(buf, sizeof(buf), "error");
+		}
+		
+		// get error message
 		auto error_msg = std::string(
 			BABELTRADER_ERR_MSG[BABELTRADER_ERR_WSREQ_FAILED_HANDLE - BABELTRADER_ERR_BEGIN]) + std::string(" - ") + e.what();
+
+		// response error
 		OnClientMsgError(ws, doc,
 			BABELTRADER_ERR_WSREQ_FAILED_HANDLE,
-			error_msg.c_str());
+			error_msg.c_str(), buf);
 	}
 }
 
-void WsService::OnClientMsgError(uWS::WebSocket<uWS::SERVER> *ws, char *message, size_t length, int error_id, const char  *error_msg)
+void WsService::OnClientMsgError(uWS::WebSocket<uWS::SERVER> *ws, char *message, size_t length, int error_id, const char  *error_msg, const char *msg)
 {
 	rapidjson::StringBuffer s;
 	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
 
 	writer.StartObject();
 	writer.Key("msg");
-	writer.String("error");
+	writer.String(msg);
 	writer.Key("error_id");
 	writer.Int(error_id);
 	writer.Key("error_msg");
@@ -145,14 +161,14 @@ void WsService::OnClientMsgError(uWS::WebSocket<uWS::SERVER> *ws, char *message,
 		}
 	}
 }
-void WsService::OnClientMsgError(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Document &doc, int error_id, const char  *error_msg)
+void WsService::OnClientMsgError(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Document &doc, int error_id, const char  *error_msg, const char *msg)
 {
 	rapidjson::StringBuffer s;
 	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
 
 	writer.StartObject();
 	writer.Key("msg");
-	writer.String("error");
+	writer.String(msg);
 	writer.Key("error_id");
 	writer.Int(error_id);
 	writer.Key("error_msg");

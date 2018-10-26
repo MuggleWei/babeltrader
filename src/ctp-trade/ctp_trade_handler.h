@@ -43,6 +43,8 @@ private:
 	void DoAuthenticate();
 	void DoLogin();
 
+	void OutputOrderInsert(CThostFtdcInputOrderField *req);
+
 	void OutputFrontConnected();
 	void OutputFrontDisconnected(int reason);
 	void OutputRsperror(CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
