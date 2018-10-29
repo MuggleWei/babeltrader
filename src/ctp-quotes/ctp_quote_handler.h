@@ -14,6 +14,8 @@
 #include "common/kline_builder.h"
 #include "conf.h"
 
+using namespace babeltrader;
+
 class CTPQuoteHandler : public QuoteService, CThostFtdcMdSpi
 {
 public:
@@ -66,8 +68,6 @@ private:
 
 	void BroadcastMarketData(const Quote &quote, const MarketData &md);
 	void BroadcastKline(const Quote &quote, const Kline &kline);
-
-	void SplitInstrument(const char *instrument, std::string &symbol, std::string &contract);
 
 	int64_t GetUpdateTimeMs(CThostFtdcDepthMarketDataField *pDepthMarketData);
 

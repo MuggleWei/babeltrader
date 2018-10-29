@@ -2,6 +2,10 @@
 
 #include <time.h>
 
+namespace babeltrader
+{
+
+
 void KlineBuilder::add(const std::string &key)
 {
 	if (caches_.find(key) == caches_.end()) {
@@ -101,4 +105,7 @@ bool KlineBuilder::updateMarketData(int64_t cur_local_sec, const std::string &ke
 
 
 	return false;
+}
+
+
 }

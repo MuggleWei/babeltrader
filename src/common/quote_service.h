@@ -5,6 +5,10 @@
 
 #include "common/common_struct.h"
 
+namespace babeltrader
+{
+
+
 class QuoteService
 {
 public:
@@ -12,5 +16,8 @@ public:
 	virtual void SubTopic(const Quote &msg) = 0;
 	virtual void UnsubTopic(const Quote &msg) = 0;
 };
+
+
+}
 
 #endif

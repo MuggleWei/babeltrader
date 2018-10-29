@@ -1,6 +1,9 @@
 #ifndef BABELTRADER_ERR_H_
 #define BABELTRADER_ERR_H_
 
+namespace babeltrader
+{
+
 enum {
 	BABELTRADER_OK = 0,
 	BABELTRADER_ERR_BEGIN = 10000,
@@ -14,5 +17,8 @@ enum {
 };
 
 extern const char* BABELTRADER_ERR_MSG[BABELTRADER_ERR_MAX - BABELTRADER_ERR_BEGIN];
+
+
+}
 
 #endif

@@ -5,6 +5,25 @@
 #include <string>
 #include <vector>
 
+namespace babeltrader
+{
+
+
+//////////////////////////
+// enum
+enum OrderStatus
+{
+	OrderStatus_Unknown = 0,
+	OrderStatus_PartDealed = 1,
+	OrderStatus_AllDealed = 2,
+	OrderStatus_Canceled = 3,
+	OrderStatus_Canceling = 4,
+};
+
+
+//////////////////////////
+// quotes
+
 struct Quote
 {
 	std::string market;			// e.g. okex, bitmex, CTP, XTP, IB ...
@@ -56,5 +75,33 @@ struct Kline
 	double close;
 	double vol;
 };
+
+
+//////////////////////////
+// trade
+
+struct Order
+{
+	std::string user_id;
+	std::string order_id;
+	std::string outside_id;
+	std::string client_order_id;
+	std::string market;
+	std::string exchange;
+	std::string type;
+	std::string symbol;
+	std::string contract;
+	std::string contract_id;
+	std::string order_type;		// e.g. limit, market
+	std::string order_flag1;	// e.g. speculation, hedge, arbitrage
+	std::string dir;
+	double price;
+	int amount;
+	double total_price;
+	int64_t ts;
+};
+
+
+}
 
 #endif

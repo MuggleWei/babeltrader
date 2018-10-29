@@ -59,7 +59,7 @@ symbol(string): 符号 - 例如: rb, CL, btc, btc_usdt
 contract(string): 合约类型 - 例如: 1901, this_week
 contract_id(string): 合约id - 例如: 1901, 20181901
 order_type(string): 订单类型 - limit(限价单), market(市价单)
-order_flag1(string): 订单标识 - speculation(投机), hedge(套保), arbitrage(套利)
+order_flag1(string): 订单标识 - speculation(投机), hedge(套保), arbitrage(套利), marketmaker(做市商)
 dir(string): 订单方向 - buy(买), sell(卖), open_long(开多), open_short(开空), close_long(平多), close_short(平空), closetoday_long(平今多), closetoday_short(平今空), closeyesterday_long(平昨多), closeyesterday_short(平昨空)
 price(double): 限价单价格, 当为市价单时, 此字段无效
 amount(double/int): 开仓头寸大小

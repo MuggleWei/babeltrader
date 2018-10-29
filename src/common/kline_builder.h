@@ -6,6 +6,10 @@
 
 #include "common/common_struct.h"
 
+namespace babeltrader
+{
+
+
 struct KlineCache
 {
 	int64_t start_vol;
@@ -24,5 +28,8 @@ public:
 private:
 	std::map<std::string, KlineCache> caches_;
 };
+
+
+}
 
 #endif

@@ -14,6 +14,8 @@
 #include "common/kline_builder.h"
 #include "conf.h"
 
+using namespace babeltrader;
+
 class XTPQuoteHandler : public QuoteService, XTP::API::QuoteSpi
 {
 public:

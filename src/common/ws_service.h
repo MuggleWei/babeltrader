@@ -12,6 +12,9 @@
 #include "common/quote_service.h"
 #include "common/trade_service.h"
 
+namespace babeltrader
+{
+
 class WsService
 {
 private:
@@ -59,5 +62,8 @@ private:
 	std::mutex ws_mtx_;
 	std::set<uWS::WebSocket<uWS::SERVER>*> ws_set_;
 };
+
+
+}
 
 #endif

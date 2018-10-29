@@ -19,7 +19,6 @@ def insert_order(ws, user_id, client_order_id,
         "data": {
             "user_id": user_id,
             "order_id": str(user_id) + '-' + ts_str,
-            "extra_order_id": "",
             "outside_id": "",
             "client_order_id": client_order_id,
             "market": market,
@@ -54,7 +53,7 @@ if __name__ == '__main__':
             contract_id="1901",
             order_type="limit",
             order_flag1="speculation", # speculation, hedge, arbitrage
-            dir="closetoday_long", # [action: open, close, close_today, close_yesterday; dir: long, short] or [buy, sell]
+            dir="open_long", # [action: open, close, close_today, close_yesterday; dir: long, short] or [buy, sell]
             price=4300,
             amount=1,
             total_price=0,

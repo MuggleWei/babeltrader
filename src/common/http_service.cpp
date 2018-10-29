@@ -10,6 +10,10 @@
 
 #include "err.h"
 
+namespace babeltrader
+{
+
+
 HttpService::HttpService(QuoteService *quote_service, TradeService *trade_service)
 	: quote_(quote_service)
 	, trade_(trade_service)
@@ -225,4 +229,7 @@ bool HttpService::ParseSubunsubMsg(const char *data, size_t length, Quote& msg, 
 	}
 
 	return true;
+}
+
+
 }

@@ -1,5 +1,8 @@
 #include "err.h"
 
+namespace babeltrader
+{
+
 const char* BABELTRADER_ERR_MSG[BABELTRADER_ERR_MAX - BABELTRADER_ERR_BEGIN] = {
 	"",
 	"http request data too long",			// BABELTRADER_ERR_HTTPREQ_TOO_LONG
@@ -9,3 +12,6 @@ const char* BABELTRADER_ERR_MSG[BABELTRADER_ERR_MAX - BABELTRADER_ERR_BEGIN] = {
 	"failed handle message",				// BABELTRADER_ERR_WSREQ_FAILED_HANDLE
 	"failed transfer message in tunnel",	// BABELTRADER_ERR_WSREQ_FAILED_TUNNEL
 };
+
+
+}

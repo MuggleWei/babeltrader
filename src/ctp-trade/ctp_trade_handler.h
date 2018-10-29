@@ -1,6 +1,8 @@
 #ifndef CTP_TRADE_HANDLER
 #define CTP_TRADE_HANDLER
 
+#include <thread>
+
 #include "ThostFtdcTraderApi.h"
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
@@ -9,6 +11,8 @@
 #include "common/ws_service.h"
 #include "common/http_service.h"
 #include "conf.h"
+
+using namespace babeltrader;
 
 class CTPTradeHandler : public TradeService, CThostFtdcTraderSpi
 {
@@ -68,10 +72,21 @@ private:
 	bool getOrderDir(const char *order_dir, char& action, char& dir);
 
 	void ConvertInsertOrderJson2CTP(rapidjson::Value &msg, CThostFtdcInputOrderField &req);
-	void ConvertInsertOrderCTP2Json(CThostFtdcInputOrderField &req, rapidjson::Writer<rapidjson::StringBuffer> &writer);
+	void ConvertInsertOrderCTP2Common(CThostFtdcInputOrderField &req, Order &order);
+	void ConvertInsertOrderJson2Common(rapidjson::Value &msg, Order &order);
+	void ConvertRtnOrderCTP2Common(CThostFtdcOrderField *pOrder, Order &order);
+
+	void NotifyOrderStatus(Order &order, int error_id, const char *error_msg, int order_status);
 
 	void FillConnectionInfo(const char *tradeing_day, const char *login_time, int front_id, int session_id);
 	void ClearConnectionInfo();
+
+	void RecordOrder(Order &order, const std::string &order_ref, int front_id, int session_id);
+	bool GetRecordOrder(Order &order, const std::string &user_id, const std::string &order_ref, int front_id, int session_id);
+	bool GetAndCleanRecordOrder(Order &order, const std::string &user_id, const std::string &order_ref, int front_id, int session_id);
+
+	int GetOrderStatus(TThostFtdcOrderStatusType OrderStatus);
+	std::string GenOutsideOrderId(const char *user_id, const char *trading_date, int front_id, int session_id, const char *ctp_order_sys_id);
 
 private:
 	CThostFtdcTraderApi *api_;
@@ -89,6 +104,10 @@ private:
 	std::string ctp_login_time_;
 	int ctp_front_id_;
 	int ctp_session_id_;
+
+	// order recorder
+	std::map<std::string, Order> wait_deal_orders_;
+	std::mutex wati_deal_order_mtx_;
 };
 
 #endif

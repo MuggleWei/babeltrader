@@ -1,5 +1,9 @@
 #include "serialization.h"
 
+namespace babeltrader
+{
+
+
 void SerializeQuoteBegin(rapidjson::Writer<rapidjson::StringBuffer> &writer, const Quote &quote)
 {
 	// quote object
@@ -110,4 +114,45 @@ void SerializeKline(rapidjson::Writer<rapidjson::StringBuffer> &writer, const Kl
 	writer.Double(kline.close);
 	writer.Key("vol");
 	writer.Double(kline.vol);
+}
+
+void SerializeOrder(rapidjson::Writer<rapidjson::StringBuffer> &writer, const Order &order)
+{
+	writer.Key("user_id");
+	writer.String(order.user_id.c_str());
+	writer.Key("order_id");
+	writer.String(order.order_id.c_str());
+	writer.Key("outside_id");
+	writer.String(order.outside_id.c_str());
+	writer.Key("client_order_id");
+	writer.String(order.client_order_id.c_str());
+	writer.Key("market");
+	writer.String(order.market.c_str());
+	writer.Key("exchange");
+	writer.String(order.exchange.c_str());
+	writer.Key("type");
+	writer.String(order.type.c_str());
+	writer.Key("symbol");
+	writer.String(order.symbol.c_str());
+	writer.Key("contract");
+	writer.String(order.contract.c_str());
+	writer.Key("contract_id");
+	writer.String(order.contract_id.c_str());
+	writer.Key("order_type");
+	writer.String(order.order_type.c_str());
+	writer.Key("order_flag1");
+	writer.String(order.order_flag1.c_str());
+	writer.Key("dir");
+	writer.String(order.dir.c_str());
+	writer.Key("price");
+	writer.Double(order.price);
+	writer.Key("amount");
+	writer.Int(order.amount);
+	writer.Key("total_price");
+	writer.Double(order.total_price);
+	writer.Key("ts");
+	writer.Double(order.ts);
+}
+
+
 }

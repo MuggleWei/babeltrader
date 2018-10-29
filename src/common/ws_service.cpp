@@ -9,6 +9,11 @@
 
 #include "err.h"
 
+
+namespace babeltrader
+{
+
+
 WsService::WsService(QuoteService *quote_service, TradeService *trade_service)
 	: quote_(quote_service)
 	, trade_(trade_service)
@@ -189,4 +194,7 @@ void WsService::OnReqCancelOrder(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Doc
 	}
 
 	trade_->CancelOrder(ws, doc["data"]);
+}
+
+
 }

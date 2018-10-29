@@ -7,6 +7,8 @@
 
 #include "common/common_struct.h"
 
+using namespace babeltrader;
+
 struct XTPQuoteConf
 {
 	uint8_t client_id;

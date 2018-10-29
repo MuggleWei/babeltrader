@@ -6,6 +6,10 @@
 #include "common/trade_service.h"
 #include "common/common_struct.h"
 
+namespace babeltrader
+{
+
+
 class HttpService
 {
 public:
@@ -27,5 +31,8 @@ private:
 	QuoteService *quote_;
 	TradeService *trade_;
 };
+
+
+}
 
 #endif
