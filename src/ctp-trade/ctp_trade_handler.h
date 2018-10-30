@@ -96,6 +96,7 @@ private:
 	void GetOrderDirection(const char ctp_dir, const char ctp_hedge_flag, const char ctp_offset_flag, Order &order);
 	std::string GenOutsideOrderIdFromOrder(CThostFtdcOrderField *pOrder);
 	std::string GenOutsideOrderIdFromDeal(CThostFtdcTradeField *pTrade);
+	std::string GenOutsideTradeIdFromDeal(CThostFtdcTradeField *pTrade);
 
 
 private:

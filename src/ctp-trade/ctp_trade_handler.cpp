@@ -146,11 +146,6 @@ void CTPTradeHandler::OnRtnOrder(CThostFtdcOrderField *pOrder)
 	if (ret)
 	{
 		BroadcastOrderConfirm(order, 0, "");
-
-		// clear info for prevent mistakes
-		order.user_id = "";
-		order.order_id = "";
-		order.client_order_id = "";
 	}
 	BroadcastOrderStatus(order, order_status, 0, "");
 }
@@ -1337,17 +1332,7 @@ void CTPTradeHandler::ConvertRtnTradeCTP2Common(CThostFtdcTradeField *pTrade, Or
 		order_deal.price = pTrade->Price;
 		order_deal.amount = pTrade->Volume;
 		order_deal.trading_day = pTrade->TradingDay;
-
-		const char *p = pTrade->TradeID;
-		while (p)
-		{
-			if (*p == ' ') {
-				p++;
-				continue;
-			}
-			break;
-		}
-		order_deal.trade_id = p;
+		order_deal.trade_id = GenOutsideTradeIdFromDeal(pTrade);
 		order_deal.ts = CTPGetTimestamp(pTrade->TradeDate, pTrade->TradeTime, 0);
 	}
 }
@@ -1645,6 +1630,21 @@ std::string CTPTradeHandler::GenOutsideOrderIdFromDeal(CThostFtdcTradeField *pTr
 	while (p) {
 		if (*p == ' ') {
 			++p;
+			continue;
+		}
+		break;
+	}
+	snprintf(buf, sizeof(buf), "%s_%s_%s", pTrade->InvestorID, pTrade->TradingDay, p);
+	return std::string(buf);
+}
+std::string CTPTradeHandler::GenOutsideTradeIdFromDeal(CThostFtdcTradeField *pTrade)
+{
+	char buf[256] = { 0 };
+	const char *p = pTrade->TradeID;
+	while (p)
+	{
+		if (*p == ' ') {
+			p++;
 			continue;
 		}
 		break;

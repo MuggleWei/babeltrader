@@ -77,3 +77,79 @@ ts(int64): 时间戳
     "data": { 订单结构 }
 }
 ```
+
+## 交易应答
+#### 上手确认订单接收
+消息名: confirmorder  
+
+示例:
+```
+{
+    "msg": "confirmorder",
+    "error_id": 0,
+    "data": { 订单结构 }
+}
+```
+
+说明:
+此消息代表上手已接收订单，使用此消息，关联上手订单号(outside_id)和系统内订单号, 当上手拒单或者出现错误时, 此结构中的outside_id会为空。
+
+#### 订单状态变更
+消息名: orderstatus  
+
+示例:
+```
+{
+    "msg": "orderstatus",
+    "error_id": 0,
+    "data": {
+        "status": 2,
+        "submit_status": 1,
+        "amount": 5,
+        "dealed_amount": 5,
+        "order": { 订单结构 }
+    }
+}
+```
+
+字段说明:
+```
+status(int): 订单状态 - 0(未知), 1(部分成交), 2(完全成交), 3(已撤), 4(撤单中)
+submit_status(int): 订单提交状态 - 0(未知), 1(已提交), 2(已接受), 3(已拒绝)
+amount(int/double): 订单总数量
+dealed_amount(int/double): 订单已成交量
+```
+
+说明:
+使用此消息时, 需要先检查 error_id 和 status, 当有错误或是订单遭到拒绝时, 此结构的order中, 会有 user_id, order_id, client_order_id。 当订单顺利进行时, 此结构体的order中, 只会有 outside_id。 上手订单号和系统内订单号的关联工作, 需要在收到confirmorder时进行。
+
+#### 订单成交
+消息名: orderdeal  
+
+示例:
+```
+{
+    "msg": "orderstatus",
+    "error_id": 0,
+    "data": {
+        "price": 4194,
+        "amount": 1,
+        "trading_day": "20181030",
+        "trade_id": "104027_20181030_97398",
+        "ts": 1540880723000,
+        "order": { 订单结构 }
+    }
+}
+```
+
+字段说明:
+```
+price(double): 单笔成交价格
+amount(int/double): 单笔成交量
+trading_day(string): 交易日
+trade_id(string): 成交id
+ts(int64): 成交时间戳
+```
+
+说明:  
+返回的订单结构中, 只会有市场, 交易所, 品种, 方向等字段, 下单的价格并不会有。
