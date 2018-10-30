@@ -11,13 +11,21 @@ namespace babeltrader
 
 //////////////////////////
 // enum
-enum OrderStatus
+enum OrderStatusEnum
 {
 	OrderStatus_Unknown = 0,
 	OrderStatus_PartDealed = 1,
 	OrderStatus_AllDealed = 2,
 	OrderStatus_Canceled = 3,
 	OrderStatus_Canceling = 4,
+};
+
+enum OrderSubmitStatusEnum
+{
+	OrderSubmitStatus_Unknown = 0,
+	OrderSubmitStatus_Submitted = 1,
+	OrderSubmitStatus_Accepted = 2,
+	OrderSubmitStatus_Rejected = 3,
 };
 
 
@@ -99,6 +107,43 @@ struct Order
 	int amount;
 	double total_price;
 	int64_t ts;
+
+	Order()
+		: price(0)
+		, amount(0)
+		, total_price(0)
+		, ts(0)
+	{}
+};
+
+struct OrderStatusNotify
+{
+	OrderStatusEnum order_status;
+	OrderSubmitStatusEnum order_submit_status;
+	int amount;
+	int dealed_amount;
+
+	OrderStatusNotify()
+		: order_status(OrderStatus_Unknown)
+		, order_submit_status(OrderSubmitStatus_Unknown)
+		, amount(0)
+		, dealed_amount(0)
+	{}
+};
+
+struct OrderDealNotify
+{
+	double price;
+	int amount;
+	std::string trading_day;
+	std::string trade_id;
+	int64_t ts;
+
+	OrderDealNotify()
+		: price(0)
+		, amount(0)
+		, ts(0)
+	{}
 };
 
 

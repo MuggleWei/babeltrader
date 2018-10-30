@@ -37,6 +37,7 @@ public:
 	virtual void OnRspAuthenticate(CThostFtdcRspAuthenticateField *pRspAuthenticateField, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast) override;
 	virtual void OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast) override;
 	virtual void OnRspUserLogout(CThostFtdcUserLogoutField *pUserLogout, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast) override;
+	virtual void OnRspSettlementInfoConfirm(CThostFtdcSettlementInfoConfirmField *pSettlementInfoConfirm, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast) override;
 
 	virtual void OnRspOrderInsert(CThostFtdcInputOrderField *pInputOrder, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast) override;
 	virtual void OnErrRtnOrderInsert(CThostFtdcInputOrderField *pInputOrder, CThostFtdcRspInfoField *pRspInfo) override;
@@ -49,6 +50,7 @@ private:
 
 	void DoAuthenticate();
 	void DoLogin();
+	void DoSettlementConfirm();
 
 	void OutputOrderInsert(CThostFtdcInputOrderField *req);
 
@@ -58,6 +60,7 @@ private:
 	void OutputAuthenticate(CThostFtdcRspAuthenticateField *pRspAuthenticateField, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
 	void OutputRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
 	void OutputRspUserLogout(CThostFtdcUserLogoutField *pUserLogout, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
+	void OutputRspSettlementConfirm(CThostFtdcSettlementInfoConfirmField *pSettlementInfoConfirm, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
 	void OutputRspOrderInsert(CThostFtdcInputOrderField *pInputOrder, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
 	void OutputErrRtnOrderInsert(CThostFtdcInputOrderField *pInputOrder, CThostFtdcRspInfoField *pRspInfo);
 	void OutputRtnOrder(CThostFtdcOrderField *pOrder);
@@ -74,9 +77,12 @@ private:
 	void ConvertInsertOrderJson2CTP(rapidjson::Value &msg, CThostFtdcInputOrderField &req);
 	void ConvertInsertOrderCTP2Common(CThostFtdcInputOrderField &req, Order &order);
 	void ConvertInsertOrderJson2Common(rapidjson::Value &msg, Order &order);
-	void ConvertRtnOrderCTP2Common(CThostFtdcOrderField *pOrder, Order &order);
+	void ConvertRtnOrderCTP2Common(CThostFtdcOrderField *pOrder, Order &order, OrderStatusNotify &order_status_notify);
+	void ConvertRtnTradeCTP2Common(CThostFtdcTradeField *pTrade, Order &order, OrderDealNotify &order_deal);
 
-	void NotifyOrderStatus(Order &order, int error_id, const char *error_msg, int order_status);
+	void BroadcastOrderConfirm(Order &order, int error_id, const char *error_msg);
+	void BroadcastOrderStatus(Order &order, OrderStatusNotify &order_status_notify, int error_id, const char *error_msg);
+	void BroadcastOrderDeal(Order &order, OrderDealNotify &order_deal);
 
 	void FillConnectionInfo(const char *tradeing_day, const char *login_time, int front_id, int session_id);
 	void ClearConnectionInfo();
@@ -86,7 +92,11 @@ private:
 	bool GetAndCleanRecordOrder(Order &order, const std::string &user_id, const std::string &order_ref, int front_id, int session_id);
 
 	int GetOrderStatus(TThostFtdcOrderStatusType OrderStatus);
-	std::string GenOutsideOrderId(const char *user_id, const char *trading_date, int front_id, int session_id, const char *ctp_order_sys_id);
+	int GetOrderSubmitStatus(TThostFtdcOrderSubmitStatusType OrderSubmitStatus);
+	void GetOrderDirection(const char ctp_dir, const char ctp_hedge_flag, const char ctp_offset_flag, Order &order);
+	std::string GenOutsideOrderIdFromOrder(CThostFtdcOrderField *pOrder);
+	std::string GenOutsideOrderIdFromDeal(CThostFtdcTradeField *pTrade);
+
 
 private:
 	CThostFtdcTraderApi *api_;

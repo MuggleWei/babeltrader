@@ -101,6 +101,9 @@ void CTPTradeHandler::OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin,
 
 	// record connection information
 	FillConnectionInfo(pRspUserLogin->TradingDay, pRspUserLogin->LoginTime, pRspUserLogin->FrontID, pRspUserLogin->SessionID);
+
+	// confirm settlement
+	DoSettlementConfirm();
 }
 void CTPTradeHandler::OnRspUserLogout(CThostFtdcUserLogoutField *pUserLogout, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
@@ -110,6 +113,11 @@ void CTPTradeHandler::OnRspUserLogout(CThostFtdcUserLogoutField *pUserLogout, CT
 	// clear connection information
 	ClearConnectionInfo();
 }
+void CTPTradeHandler::OnRspSettlementInfoConfirm(CThostFtdcSettlementInfoConfirmField *pSettlementInfoConfirm, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+{
+	
+}
+
 void CTPTradeHandler::OnRspOrderInsert(CThostFtdcInputOrderField *pInputOrder, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
 	// output
@@ -119,7 +127,7 @@ void CTPTradeHandler::OnRspOrderInsert(CThostFtdcInputOrderField *pInputOrder, C
 	Order order;
 	GetAndCleanRecordOrder(order, pInputOrder->UserID, pInputOrder->OrderRef, ctp_front_id_, ctp_session_id_);
 	ConvertInsertOrderCTP2Common(*pInputOrder, order);
-	NotifyOrderStatus(order, pRspInfo->ErrorID, pRspInfo->ErrorMsg, OrderStatus_Unknown);
+	BroadcastOrderConfirm(order, pRspInfo->ErrorID, pRspInfo->ErrorMsg);
 }
 void CTPTradeHandler::OnRtnOrder(CThostFtdcOrderField *pOrder)
 {
@@ -127,19 +135,24 @@ void CTPTradeHandler::OnRtnOrder(CThostFtdcOrderField *pOrder)
 	OutputRtnOrder(pOrder);
 
 	// notify
+	if (pOrder->OrderSysID[0] == '\0' && pOrder->OrderStatus == THOST_FTDC_OST_Unknown) {
+		return;
+	}
+
 	Order order;
-	int order_status = GetOrderStatus(pOrder->OrderStatus);
-	if (order_status == OrderStatus_Unknown || order_status == OrderStatus_PartDealed || order_status == OrderStatus_Canceling)
+	OrderStatusNotify order_status;
+	bool ret = GetAndCleanRecordOrder(order, pOrder->UserID, pOrder->OrderRef, pOrder->FrontID, pOrder->SessionID);
+	ConvertRtnOrderCTP2Common(pOrder, order, order_status);
+	if (ret)
 	{
-		GetRecordOrder(order, pOrder->UserID, pOrder->OrderRef, pOrder->FrontID, pOrder->SessionID);
+		BroadcastOrderConfirm(order, 0, "");
+
+		// clear info for prevent mistakes
+		order.user_id = "";
+		order.order_id = "";
+		order.client_order_id = "";
 	}
-	else
-	{
-		GetAndCleanRecordOrder(order, pOrder->UserID, pOrder->OrderRef, pOrder->FrontID, pOrder->SessionID);
-	}
-	ConvertRtnOrderCTP2Common(pOrder, order);
-	order.outside_id = GenOutsideOrderId(pOrder->UserID, pOrder->TradingDay, pOrder->FrontID, pOrder->SessionID, pOrder->OrderSysID);
-	NotifyOrderStatus(order, 0, "", order_status);
+	BroadcastOrderStatus(order, order_status, 0, "");
 }
 void CTPTradeHandler::OnRtnTrade(CThostFtdcTradeField *pTrade)
 {
@@ -147,20 +160,16 @@ void CTPTradeHandler::OnRtnTrade(CThostFtdcTradeField *pTrade)
 	OutputRtnTrade(pTrade);
 
 	// notify
+	Order order;
+	OrderDealNotify order_deal;
+	ConvertRtnTradeCTP2Common(pTrade, order, order_deal);
+	BroadcastOrderDeal(order, order_deal);
 }
 void CTPTradeHandler::OnErrRtnOrderInsert(CThostFtdcInputOrderField *pInputOrder, CThostFtdcRspInfoField *pRspInfo)
 {
-	// use OnRspOrderInsert is enough
-	/*
 	// output
 	OutputErrRtnOrderInsert(pInputOrder, pRspInfo);
-
-	// broadcast
-	Order order;
-	ConvertInsertOrderCTP2Common(*pInputOrder, order);
-
-	NotifyOrderStatus(order, pRspInfo->ErrorID, pRspInfo->ErrorMsg);
-	*/	
+	// use OnRspOrderInsert is enough
 }
 
 void CTPTradeHandler::RunAPI()
@@ -223,6 +232,13 @@ void CTPTradeHandler::DoLogin()
 	strncpy(req_user_login.Password, conf_.password.c_str(), sizeof(req_user_login.Password) - 1);
 	// api_->ReqUserLogin(&req_user_login, req_id_++);
 	api_->ReqUserLogin2(&req_user_login, req_id_++);
+}
+void CTPTradeHandler::DoSettlementConfirm()
+{
+	CThostFtdcSettlementInfoConfirmField confirm = { 0 };
+	strncpy(confirm.BrokerID, conf_.broker_id.c_str(), sizeof(confirm.BrokerID) - 1);
+	strncpy(confirm.InvestorID, conf_.user_id.c_str(), sizeof(confirm.InvestorID) - 1);
+	api_->ReqSettlementInfoConfirm(&confirm, req_id_++);
 }
 
 void CTPTradeHandler::OutputOrderInsert(CThostFtdcInputOrderField *req)
@@ -378,6 +394,42 @@ void CTPTradeHandler::OutputRspUserLogout(CThostFtdcUserLogoutField *pUserLogout
 	writer.Int(pRspInfo->ErrorID);
 	writer.Key("error_msg");
 	writer.String(pRspInfo->ErrorMsg);
+
+	writer.EndObject();
+	LOG(INFO) << s.GetString();
+}
+void CTPTradeHandler::OutputRspSettlementConfirm(CThostFtdcSettlementInfoConfirmField *pSettlementInfoConfirm, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("rspsettlementconfirm");
+	writer.Key("req_id");
+	writer.Int(nRequestID);
+	writer.Key("error_id");
+	writer.Int(pRspInfo->ErrorID);
+	writer.Key("error_msg");
+	writer.String(pRspInfo->ErrorMsg);
+
+	writer.Key("data");
+	writer.StartObject();
+	writer.Key("BrokerID");
+	writer.String(pSettlementInfoConfirm->BrokerID);
+	writer.Key("InvestorID");
+	writer.String(pSettlementInfoConfirm->InvestorID);
+	writer.Key("ConfirmDate");
+	writer.String(pSettlementInfoConfirm->ConfirmDate);
+	writer.Key("ConfirmTime");
+	writer.String(pSettlementInfoConfirm->ConfirmTime);
+	writer.Key("SettlementID");
+	writer.Int(pSettlementInfoConfirm->SettlementID);
+	writer.Key("AccountID");
+	writer.String(pSettlementInfoConfirm->AccountID);
+	writer.Key("CurrencyID");
+	writer.String(pSettlementInfoConfirm->CurrencyID);
+	writer.EndObject();
 
 	writer.EndObject();
 	LOG(INFO) << s.GetString();
@@ -1231,89 +1283,76 @@ void CTPTradeHandler::ConvertInsertOrderJson2Common(rapidjson::Value &msg, Order
 		order.ts = msg["ts"].GetInt64();
 	}
 }
-void CTPTradeHandler::ConvertRtnOrderCTP2Common(CThostFtdcOrderField *pOrder, Order &order)
+void CTPTradeHandler::ConvertRtnOrderCTP2Common(CThostFtdcOrderField *pOrder, Order &order, OrderStatusNotify &order_status_notify)
 {
-	order.market = "ctp";
-	order.exchange = pOrder->ExchangeID;
-	order.type = "future";
-	CTPSplitInstrument(pOrder->InstrumentID, order.symbol, order.contract);
-	order.contract_id = order.contract;
-	if (pOrder->OrderPriceType == THOST_FTDC_OPT_AnyPrice)
+	// order
 	{
-		order.order_type = "market";
-	}
-	else
-	{
-		order.order_type = "limit";
-	}
-
-	switch (pOrder->CombHedgeFlag[0])
-	{
-	case THOST_FTDC_HF_Speculation:
-	{
-		order.order_flag1 = "speculation";
-	}break;
-	case THOST_FTDC_HF_Arbitrage:
-	{
-		order.order_flag1 = "arbitrage";
-	}break;
-	case THOST_FTDC_HF_Hedge:
-	{
-		order.order_flag1 = "hedge";
-	}break;
-	case THOST_FTDC_HF_MarketMaker:
-	{
-		order.order_flag1 = "marketmaker";
-	}break;
-	}
-
-	if (pOrder->Direction == THOST_FTDC_D_Buy)
-	{
-		if (pOrder->CombOffsetFlag[0] == THOST_FTDC_OF_Open)
+		order.outside_id = GenOutsideOrderIdFromOrder(pOrder);
+		order.market = "ctp";
+		order.exchange = pOrder->ExchangeID;
+		order.type = "future";
+		CTPSplitInstrument(pOrder->InstrumentID, order.symbol, order.contract);
+		order.contract_id = order.contract;
+		if (pOrder->OrderPriceType == THOST_FTDC_OPT_AnyPrice)
 		{
-			order.dir = "open_long";
-		}
-		else if (pOrder->CombOffsetFlag[0] == THOST_FTDC_OF_CloseToday)
-		{
-			order.dir = "closetoday_short";
-		}
-		else if (pOrder->CombOffsetFlag[0] == THOST_FTDC_OF_CloseYesterday)
-		{
-			order.dir = "closeyesterday_short";
+			order.order_type = "market";
 		}
 		else
 		{
-			order.dir = "close_short";
+			order.order_type = "limit";
 		}
+
+		GetOrderDirection(pOrder->Direction, pOrder->CombHedgeFlag[0], pOrder->CombOffsetFlag[0], order);
+
+		order.price = pOrder->LimitPrice;
+		order.amount = pOrder->VolumeTotalOriginal;
+		order.total_price = 0;
+
+		order.ts = CTPGetTimestamp(pOrder->InsertDate, pOrder->InsertTime, 0);
 	}
-	else
+	
+	// status
 	{
-		if (pOrder->CombOffsetFlag[0] == THOST_FTDC_OF_Open)
-		{
-			order.dir = "open_short";
-		}
-		else if (pOrder->CombOffsetFlag[0] == THOST_FTDC_OF_CloseToday)
-		{
-			order.dir = "closetoday_long";
-		}
-		else if (pOrder->CombOffsetFlag[0] == THOST_FTDC_OF_CloseYesterday)
-		{
-			order.dir = "closeyesterday_long";
-		}
-		else
-		{
-			order.dir = "close_long";
-		}
+		order_status_notify.order_status = (OrderStatusEnum)GetOrderStatus(pOrder->OrderStatus);
+		order_status_notify.order_submit_status = (OrderSubmitStatusEnum)GetOrderSubmitStatus(pOrder->OrderSubmitStatus);
+		order_status_notify.amount = pOrder->VolumeTotalOriginal;
+		order_status_notify.dealed_amount = pOrder->VolumeTraded;
+	}
+}
+void CTPTradeHandler::ConvertRtnTradeCTP2Common(CThostFtdcTradeField *pTrade, Order &order, OrderDealNotify &order_deal)
+{
+	// order
+	{
+		order.outside_id = GenOutsideOrderIdFromDeal(pTrade);
+		order.market = "ctp";
+		order.exchange = pTrade->ExchangeID;
+		order.type = "future";
+		CTPSplitInstrument(pTrade->InstrumentID, order.symbol, order.contract);
+		order.contract_id = order.contract;
+		GetOrderDirection(pTrade->Direction, pTrade->HedgeFlag, pTrade->OffsetFlag, order);
 	}
 
-	order.price = pOrder->LimitPrice;
-	order.amount = pOrder->VolumeTotalOriginal;
-	order.total_price = 0;
+	// deal
+	{
+		order_deal.price = pTrade->Price;
+		order_deal.amount = pTrade->Volume;
+		order_deal.trading_day = pTrade->TradingDay;
 
-	order.ts = CTPGetTimestamp(pOrder->InsertDate, pOrder->InsertTime, 0);
+		const char *p = pTrade->TradeID;
+		while (p)
+		{
+			if (*p == ' ') {
+				p++;
+				continue;
+			}
+			break;
+		}
+		order_deal.trade_id = p;
+		order_deal.ts = CTPGetTimestamp(pTrade->TradeDate, pTrade->TradeTime, 0);
+	}
 }
 
-void CTPTradeHandler::NotifyOrderStatus(Order &order, int error_id, const char *error_msg, int order_status)
+void CTPTradeHandler::BroadcastOrderConfirm(Order &order, int error_id, const char *error_msg)
 {
 	// serialize
 	rapidjson::StringBuffer s;
@@ -1321,7 +1360,33 @@ void CTPTradeHandler::NotifyOrderStatus(Order &order, int error_id, const char *
 
 	writer.StartObject();
 	writer.Key("msg");
-	writer.String("ordernotify");
+	writer.String("confirmorder");
+	writer.Key("error_id");
+	writer.Int(error_id);
+	// don't response error message, it will lead json loads error in python
+	// writer.Key("error_msg");
+	// writer.String(error_msg);
+
+	writer.Key("data");
+	writer.StartObject();
+	SerializeOrder(writer, order);
+	writer.EndObject();
+
+	writer.EndObject();
+
+	LOG(INFO) << s.GetString();
+
+	uws_hub_.getDefaultGroup<uWS::SERVER>().broadcast(s.GetString(), s.GetLength(), uWS::OpCode::TEXT);
+}
+void CTPTradeHandler::BroadcastOrderStatus(Order &order, OrderStatusNotify &order_status_notify, int error_id, const char *error_msg)
+{
+	// serialize
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("orderstatus");
 	writer.Key("error_id");
 	writer.Int(error_id);
 	// don't response error message, it will lead json loads error in python
@@ -1331,16 +1396,47 @@ void CTPTradeHandler::NotifyOrderStatus(Order &order, int error_id, const char *
 	writer.Key("data");
 	writer.StartObject();
 
-	writer.Key("status");
-	writer.Int(order_status);
+	SerializeOrderStatus(writer, order_status_notify);
 
 	writer.Key("order");
 	writer.StartObject();
 	SerializeOrder(writer, order);
-	writer.EndObject();
+	writer.EndObject();  // order end
 
-	writer.EndObject();
-	writer.EndObject();
+	writer.EndObject();  // data end
+	writer.EndObject();  // object end
+
+	LOG(INFO) << s.GetString();
+
+	uws_hub_.getDefaultGroup<uWS::SERVER>().broadcast(s.GetString(), s.GetLength(), uWS::OpCode::TEXT);
+}
+void CTPTradeHandler::BroadcastOrderDeal(Order &order, OrderDealNotify &order_deal)
+{
+	// serialize
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("orderdeal");
+	writer.Key("error_id");
+	writer.Int(0);
+	// don't response error message, it will lead json loads error in python
+	// writer.Key("error_msg");
+	// writer.String(error_msg);
+
+	writer.Key("data");
+	writer.StartObject();
+
+	SerializeOrderDeal(writer, order_deal);
+
+	writer.Key("order");
+	writer.StartObject();
+	SerializeOrder(writer, order);
+	writer.EndObject();  // order end
+
+	writer.EndObject();  // data end
+	writer.EndObject();  // object end
 
 	LOG(INFO) << s.GetString();
 
@@ -1431,15 +1527,102 @@ int CTPTradeHandler::GetOrderStatus(TThostFtdcOrderStatusType OrderStatus)
 
 	return ret;
 }
-std::string CTPTradeHandler::GenOutsideOrderId(const char *user_id, const char *trading_date, int front_id, int session_id, const char *ctp_order_sys_id)
+int CTPTradeHandler::GetOrderSubmitStatus(TThostFtdcOrderSubmitStatusType OrderSubmitStatus)
 {
-	if (ctp_order_sys_id[0] == '\0')
+	int ret = OrderSubmitStatus_Unknown;
+
+	switch (OrderSubmitStatus)
+	{
+	case THOST_FTDC_OSS_InsertSubmitted:
+	case THOST_FTDC_OSS_CancelSubmitted:
+	case THOST_FTDC_OSS_ModifySubmitted:
+	{
+		ret = OrderSubmitStatus_Submitted;
+	}break;
+	case THOST_FTDC_OSS_Accepted:
+	{
+		ret = OrderSubmitStatus_Accepted;
+	}break;
+	case THOST_FTDC_OSS_InsertRejected:
+	case THOST_FTDC_OSS_CancelRejected:
+	case THOST_FTDC_OSS_ModifyRejected:
+	{
+		ret = OrderSubmitStatus_Rejected;
+	}break;
+	}
+
+	return ret;
+}
+void CTPTradeHandler::GetOrderDirection(const char ctp_dir, const char ctp_hedge_flag, const char ctp_offset_flag, Order &order)
+{
+	switch (ctp_hedge_flag)
+	{
+	case THOST_FTDC_HF_Speculation:
+	{
+		order.order_flag1 = "speculation";
+	}break;
+	case THOST_FTDC_HF_Arbitrage:
+	{
+		order.order_flag1 = "arbitrage";
+	}break;
+	case THOST_FTDC_HF_Hedge:
+	{
+		order.order_flag1 = "hedge";
+	}break;
+	case THOST_FTDC_HF_MarketMaker:
+	{
+		order.order_flag1 = "marketmaker";
+	}break;
+	}
+
+	if (ctp_dir == THOST_FTDC_D_Buy)
+	{
+		if (ctp_offset_flag == THOST_FTDC_OF_Open)
+		{
+			order.dir = "open_long";
+		}
+		else if (ctp_offset_flag == THOST_FTDC_OF_CloseToday)
+		{
+			order.dir = "closetoday_short";
+		}
+		else if (ctp_offset_flag == THOST_FTDC_OF_CloseYesterday)
+		{
+			order.dir = "closeyesterday_short";
+		}
+		else
+		{
+			order.dir = "close_short";
+		}
+	}
+	else
+	{
+		if (ctp_offset_flag == THOST_FTDC_OF_Open)
+		{
+			order.dir = "open_short";
+		}
+		else if (ctp_offset_flag == THOST_FTDC_OF_CloseToday)
+		{
+			order.dir = "closetoday_long";
+		}
+		else if (ctp_offset_flag == THOST_FTDC_OF_CloseYesterday)
+		{
+			order.dir = "closeyesterday_long";
+		}
+		else
+		{
+			order.dir = "close_long";
+		}
+	}
+}
+std::string CTPTradeHandler::GenOutsideOrderIdFromOrder(CThostFtdcOrderField *pOrder)
+{
+	if (pOrder->OrderSysID[0] == '\0')
 	{
 		return "";
 	}
 
 	char buf[256] = { 0 };
-	const char *p = ctp_order_sys_id;
+	const char *p = pOrder->OrderSysID;
 	while (p) {
 		if (*p == ' ') {
 			++p;
@@ -1447,6 +1630,25 @@ std::string CTPTradeHandler::GenOutsideOrderId(const char *user_id, const char *
 		}
 		break;
 	}
-	snprintf(buf, sizeof(buf), "%s_%s_%d#%d_%s", user_id, trading_date, front_id, session_id, p);
+	snprintf(buf, sizeof(buf), "%s_%s_%s", pOrder->InvestorID, pOrder->TradingDay, p);
+	return std::string(buf);
+}
+std::string CTPTradeHandler::GenOutsideOrderIdFromDeal(CThostFtdcTradeField *pTrade)
+{
+	if (pTrade->OrderSysID[0] == '\0')
+	{
+		return "";
+	}
+
+	char buf[256] = { 0 };
+	const char *p = pTrade->OrderSysID;
+	while (p) {
+		if (*p == ' ') {
+			++p;
+			continue;
+		}
+		break;
+	}
+	snprintf(buf, sizeof(buf), "%s_%s_%s", pTrade->InvestorID, pTrade->TradingDay, p);
 	return std::string(buf);
 }

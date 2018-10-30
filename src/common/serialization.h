@@ -17,6 +17,8 @@ void SerializeMarketData(rapidjson::Writer<rapidjson::StringBuffer> &writer, con
 void SerializeKline(rapidjson::Writer<rapidjson::StringBuffer> &writer, const Kline &kline);
 
 void SerializeOrder(rapidjson::Writer<rapidjson::StringBuffer> &writer, const Order &order);
+void SerializeOrderStatus(rapidjson::Writer<rapidjson::StringBuffer> &writer, const OrderStatusNotify &order_status);
+void SerializeOrderDeal(rapidjson::Writer<rapidjson::StringBuffer> &writer, const OrderDealNotify &order_deal);
 
 
 }

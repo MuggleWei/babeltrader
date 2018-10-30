@@ -153,6 +153,30 @@ void SerializeOrder(rapidjson::Writer<rapidjson::StringBuffer> &writer, const Or
 	writer.Key("ts");
 	writer.Double(order.ts);
 }
+void SerializeOrderStatus(rapidjson::Writer<rapidjson::StringBuffer> &writer, const OrderStatusNotify &order_status)
+{
+	writer.Key("status");
+	writer.Int(order_status.order_status);
+	writer.Key("submit_status");
+	writer.Int(order_status.order_submit_status);
+	writer.Key("amount");
+	writer.Int(order_status.amount);
+	writer.Key("dealed_amount");
+	writer.Int(order_status.dealed_amount);
+}
+void SerializeOrderDeal(rapidjson::Writer<rapidjson::StringBuffer> &writer, const OrderDealNotify &order_deal)
+{
+	writer.Key("price");
+	writer.Double(order_deal.price);
+	writer.Key("amount");
+	writer.Int(order_deal.amount);
+	writer.Key("trading_day");
+	writer.String(order_deal.trading_day.c_str());
+	writer.Key("trade_id");
+	writer.String(order_deal.trade_id.c_str());
+	writer.Key("ts");
+	writer.Int64(order_deal.ts);
+}
 
 
 }
