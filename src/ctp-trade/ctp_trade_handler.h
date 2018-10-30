@@ -101,6 +101,8 @@ private:
 
 private:
 	CThostFtdcTraderApi *api_;
+	bool api_ready_;
+
 	CTPTradeConf conf_;
 
 	uWS::Hub uws_hub_;

@@ -9,6 +9,7 @@
 
 CTPTradeHandler::CTPTradeHandler(CTPTradeConf &conf)
 	: api_(nullptr)
+	, api_ready_(false)
 	, conf_(conf)
 	, req_id_(1)
 	, order_ref_(1)
@@ -40,7 +41,7 @@ void CTPTradeHandler::InsertOrder(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Va
 	ConvertInsertOrderJson2Common(msg, order);
 	RecordOrder(order, req.OrderRef, ctp_front_id_, ctp_session_id_);
 	
-	if (api_ == nullptr)
+	if (api_ == nullptr || !api_ready_)
 	{
 		throw std::runtime_error("trade api not ready yet");
 	}
@@ -104,6 +105,8 @@ void CTPTradeHandler::OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin,
 
 	// confirm settlement
 	DoSettlementConfirm();
+
+	api_ready_ = true;
 }
 void CTPTradeHandler::OnRspUserLogout(CThostFtdcUserLogoutField *pUserLogout, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
@@ -1437,6 +1440,8 @@ void CTPTradeHandler::FillConnectionInfo(const char *tradeing_day, const char *l
 }
 void CTPTradeHandler::ClearConnectionInfo()
 {
+	api_ready_ = false;
+
 	ctp_tradeing_day_ = "";
 	ctp_login_time_ = "";
 	ctp_front_id_ = 0;

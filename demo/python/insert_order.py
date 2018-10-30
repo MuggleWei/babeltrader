@@ -6,8 +6,6 @@ import websocket
 import traceback
 
 addr = "127.0.0.1:8001"
-
-
 # addr = "127.0.0.1:8002"
 
 
@@ -17,6 +15,7 @@ class Connector:
         self.rsp_callbacks["confirmorder"] = self.on_confirmorder
         self.rsp_callbacks["orderstatus"] = self.on_orderstatus
         self.rsp_callbacks["orderdeal"] = self.on_orderdeal
+        self.rsp_callbacks["error"] = self.on_error
 
         self.order_map = {}
 
@@ -43,6 +42,7 @@ class Connector:
             )
             while True:
                 result = self.ws.recv()
+                print("receive message: " + result)
                 result = json.loads(result)
                 fn = self.rsp_callbacks.get(result['msg'])
                 if fn:
@@ -80,7 +80,7 @@ class Connector:
             }
         })
         self.ws.send(order)
-        print("发送报单: " + str(order))
+        print("send insert order: " + str(order))
 
     def on_confirmorder(self, msg):
         if 'error_id' in msg:
@@ -92,15 +92,15 @@ class Connector:
         order_id = msg['data']['order_id']
 
         if error_id != 0:
-            print("订单发生错误: {0} - 上手错误号:({1})".format(order_id, error_id))
+            print("order error: {0} - 上手错误号:({1})".format(order_id, error_id))
             return
 
         if outside_id == "":
-            print("订单发生错误: {0}".format(order_id))
+            print("order error: {0}".format(order_id))
             return
 
         self.order_map[outside_id] = msg['data']
-        print("订单确认: {0} - {1}".format(outside_id, order_id))
+        print("order confirm: {0} - {1}".format(outside_id, order_id))
 
     def on_orderstatus(self, msg):
         if 'error_id' in msg:
@@ -114,24 +114,27 @@ class Connector:
         order_submit_status = msg['data']['submit_status']
 
         if outside_id == "":
-            print("订单失败通知: 订单({0}) - 订单状态: {1}, 报送状态: {2}".format(order_id, order_status, order_submit_status))
+            print("order failed: order({0}) - status: {1}, submit status: {2}".format(order_id, order_status, order_submit_status))
             return
 
         order = self.order_map.get(outside_id)
         if order is None:
-            print("收到来自其他连接的报单状态反馈: " + str(outside_id))
+            print("receive order status from other: " + str(outside_id))
         else:
-            print("订单状态更新: 订单({0}) - 订单状态: {1}, 报送状态: {2}, 总量: {3}, 已成: {4}".format(
+            print("order status update: order({0}) - status: {1}, submit status: {2}, amount: {3}, dealed amount: {4}".format(
                 order_id, order_status, order_submit_status, msg['data']['amount'], msg['data']['dealed_amount']))
 
     def on_orderdeal(self, msg):
         outside_id = msg['data']['order']['outside_id']
         order = self.order_map.get(outside_id)
         if order is None:
-            print("收到来自其他连接的报单成交反馈: " + str(outside_id))
+            print("receive order deal from other: " + str(outside_id))
         else:
-            print("订单成交通知: " + str(msg))
-            print("原订单: " + str(order))
+            print("order deal: " + str(msg))
+            print("original order: " + str(order))
+
+    def on_error(self, msg):
+        print("exception happened: " + str(msg))
 
 
 if __name__ == '__main__':
