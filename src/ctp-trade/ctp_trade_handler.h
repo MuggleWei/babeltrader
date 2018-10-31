@@ -44,6 +44,8 @@ public:
 	virtual void OnRtnOrder(CThostFtdcOrderField *pOrder) override;
 	virtual void OnRtnTrade(CThostFtdcTradeField *pTrade) override;
 
+	virtual void OnRspOrderAction(CThostFtdcInputOrderActionField *pInputOrderAction, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast) override;
+
 private:
 	void RunAPI();
 	void RunService();
@@ -53,6 +55,7 @@ private:
 	void DoSettlementConfirm();
 
 	void OutputOrderInsert(CThostFtdcInputOrderField *req);
+	void OutputOrderAction(CThostFtdcInputOrderActionField *req);
 
 	void OutputFrontConnected();
 	void OutputFrontDisconnected(int reason);
@@ -65,8 +68,10 @@ private:
 	void OutputErrRtnOrderInsert(CThostFtdcInputOrderField *pInputOrder, CThostFtdcRspInfoField *pRspInfo);
 	void OutputRtnOrder(CThostFtdcOrderField *pOrder);
 	void OutputRtnTrade(CThostFtdcTradeField *pTrade);
+	void OutputRspOrderAction(CThostFtdcInputOrderActionField *pInputOrderAction, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
 
 	void SerializeCTPInputOrder(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcInputOrderField *pInputOrder);
+	void SerializeCTPActionOrder(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcInputOrderActionField *pActionOrder);
 	void SerializeCTPOrder(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcOrderField *pOrder);
 	void SerializeCTPTrade(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcTradeField *pTrade);
 
@@ -75,6 +80,8 @@ private:
 	bool getOrderDir(const char *order_dir, char& action, char& dir);
 
 	void ConvertInsertOrderJson2CTP(rapidjson::Value &msg, CThostFtdcInputOrderField &req);
+	void ConvertCancelOrderJson2CTP(rapidjson::Value &msg, CThostFtdcInputOrderActionField &req);
+
 	void ConvertInsertOrderCTP2Common(CThostFtdcInputOrderField &req, Order &order);
 	void ConvertInsertOrderJson2Common(rapidjson::Value &msg, Order &order);
 	void ConvertRtnOrderCTP2Common(CThostFtdcOrderField *pOrder, Order &order, OrderStatusNotify &order_status_notify);
@@ -97,6 +104,7 @@ private:
 	std::string GenOutsideOrderIdFromOrder(CThostFtdcOrderField *pOrder);
 	std::string GenOutsideOrderIdFromDeal(CThostFtdcTradeField *pTrade);
 	std::string GenOutsideTradeIdFromDeal(CThostFtdcTradeField *pTrade);
+	bool GetCTPOrderSysIDFromOutsideId(TThostFtdcOrderSysIDType &ctp_order_sys_id, const char *outside_id, int len);
 
 
 private:
@@ -111,6 +119,7 @@ private:
 
 	int req_id_;
 	int order_ref_;
+	int order_action_ref_;
 
 	// connection info
 	std::string ctp_tradeing_day_;
