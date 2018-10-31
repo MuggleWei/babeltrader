@@ -26,6 +26,7 @@ public:
 	// trade service virtual function
 	virtual void InsertOrder(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Value &msg) override;
 	virtual void CancelOrder(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Value &msg) override;
+	virtual void QueryOrder(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Value &msg) override;
 
 	////////////////////////////////////////
 	// spi virtual function
@@ -46,16 +47,52 @@ public:
 
 	virtual void OnRspOrderAction(CThostFtdcInputOrderActionField *pInputOrderAction, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast) override;
 
+	virtual void OnRspQryOrder(CThostFtdcOrderField *pOrder, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast) override;
+
 private:
 	void RunAPI();
 	void RunService();
 
+	////////////////////////////////////////
+	// requests
 	void DoAuthenticate();
 	void DoLogin();
 	void DoSettlementConfirm();
 
+	////////////////////////////////////////
+	// broadcast or response message
+	void BroadcastOrderConfirm(Order &order, int error_id, const char *error_msg);
+	void BroadcastOrderStatus(Order &order, OrderStatusNotify &order_status_notify, int error_id, const char *error_msg);
+	void BroadcastOrderDeal(Order &order, OrderDealNotify &order_deal);
+	void SendRspOrderQry2Client(uWS::WebSocket<uWS::SERVER>* ws, OrderQuery &order_qry, std::vector<CThostFtdcOrderField> &orders, CThostFtdcRspInfoField *pRspInfo);
+
+	////////////////////////////////////////
+	// convert json to ctp struct
+	void ConvertInsertOrderJson2CTP(rapidjson::Value &msg, CThostFtdcInputOrderField &req);
+	void ConvertCancelOrderJson2CTP(rapidjson::Value &msg, CThostFtdcInputOrderActionField &req);
+	void ConvertQueryOrderJson2CTP(rapidjson::Value &msg, CThostFtdcQryOrderField &req);
+
+	////////////////////////////////////////
+	// convert ctp struct to json
+	void SerializeCTPInputOrder(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcInputOrderField *pInputOrder);
+	void SerializeCTPActionOrder(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcInputOrderActionField *pActionOrder);
+	void SerializeCTPQueryOrder(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcQryOrderField *pQryOrder);
+	void SerializeCTPOrder(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcOrderField *pOrder);
+	void SerializeCTPTrade(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcTradeField *pTrade);
+
+	////////////////////////////////////////
+	// convert to common
+	void ConvertInsertOrderCTP2Common(CThostFtdcInputOrderField &req, Order &order);
+	void ConvertInsertOrderJson2Common(rapidjson::Value &msg, Order &order);
+	void ConvertRtnOrderCTP2Common(CThostFtdcOrderField *pOrder, Order &order, OrderStatusNotify &order_status_notify);
+	void ConvertRtnTradeCTP2Common(CThostFtdcTradeField *pTrade, Order &order, OrderDealNotify &order_deal);
+	void ConvertQryOrderJson2Common(rapidjson::Value &msg, OrderQuery &order_qry);
+
+	////////////////////////////////////////
+	// output ctp struct 
 	void OutputOrderInsert(CThostFtdcInputOrderField *req);
 	void OutputOrderAction(CThostFtdcInputOrderActionField *req);
+	void OutputOrderQuery(CThostFtdcQryOrderField *req);
 
 	void OutputFrontConnected();
 	void OutputFrontDisconnected(int reason);
@@ -69,27 +106,11 @@ private:
 	void OutputRtnOrder(CThostFtdcOrderField *pOrder);
 	void OutputRtnTrade(CThostFtdcTradeField *pTrade);
 	void OutputRspOrderAction(CThostFtdcInputOrderActionField *pInputOrderAction, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
-
-	void SerializeCTPInputOrder(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcInputOrderField *pInputOrder);
-	void SerializeCTPActionOrder(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcInputOrderActionField *pActionOrder);
-	void SerializeCTPOrder(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcOrderField *pOrder);
-	void SerializeCTPTrade(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcTradeField *pTrade);
+	void OutputRspOrderQuery(CThostFtdcOrderField *pOrder, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
 
 	char getOrderType(const char *order_type);
 	char getOrderFlag1(const char *order_flag1);
 	bool getOrderDir(const char *order_dir, char& action, char& dir);
-
-	void ConvertInsertOrderJson2CTP(rapidjson::Value &msg, CThostFtdcInputOrderField &req);
-	void ConvertCancelOrderJson2CTP(rapidjson::Value &msg, CThostFtdcInputOrderActionField &req);
-
-	void ConvertInsertOrderCTP2Common(CThostFtdcInputOrderField &req, Order &order);
-	void ConvertInsertOrderJson2Common(rapidjson::Value &msg, Order &order);
-	void ConvertRtnOrderCTP2Common(CThostFtdcOrderField *pOrder, Order &order, OrderStatusNotify &order_status_notify);
-	void ConvertRtnTradeCTP2Common(CThostFtdcTradeField *pTrade, Order &order, OrderDealNotify &order_deal);
-
-	void BroadcastOrderConfirm(Order &order, int error_id, const char *error_msg);
-	void BroadcastOrderStatus(Order &order, OrderStatusNotify &order_status_notify, int error_id, const char *error_msg);
-	void BroadcastOrderDeal(Order &order, OrderDealNotify &order_deal);
 
 	void FillConnectionInfo(const char *tradeing_day, const char *login_time, int front_id, int session_id);
 	void ClearConnectionInfo();
@@ -106,6 +127,10 @@ private:
 	std::string GenOutsideTradeIdFromDeal(CThostFtdcTradeField *pTrade);
 	bool GetCTPOrderSysIDFromOutsideId(TThostFtdcOrderSysIDType &ctp_order_sys_id, const char *outside_id, int len);
 
+	std::string GetQryId(rapidjson::Value &msg);
+
+	void CacheQryOrder(int req_id, uWS::WebSocket<uWS::SERVER>* ws, OrderQuery &&order_qry);
+	void GetAndClearCacheQryOrder(int req_id, uWS::WebSocket<uWS::SERVER>*& ws, OrderQuery &order_qry);
 
 private:
 	CThostFtdcTraderApi *api_;
@@ -130,6 +155,13 @@ private:
 	// order recorder
 	std::map<std::string, Order> wait_deal_orders_;
 	std::mutex wati_deal_order_mtx_;
+
+	// query results
+	std::mutex qry_cache_mtx_;
+	std::map<int, uWS::WebSocket<uWS::SERVER>*> qry_ws_cache_;
+	std::map<int, OrderQuery> qry_info_cache_;
+
+	std::map<int, std::vector<CThostFtdcOrderField>> qry_order_caches_;
 };
 
 #endif

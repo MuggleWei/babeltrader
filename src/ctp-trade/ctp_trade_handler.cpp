@@ -62,6 +62,25 @@ void CTPTradeHandler::CancelOrder(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Va
 	}
 	api_->ReqOrderAction(&req, req_id_++);
 }
+void CTPTradeHandler::QueryOrder(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Value &msg)
+{
+	CThostFtdcQryOrderField req = { 0 };
+	ConvertQueryOrderJson2CTP(msg, req);
+
+	// output
+	OutputOrderQuery(&req);
+
+	// convert query order json to common
+	OrderQuery order_query;
+	ConvertQryOrderJson2Common(msg, order_query);
+	CacheQryOrder(req_id_, ws, std::move(order_query));
+
+	if (api_ == nullptr || !api_ready_)
+	{
+		throw std::runtime_error("trade api not ready yet");
+	}
+	api_->ReqQryOrder(&req, req_id_++);
+}
 
 void CTPTradeHandler::OnFrontConnected()
 {
@@ -187,6 +206,38 @@ void CTPTradeHandler::OnRspOrderAction(CThostFtdcInputOrderActionField *pInputOr
 	OutputRspOrderAction(pInputOrderAction, pRspInfo, nRequestID, bIsLast);
 }
 
+void CTPTradeHandler::OnRspQryOrder(CThostFtdcOrderField *pOrder, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+{
+	// output
+	OutputRspOrderQuery(pOrder, pRspInfo, nRequestID, bIsLast);
+
+	auto it = qry_order_caches_.find(nRequestID);
+	if (it == qry_order_caches_.end())
+	{
+		std::vector<CThostFtdcOrderField> vec;
+		qry_order_caches_[nRequestID] = vec;
+		it = qry_order_caches_.find(nRequestID);
+	}
+	CThostFtdcOrderField copy_order;
+	memcpy(&copy_order, pOrder, sizeof(copy_order));
+	it->second.push_back(copy_order);
+
+	if (bIsLast)
+	{
+		uWS::WebSocket<uWS::SERVER>* ws;
+		OrderQuery order_qry;
+		GetAndClearCacheQryOrder(nRequestID, ws, order_qry);
+		std::vector<CThostFtdcOrderField> &orders = qry_order_caches_[nRequestID];
+
+		if (ws)
+		{
+			SendRspOrderQry2Client(ws, order_qry, orders, pRspInfo);
+		}
+
+		qry_order_caches_.erase(nRequestID);
+	}
+}
+
 void CTPTradeHandler::RunAPI()
 {
 	api_ = CThostFtdcTraderApi::CreateFtdcTraderApi("./");
@@ -256,316 +307,287 @@ void CTPTradeHandler::DoSettlementConfirm()
 	api_->ReqSettlementInfoConfirm(&confirm, req_id_++);
 }
 
-void CTPTradeHandler::OutputOrderInsert(CThostFtdcInputOrderField *req)
+void CTPTradeHandler::BroadcastOrderConfirm(Order &order, int error_id, const char *error_msg)
 {
+	// serialize
 	rapidjson::StringBuffer s;
 	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
 
 	writer.StartObject();
 	writer.Key("msg");
-	writer.String("ctp_orderinsert");
-
-	writer.Key("data");
-	writer.StartObject();
-	SerializeCTPInputOrder(writer, req);
-	writer.EndObject();
-
-	writer.EndObject();
-	LOG(INFO) << s.GetString();
-}
-void CTPTradeHandler::OutputOrderAction(CThostFtdcInputOrderActionField *req)
-{
-	rapidjson::StringBuffer s;
-	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
-
-	writer.StartObject();
-	writer.Key("msg");
-	writer.String("ctp_orderaction");
-
-	writer.Key("data");
-	writer.StartObject();
-	SerializeCTPActionOrder(writer, req);
-	writer.EndObject();
-
-	writer.EndObject();
-	LOG(INFO) << s.GetString();
-}
-
-void CTPTradeHandler::OutputFrontConnected()
-{
-	rapidjson::StringBuffer s;
-	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
-
-	writer.StartObject();
-	writer.Key("msg");
-	writer.String("connected");
-	writer.EndObject();
-	LOG(INFO) << s.GetString();
-}
-void CTPTradeHandler::OutputFrontDisconnected(int reason)
-{
-	rapidjson::StringBuffer s;
-	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
-
-	writer.StartObject();
-	writer.Key("msg");
-	writer.String("disconnected");
-	writer.Key("data");
-	writer.StartObject();
-	writer.Key("reason");
-	writer.Int(reason);
-	writer.EndObject();
-	writer.EndObject();
-	LOG(INFO) << s.GetString();
-}
-void CTPTradeHandler::OutputRsperror(CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
-{
-	rapidjson::StringBuffer s;
-	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
-
-	writer.StartObject();
-	writer.Key("msg");
-	writer.String("on_error");
-	writer.Key("req_id");
-	writer.Int(nRequestID);
+	writer.String("confirmorder");
 	writer.Key("error_id");
-	writer.Int(pRspInfo->ErrorID);
-	writer.Key("error_msg");
-	writer.String(pRspInfo->ErrorMsg);
+	writer.Int(error_id);
+	// don't response error message, it will lead json loads error in python
+	// writer.Key("error_msg");
+	// writer.String(error_msg);
+
+	writer.Key("data");
+	writer.StartObject();
+	SerializeOrder(writer, order);
+	writer.EndObject();
 
 	writer.EndObject();
+
 	LOG(INFO) << s.GetString();
+
+	uws_hub_.getDefaultGroup<uWS::SERVER>().broadcast(s.GetString(), s.GetLength(), uWS::OpCode::TEXT);
 }
-void CTPTradeHandler::OutputAuthenticate(CThostFtdcRspAuthenticateField *pRspAuthenticateField, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+void CTPTradeHandler::BroadcastOrderStatus(Order &order, OrderStatusNotify &order_status_notify, int error_id, const char *error_msg)
 {
+	// serialize
 	rapidjson::StringBuffer s;
 	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
 
 	writer.StartObject();
 	writer.Key("msg");
-	writer.String("auth");
-	writer.Key("req_id");
-	writer.Int(nRequestID);
+	writer.String("orderstatus");
 	writer.Key("error_id");
-	writer.Int(pRspInfo->ErrorID);
-	writer.Key("error_msg");
-	writer.String(pRspInfo->ErrorMsg);
+	writer.Int(error_id);
+	// don't response error message, it will lead json loads error in python
+	// writer.Key("error_msg");
+	// writer.String(error_msg);
 
 	writer.Key("data");
 	writer.StartObject();
-	writer.Key("BrokerID");
-	writer.String(pRspAuthenticateField->BrokerID);
-	writer.Key("UserID");
-	writer.String(pRspAuthenticateField->UserID);
-	writer.Key("UserProductInfo");
-	writer.String(pRspAuthenticateField->UserProductInfo);
-	writer.EndObject(); // data
 
-	writer.EndObject(); // object
+	SerializeOrderStatus(writer, order_status_notify);
+
+	writer.Key("order");
+	writer.StartObject();
+	SerializeOrder(writer, order);
+	writer.EndObject();  // order end
+
+	writer.EndObject();  // data end
+	writer.EndObject();  // object end
+
 	LOG(INFO) << s.GetString();
+
+	uws_hub_.getDefaultGroup<uWS::SERVER>().broadcast(s.GetString(), s.GetLength(), uWS::OpCode::TEXT);
 }
-void CTPTradeHandler::OutputRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+void CTPTradeHandler::BroadcastOrderDeal(Order &order, OrderDealNotify &order_deal)
 {
+	// serialize
 	rapidjson::StringBuffer s;
 	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
 
 	writer.StartObject();
 	writer.Key("msg");
-	writer.String("login");
-	writer.Key("req_id");
-	writer.Int(nRequestID);
+	writer.String("orderdeal");
 	writer.Key("error_id");
-	writer.Int(pRspInfo->ErrorID);
-	writer.Key("error_msg");
-	writer.String(pRspInfo->ErrorMsg);
+	writer.Int(0);
+	// don't response error message, it will lead json loads error in python
+	// writer.Key("error_msg");
+	// writer.String(error_msg);
 
 	writer.Key("data");
 	writer.StartObject();
-	writer.Key("TradingDay");
-	writer.String(pRspUserLogin->TradingDay);
-	writer.Key("LoginTime");
-	writer.String(pRspUserLogin->LoginTime);
-	writer.Key("BrokerID");
-	writer.String(pRspUserLogin->BrokerID);
-	writer.Key("UserID");
-	writer.String(pRspUserLogin->UserID);
-	writer.Key("SystemName");
-	writer.String(pRspUserLogin->SystemName);
-	writer.Key("FrontID");
-	writer.Int(pRspUserLogin->FrontID);
-	writer.Key("SessionID");
-	writer.Int(pRspUserLogin->SessionID);
-	writer.Key("MaxOrderRef");
-	writer.String(pRspUserLogin->MaxOrderRef);
-	writer.Key("SHFETime");
-	writer.String(pRspUserLogin->SHFETime);
-	writer.Key("DCETime");
-	writer.String(pRspUserLogin->DCETime);
-	writer.Key("CZCETime");
-	writer.String(pRspUserLogin->CZCETime);
-	writer.Key("FFEXTime");
-	writer.String(pRspUserLogin->FFEXTime);
-	writer.Key("INETime");
-	writer.String(pRspUserLogin->INETime);
-	writer.EndObject();
 
-	writer.EndObject();
+	SerializeOrderDeal(writer, order_deal);
+
+	writer.Key("order");
+	writer.StartObject();
+	SerializeOrder(writer, order);
+	writer.EndObject();  // order end
+
+	writer.EndObject();  // data end
+	writer.EndObject();  // object end
+
 	LOG(INFO) << s.GetString();
+
+	uws_hub_.getDefaultGroup<uWS::SERVER>().broadcast(s.GetString(), s.GetLength(), uWS::OpCode::TEXT);
 }
-void CTPTradeHandler::OutputRspUserLogout(CThostFtdcUserLogoutField *pUserLogout, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+void CTPTradeHandler::SendRspOrderQry2Client(uWS::WebSocket<uWS::SERVER>* ws, OrderQuery &order_qry, std::vector<CThostFtdcOrderField> &orders, CThostFtdcRspInfoField *pRspInfo)
 {
 	rapidjson::StringBuffer s;
 	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
 
 	writer.StartObject();
 	writer.Key("msg");
-	writer.String("logout");
-	writer.Key("req_id");
-	writer.Int(nRequestID);
-	writer.Key("error_id");
-	writer.Int(pRspInfo->ErrorID);
-	writer.Key("error_msg");
-	writer.String(pRspInfo->ErrorMsg);
-
-	writer.EndObject();
-	LOG(INFO) << s.GetString();
-}
-void CTPTradeHandler::OutputRspSettlementConfirm(CThostFtdcSettlementInfoConfirmField *pSettlementInfoConfirm, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
-{
-	rapidjson::StringBuffer s;
-	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
-
-	writer.StartObject();
-	writer.Key("msg");
-	writer.String("rspsettlementconfirm");
-	writer.Key("req_id");
-	writer.Int(nRequestID);
-	writer.Key("error_id");
-	writer.Int(pRspInfo->ErrorID);
-	writer.Key("error_msg");
-	writer.String(pRspInfo->ErrorMsg);
+	writer.String("rsp_qryorder");
+	if (pRspInfo)
+	{
+		writer.Key("error_id");
+		writer.Int(pRspInfo->ErrorID);
+	}
+	else
+	{
+		writer.Key("error_id");
+		writer.Int(0);
+	}
 
 	writer.Key("data");
 	writer.StartObject();
-	writer.Key("BrokerID");
-	writer.String(pSettlementInfoConfirm->BrokerID);
-	writer.Key("InvestorID");
-	writer.String(pSettlementInfoConfirm->InvestorID);
-	writer.Key("ConfirmDate");
-	writer.String(pSettlementInfoConfirm->ConfirmDate);
-	writer.Key("ConfirmTime");
-	writer.String(pSettlementInfoConfirm->ConfirmTime);
-	writer.Key("SettlementID");
-	writer.Int(pSettlementInfoConfirm->SettlementID);
-	writer.Key("AccountID");
-	writer.String(pSettlementInfoConfirm->AccountID);
-	writer.Key("CurrencyID");
-	writer.String(pSettlementInfoConfirm->CurrencyID);
-	writer.EndObject();
 
-	writer.EndObject();
-	LOG(INFO) << s.GetString();
-}
-void CTPTradeHandler::OutputRspOrderInsert(CThostFtdcInputOrderField *pInputOrder, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
-{
-	rapidjson::StringBuffer s;
-	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
-
-	writer.StartObject();
-	writer.Key("msg");
-	writer.String("ctp_rsporderinsert");
-	writer.Key("req_id");
-	writer.Int(nRequestID);
-	writer.Key("error_id");
-	writer.Int(pRspInfo->ErrorID);
-	writer.Key("error_msg");
-	writer.String(pRspInfo->ErrorMsg);
+	SerializeOrderQuery(writer, order_qry);
 
 	writer.Key("data");
-	writer.StartObject();
-	SerializeCTPInputOrder(writer, pInputOrder);
-	writer.EndObject();
+	writer.StartArray();
 
-	writer.EndObject();
+	for (CThostFtdcOrderField &ctp_order : orders)
+	{
+		Order order;
+		OrderStatusNotify order_status;
+		ConvertRtnOrderCTP2Common(&ctp_order, order, order_status);
+
+		writer.StartObject();
+
+		writer.Key("status");
+		writer.StartObject();
+		SerializeOrderStatus(writer, order_status);
+		writer.EndObject();
+
+		writer.Key("order");
+		writer.StartObject();
+		SerializeOrder(writer, order);
+		writer.EndObject();
+
+		writer.EndObject();  // order end
+	}
+
+	writer.EndArray();  // orders
+	
+	writer.EndObject();  // data end
+
+	writer.EndObject();  // object end
+
 	LOG(INFO) << s.GetString();
+
+	ws_service_.SendMsgToClient(ws, s.GetString());
 }
-void CTPTradeHandler::OutputErrRtnOrderInsert(CThostFtdcInputOrderField *pInputOrder, CThostFtdcRspInfoField *pRspInfo)
+
+void CTPTradeHandler::ConvertInsertOrderJson2CTP(rapidjson::Value &msg, CThostFtdcInputOrderField &req)
 {
-	rapidjson::StringBuffer s;
-	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+	// check invalid field
+	if (!(msg.HasMember("exchange") && msg["exchange"].IsString())) {
+		throw std::runtime_error("field \"exchange\" need string");
+	}
+	if (!(msg.HasMember("symbol") && msg["symbol"].IsString())) {
+		throw std::runtime_error("field \"symbol\" need string");
+	}
+	if (!(msg.HasMember("contract") && msg["contract"].IsString())) {
+		throw std::runtime_error("field \"contract\" need string");
+	}
+	if (!(msg.HasMember("order_type") && msg["order_type"].IsString())) {
+		throw std::runtime_error("field \"order_type\" need string");
+	}
+	if (!(msg.HasMember("amount") && (msg["amount"].IsInt() || msg["amount"].IsDouble()))) {
+		throw std::runtime_error("field \"amount\" need numeric");
+	}
 
-	writer.StartObject();
-	writer.Key("msg");
-	writer.String("ctp_errrtnorderinsert");
-	writer.Key("error_id");
-	writer.Int(pRspInfo->ErrorID);
-	writer.Key("error_msg");
-	writer.String(pRspInfo->ErrorMsg);
+	// start convert
+	strncpy(req.BrokerID, conf_.broker_id.c_str(), sizeof(req.BrokerID) - 1);
+	strncpy(req.InvestorID, conf_.user_id.c_str(), sizeof(req.InvestorID) - 1);
+	strncpy(req.ExchangeID, msg["exchange"].GetString(), msg["exchange"].GetStringLength());
+	snprintf(req.InstrumentID, sizeof(req.InstrumentID), "%s%s",
+		msg["symbol"].GetString(), msg["contract"].GetString());
+	strncpy(req.UserID, conf_.user_id.c_str(), sizeof(req.UserID) - 1);
 
-	writer.Key("data");
-	writer.StartObject();
-	SerializeCTPInputOrder(writer, pInputOrder);
-	writer.EndObject();
+	req.RequestID = req_id_;
+	snprintf(req.OrderRef, sizeof(req.OrderRef), "%d", order_ref_);
+	++order_ref_;
 
-	writer.EndObject();
-	LOG(INFO) << s.GetString();
+	req.OrderPriceType = getOrderType(msg["order_type"].GetString());
+	if (req.OrderPriceType == (char)0)
+	{
+		throw std::runtime_error("unsupport order type");
+	}
+
+	if (!getOrderDir(msg["dir"].GetString(), req.CombOffsetFlag[0], req.Direction)) {
+		throw std::runtime_error("unsupport order dir");
+	}
+
+	if (msg.HasMember("order_flag1") && msg["order_flag1"].IsString())
+	{
+		req.CombHedgeFlag[0] = getOrderFlag1(msg["order_flag1"].GetString());
+	}
+	else
+	{
+		req.CombHedgeFlag[0] = THOST_FTDC_HF_Speculation;
+	}
+
+	if (req.OrderPriceType == THOST_FTDC_OPT_LimitPrice) {
+		if (!(msg.HasMember("price") && (msg["price"].IsDouble() || msg["price"].IsInt()))) {
+			throw std::runtime_error("field \"price\" need double");
+		}
+
+		if (msg["price"].IsDouble())
+		{
+			req.LimitPrice = msg["price"].GetDouble();
+		}
+		else
+		{
+			req.LimitPrice = (double)msg["price"].GetInt();
+		}
+
+	}
+
+	if (msg["amount"].IsInt())
+	{
+		req.VolumeTotalOriginal = msg["amount"].GetInt();
+	}
+	else if (msg["amount"].IsDouble())
+	{
+		req.VolumeTotalOriginal = (int)msg["amount"].GetDouble();
+	}
+
+	req.TimeCondition = THOST_FTDC_TC_GFD;
+	req.VolumeCondition = THOST_FTDC_VC_AV;
+	req.MinVolume = 1;
+	req.ContingentCondition = THOST_FTDC_CC_Immediately;
+	req.StopPrice = 0;
+	req.ForceCloseReason = THOST_FTDC_FCC_NotForceClose;
+	req.IsAutoSuspend = 0;
 }
-void CTPTradeHandler::OutputRtnOrder(CThostFtdcOrderField *pOrder)
+void CTPTradeHandler::ConvertCancelOrderJson2CTP(rapidjson::Value &msg, CThostFtdcInputOrderActionField &req)
 {
-	rapidjson::StringBuffer s;
-	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+	// check invalid field
+	if (!(msg.HasMember("outside_id") && msg["outside_id"].IsString())) {
+		throw std::runtime_error("field \"outside_id\" need string");
+	}
+	if (msg["outside_id"].GetStringLength() == 0)
+	{
+		throw std::runtime_error("field \"outside_id\" need string");
+	}
+	if (!(msg.HasMember("exchange") && msg["exchange"].IsString())) {
+		throw std::runtime_error("field \"exchange\" need string");
+	}
+	if (!(msg.HasMember("symbol") && msg["symbol"].IsString())) {
+		throw std::runtime_error("field \"symbol\" need string");
+	}
+	if (!(msg.HasMember("contract") && msg["contract"].IsString())) {
+		throw std::runtime_error("field \"contract\" need string");
+	}
 
-	writer.StartObject();
-	writer.Key("msg");
-	writer.String("ctp_rtnorder");
+	// start convert
+	strncpy(req.BrokerID, conf_.broker_id.c_str(), sizeof(req.BrokerID) - 1);
+	strncpy(req.InvestorID, conf_.user_id.c_str(), sizeof(req.InvestorID) - 1);
+	strncpy(req.UserID, conf_.user_id.c_str(), sizeof(req.UserID) - 1);
 
-	writer.Key("data");
-	writer.StartObject();
-	SerializeCTPOrder(writer, pOrder);
-	writer.EndObject();
+	req.RequestID = req_id_;
+	req.OrderActionRef = order_action_ref_;
+	++order_action_ref_;
 
-	writer.EndObject();
-	LOG(INFO) << s.GetString();
+	GetCTPOrderSysIDFromOutsideId(req.OrderSysID, msg["outside_id"].GetString(), msg["outside_id"].GetStringLength());
+
+	strncpy(req.ExchangeID, msg["exchange"].GetString(), sizeof(req.ExchangeID) - 1);
+	snprintf(req.InstrumentID, sizeof(req.InstrumentID) - 1, "%s%s", msg["symbol"].GetString(), msg["contract"].GetString());
+	req.ActionFlag = THOST_FTDC_AF_Delete;
 }
-void CTPTradeHandler::OutputRtnTrade(CThostFtdcTradeField *pTrade)
+void CTPTradeHandler::ConvertQueryOrderJson2CTP(rapidjson::Value &msg, CThostFtdcQryOrderField &req)
 {
-	rapidjson::StringBuffer s;
-	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
-
-	writer.StartObject();
-	writer.Key("msg");
-	writer.String("ctp_rtntrade");
-
-	writer.Key("data");
-	writer.StartObject();
-	SerializeCTPTrade(writer, pTrade);
-	writer.EndObject();
-
-	writer.EndObject();
-	LOG(INFO) << s.GetString();
-}
-void CTPTradeHandler::OutputRspOrderAction(CThostFtdcInputOrderActionField *pInputOrderAction, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
-{
-	rapidjson::StringBuffer s;
-	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
-
-	writer.StartObject();
-	writer.Key("msg");
-	writer.String("ctp_rsporderaction");
-	writer.Key("req_id");
-	writer.Int(nRequestID);
-	writer.Key("error_id");
-	writer.Int(pRspInfo->ErrorID);
-	writer.Key("error_msg");
-	writer.String(pRspInfo->ErrorMsg);
-
-	writer.Key("data");
-	writer.StartObject();
-	SerializeCTPActionOrder(writer, pInputOrderAction);
-	writer.EndObject();
-
-	writer.EndObject();
-	LOG(INFO) << s.GetString();
+	strncpy(req.BrokerID, conf_.broker_id.c_str(), sizeof(req.BrokerID) - 1);
+	strncpy(req.InvestorID, conf_.user_id.c_str(), sizeof(req.InvestorID) - 1);
+	if (msg.HasMember("exchange") && msg["exchange"].IsString() && msg["exchange"].GetStringLength() > 0) {
+		strncpy(req.ExchangeID, msg["exchange"].GetString(), sizeof(req.ExchangeID) - 1);
+	}
+	if (msg.HasMember("symbol") && msg["symbol"].IsString() && msg["symbol"].GetStringLength() > 0 &&
+		msg.HasMember("contract") && msg["contract"].IsString() && msg["contract"].GetStringLength() > 0) {
+		snprintf(req.InstrumentID, sizeof(req.InstrumentID) - 1, "%s%s", msg["symbol"].GetString(), msg["contract"].GetString());
+	}
+	if (msg.HasMember("outside_id") && msg["outside_id"].IsString() && msg["outside_id"].GetStringLength() > 0) {
+		GetCTPOrderSysIDFromOutsideId(req.OrderSysID, msg["outside_id"].GetString(), msg["outside_id"].GetStringLength());
+	}
 }
 
 void CTPTradeHandler::SerializeCTPInputOrder(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcInputOrderField *pInputOrder)
@@ -723,6 +745,32 @@ void CTPTradeHandler::SerializeCTPActionOrder(rapidjson::Writer<rapidjson::Strin
 
 	writer.Key("MacAddress");
 	writer.String(pActionOrder->MacAddress);
+}
+void CTPTradeHandler::SerializeCTPQueryOrder(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcQryOrderField *pQryOrder)
+{
+	writer.Key("BrokerID");
+	writer.String(pQryOrder->BrokerID);
+
+	writer.Key("InvestorID");
+	writer.String(pQryOrder->InvestorID);
+
+	writer.Key("InstrumentID");
+	writer.String(pQryOrder->InstrumentID);
+
+	writer.Key("ExchangeID");
+	writer.String(pQryOrder->ExchangeID);
+
+	writer.Key("OrderSysID");
+	writer.String(pQryOrder->OrderSysID);
+
+	writer.Key("InsertTimeStart");
+	writer.String(pQryOrder->InsertTimeStart);
+
+	writer.Key("InsertTimeEnd");
+	writer.String(pQryOrder->InsertTimeEnd);
+
+	writer.Key("InvestUnitID");
+	writer.String(pQryOrder->InvestUnitID);
 }
 void CTPTradeHandler::SerializeCTPOrder(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcOrderField *pOrder)
 {
@@ -1029,6 +1077,632 @@ void CTPTradeHandler::SerializeCTPTrade(rapidjson::Writer<rapidjson::StringBuffe
 	writer.String(pTrade->InvestUnitID);
 }
 
+void CTPTradeHandler::ConvertInsertOrderCTP2Common(CThostFtdcInputOrderField &req, Order &order)
+{
+	order.market = "ctp";
+	order.exchange = req.ExchangeID;
+	order.type = "future";
+	CTPSplitInstrument(req.InstrumentID, order.symbol, order.contract);
+	order.contract_id = order.contract;
+	if (req.OrderPriceType == THOST_FTDC_OPT_AnyPrice)
+	{
+		order.order_type = "market";
+	}
+	else
+	{
+		order.order_type = "limit";
+	}
+
+	switch (req.CombHedgeFlag[0])
+	{
+	case THOST_FTDC_HF_Speculation:
+	{
+		order.order_flag1 = "speculation";
+	}break;
+	case THOST_FTDC_HF_Arbitrage:
+	{
+		order.order_flag1 = "arbitrage";
+	}break;
+	case THOST_FTDC_HF_Hedge:
+	{
+		order.order_flag1 = "hedge";
+	}break;
+	case THOST_FTDC_HF_MarketMaker:
+	{
+		order.order_flag1 = "marketmaker";
+	}break;
+	}
+
+	if (req.Direction == THOST_FTDC_D_Buy)
+	{
+		if (req.CombOffsetFlag[0] == THOST_FTDC_OF_Open)
+		{
+			order.dir = "open_long";
+		}
+		else if (req.CombOffsetFlag[0] == THOST_FTDC_OF_CloseToday)
+		{
+			order.dir = "closetoday_short";
+		}
+		else if (req.CombOffsetFlag[0] == THOST_FTDC_OF_CloseYesterday)
+		{
+			order.dir = "closeyesterday_short";
+		}
+		else
+		{
+			order.dir = "close_short";
+		}
+	}
+	else
+	{
+		if (req.CombOffsetFlag[0] == THOST_FTDC_OF_Open)
+		{
+			order.dir = "open_short";
+		}
+		else if (req.CombOffsetFlag[0] == THOST_FTDC_OF_CloseToday)
+		{
+			order.dir = "closetoday_long";
+		}
+		else if (req.CombOffsetFlag[0] == THOST_FTDC_OF_CloseYesterday)
+		{
+			order.dir = "closeyesterday_long";
+		}
+		else
+		{
+			order.dir = "close_long";
+		}
+	}
+
+	order.price = req.LimitPrice;
+	order.amount = req.VolumeTotalOriginal;
+	order.total_price = 0;
+	order.ts = time(nullptr) * 1000;
+}
+void CTPTradeHandler::ConvertInsertOrderJson2Common(rapidjson::Value &msg, Order &order)
+{
+	if (msg.HasMember("user_id") && msg["user_id"].IsString()) {
+		order.user_id = msg["user_id"].GetString();
+	}
+
+	if (msg.HasMember("order_id") && msg["order_id"].IsString()) {
+		order.order_id = msg["order_id"].GetString();
+	}
+
+	if (msg.HasMember("client_order_id") && msg["client_order_id"].IsString()) {
+		order.client_order_id = msg["client_order_id"].GetString();
+	}
+
+	if (msg.HasMember("market") && msg["market"].IsString()) {
+		order.market = msg["market"].GetString();
+	}
+
+	if (msg.HasMember("exchange") && msg["exchange"].IsString()) {
+		order.exchange = msg["exchange"].GetString();
+	}
+
+	if (msg.HasMember("type") && msg["type"].IsString()) {
+		order.type = msg["type"].GetString();
+	}
+
+	if (msg.HasMember("symbol") && msg["symbol"].IsString()) {
+		order.symbol = msg["symbol"].GetString();
+	}
+
+	if (msg.HasMember("contract") && msg["contract"].IsString()) {
+		order.contract = msg["contract"].GetString();
+	}
+
+	if (msg.HasMember("contract_id") && msg["contract_id"].IsString()) {
+		order.contract_id = msg["contract_id"].GetString();
+	}
+
+	if (msg.HasMember("order_type") && msg["order_type"].IsString()) {
+		order.order_type = msg["order_type"].GetString();
+	}
+
+	if (msg.HasMember("order_flag1") && msg["order_flag1"].IsString()) {
+		order.order_flag1 = msg["order_flag1"].GetString();
+	}
+
+	if (msg.HasMember("dir") && msg["dir"].IsString()) {
+		order.dir = msg["dir"].GetString();
+	}
+
+	if (msg.HasMember("price")) {
+		if (msg["price"].IsInt())
+		{
+			order.price = msg["price"].GetInt();
+		}
+		else if (msg["price"].IsDouble())
+		{
+			order.price = msg["price"].GetDouble();
+		}
+	}
+
+	if (msg.HasMember("amount")) {
+		if (msg["amount"].IsInt())
+		{
+			order.amount = msg["amount"].GetInt();
+		}
+		else if (msg["amount"].IsDouble())
+		{
+			order.amount = msg["amount"].GetDouble();
+		}
+	}
+
+	if (msg.HasMember("total_price")) {
+		if (msg["total_price"].IsInt())
+		{
+			order.total_price = msg["total_price"].GetInt();
+		}
+		else if (msg["total_price"].IsDouble())
+		{
+			order.total_price = msg["total_price"].GetDouble();
+		}
+	}
+
+	if (msg.HasMember("ts") && msg["ts"].IsInt64()) {
+		order.ts = msg["ts"].GetInt64();
+	}
+}
+void CTPTradeHandler::ConvertRtnOrderCTP2Common(CThostFtdcOrderField *pOrder, Order &order, OrderStatusNotify &order_status_notify)
+{
+	// order
+	{
+		order.outside_id = GenOutsideOrderIdFromOrder(pOrder);
+		order.market = "ctp";
+		order.exchange = pOrder->ExchangeID;
+		order.type = "future";
+		CTPSplitInstrument(pOrder->InstrumentID, order.symbol, order.contract);
+		order.contract_id = order.contract;
+		if (pOrder->OrderPriceType == THOST_FTDC_OPT_AnyPrice)
+		{
+			order.order_type = "market";
+		}
+		else
+		{
+			order.order_type = "limit";
+		}
+
+		GetOrderDirection(pOrder->Direction, pOrder->CombHedgeFlag[0], pOrder->CombOffsetFlag[0], order);
+
+		order.price = pOrder->LimitPrice;
+		order.amount = pOrder->VolumeTotalOriginal;
+		order.total_price = 0;
+
+		order.ts = CTPGetTimestamp(pOrder->InsertDate, pOrder->InsertTime, 0);
+	}
+
+	// status
+	{
+		order_status_notify.order_status = (OrderStatusEnum)GetOrderStatus(pOrder->OrderStatus);
+		order_status_notify.order_submit_status = (OrderSubmitStatusEnum)GetOrderSubmitStatus(pOrder->OrderSubmitStatus);
+		order_status_notify.amount = pOrder->VolumeTotalOriginal;
+		order_status_notify.dealed_amount = pOrder->VolumeTraded;
+	}
+}
+void CTPTradeHandler::ConvertRtnTradeCTP2Common(CThostFtdcTradeField *pTrade, Order &order, OrderDealNotify &order_deal)
+{
+	// order
+	{
+		order.outside_id = GenOutsideOrderIdFromDeal(pTrade);
+		order.market = "ctp";
+		order.exchange = pTrade->ExchangeID;
+		order.type = "future";
+		CTPSplitInstrument(pTrade->InstrumentID, order.symbol, order.contract);
+		order.contract_id = order.contract;
+		GetOrderDirection(pTrade->Direction, pTrade->HedgeFlag, pTrade->OffsetFlag, order);
+	}
+
+	// deal
+	{
+		order_deal.price = pTrade->Price;
+		order_deal.amount = pTrade->Volume;
+		order_deal.trading_day = pTrade->TradingDay;
+		order_deal.trade_id = GenOutsideTradeIdFromDeal(pTrade);
+		order_deal.ts = CTPGetTimestamp(pTrade->TradeDate, pTrade->TradeTime, 0);
+	}
+}
+void CTPTradeHandler::ConvertQryOrderJson2Common(rapidjson::Value &msg, OrderQuery &order_qry)
+{
+	if (msg.HasMember("qry_id") && msg["qry_id"].IsString()) {
+		order_qry.qry_id = msg["qry_id"].GetString();
+	}
+
+	if (msg.HasMember("user_id") && msg["user_id"].IsString()) {
+		order_qry.user_id = msg["user_id"].GetString();
+	}
+
+	if (msg.HasMember("outside_id") && msg["outside_id"].IsString()) {
+		order_qry.outside_id = msg["outside_id"].GetString();
+	}
+
+	if (msg.HasMember("market") && msg["market"].IsString()) {
+		order_qry.market = msg["market"].GetString();
+	}
+
+	if (msg.HasMember("exchange") && msg["exchange"].IsString()) {
+		order_qry.exchange = msg["exchange"].GetString();
+	}
+
+	if (msg.HasMember("type") && msg["type"].IsString()) {
+		order_qry.type = msg["type"].GetString();
+	}
+
+	if (msg.HasMember("symbol") && msg["symbol"].IsString()) {
+		order_qry.symbol = msg["symbol"].GetString();
+	}
+
+	if (msg.HasMember("contract") && msg["contract"].IsString()) {
+		order_qry.contract = msg["contract"].GetString();
+	}
+
+	if (msg.HasMember("contract_id") && msg["contract_id"].IsString()) {
+		order_qry.contract_id = msg["contract_id"].GetString();
+	}
+}
+
+void CTPTradeHandler::OutputOrderInsert(CThostFtdcInputOrderField *req)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("ctp_orderinsert");
+
+	writer.Key("data");
+	writer.StartObject();
+	SerializeCTPInputOrder(writer, req);
+	writer.EndObject();
+
+	writer.EndObject();
+	LOG(INFO) << s.GetString();
+}
+void CTPTradeHandler::OutputOrderAction(CThostFtdcInputOrderActionField *req)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("ctp_orderaction");
+
+	writer.Key("data");
+	writer.StartObject();
+	SerializeCTPActionOrder(writer, req);
+	writer.EndObject();
+
+	writer.EndObject();
+	LOG(INFO) << s.GetString();
+}
+void CTPTradeHandler::OutputOrderQuery(CThostFtdcQryOrderField *req)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("ctp_orderquery");
+
+	writer.Key("data");
+	writer.StartObject();
+	SerializeCTPQueryOrder(writer, req);
+	writer.EndObject();
+
+	writer.EndObject();
+	LOG(INFO) << s.GetString();
+}
+
+void CTPTradeHandler::OutputFrontConnected()
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("connected");
+	writer.EndObject();
+	LOG(INFO) << s.GetString();
+}
+void CTPTradeHandler::OutputFrontDisconnected(int reason)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("disconnected");
+	writer.Key("data");
+	writer.StartObject();
+	writer.Key("reason");
+	writer.Int(reason);
+	writer.EndObject();
+	writer.EndObject();
+	LOG(INFO) << s.GetString();
+}
+void CTPTradeHandler::OutputRsperror(CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("on_error");
+	writer.Key("req_id");
+	writer.Int(nRequestID);
+	writer.Key("error_id");
+	writer.Int(pRspInfo->ErrorID);
+	writer.Key("error_msg");
+	writer.String(pRspInfo->ErrorMsg);
+
+	writer.EndObject();
+	LOG(INFO) << s.GetString();
+}
+void CTPTradeHandler::OutputAuthenticate(CThostFtdcRspAuthenticateField *pRspAuthenticateField, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("auth");
+	writer.Key("req_id");
+	writer.Int(nRequestID);
+	writer.Key("error_id");
+	writer.Int(pRspInfo->ErrorID);
+	writer.Key("error_msg");
+	writer.String(pRspInfo->ErrorMsg);
+
+	writer.Key("data");
+	writer.StartObject();
+	writer.Key("BrokerID");
+	writer.String(pRspAuthenticateField->BrokerID);
+	writer.Key("UserID");
+	writer.String(pRspAuthenticateField->UserID);
+	writer.Key("UserProductInfo");
+	writer.String(pRspAuthenticateField->UserProductInfo);
+	writer.EndObject(); // data
+
+	writer.EndObject(); // object
+	LOG(INFO) << s.GetString();
+}
+void CTPTradeHandler::OutputRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("login");
+	writer.Key("req_id");
+	writer.Int(nRequestID);
+	writer.Key("error_id");
+	writer.Int(pRspInfo->ErrorID);
+	writer.Key("error_msg");
+	writer.String(pRspInfo->ErrorMsg);
+
+	writer.Key("data");
+	writer.StartObject();
+	writer.Key("TradingDay");
+	writer.String(pRspUserLogin->TradingDay);
+	writer.Key("LoginTime");
+	writer.String(pRspUserLogin->LoginTime);
+	writer.Key("BrokerID");
+	writer.String(pRspUserLogin->BrokerID);
+	writer.Key("UserID");
+	writer.String(pRspUserLogin->UserID);
+	writer.Key("SystemName");
+	writer.String(pRspUserLogin->SystemName);
+	writer.Key("FrontID");
+	writer.Int(pRspUserLogin->FrontID);
+	writer.Key("SessionID");
+	writer.Int(pRspUserLogin->SessionID);
+	writer.Key("MaxOrderRef");
+	writer.String(pRspUserLogin->MaxOrderRef);
+	writer.Key("SHFETime");
+	writer.String(pRspUserLogin->SHFETime);
+	writer.Key("DCETime");
+	writer.String(pRspUserLogin->DCETime);
+	writer.Key("CZCETime");
+	writer.String(pRspUserLogin->CZCETime);
+	writer.Key("FFEXTime");
+	writer.String(pRspUserLogin->FFEXTime);
+	writer.Key("INETime");
+	writer.String(pRspUserLogin->INETime);
+	writer.EndObject();
+
+	writer.EndObject();
+	LOG(INFO) << s.GetString();
+}
+void CTPTradeHandler::OutputRspUserLogout(CThostFtdcUserLogoutField *pUserLogout, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("logout");
+	writer.Key("req_id");
+	writer.Int(nRequestID);
+	writer.Key("error_id");
+	writer.Int(pRspInfo->ErrorID);
+	writer.Key("error_msg");
+	writer.String(pRspInfo->ErrorMsg);
+
+	writer.EndObject();
+	LOG(INFO) << s.GetString();
+}
+void CTPTradeHandler::OutputRspSettlementConfirm(CThostFtdcSettlementInfoConfirmField *pSettlementInfoConfirm, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("rspsettlementconfirm");
+	writer.Key("req_id");
+	writer.Int(nRequestID);
+	writer.Key("error_id");
+	writer.Int(pRspInfo->ErrorID);
+	writer.Key("error_msg");
+	writer.String(pRspInfo->ErrorMsg);
+
+	writer.Key("data");
+	writer.StartObject();
+	writer.Key("BrokerID");
+	writer.String(pSettlementInfoConfirm->BrokerID);
+	writer.Key("InvestorID");
+	writer.String(pSettlementInfoConfirm->InvestorID);
+	writer.Key("ConfirmDate");
+	writer.String(pSettlementInfoConfirm->ConfirmDate);
+	writer.Key("ConfirmTime");
+	writer.String(pSettlementInfoConfirm->ConfirmTime);
+	writer.Key("SettlementID");
+	writer.Int(pSettlementInfoConfirm->SettlementID);
+	writer.Key("AccountID");
+	writer.String(pSettlementInfoConfirm->AccountID);
+	writer.Key("CurrencyID");
+	writer.String(pSettlementInfoConfirm->CurrencyID);
+	writer.EndObject();
+
+	writer.EndObject();
+	LOG(INFO) << s.GetString();
+}
+void CTPTradeHandler::OutputRspOrderInsert(CThostFtdcInputOrderField *pInputOrder, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("ctp_rsporderinsert");
+	writer.Key("req_id");
+	writer.Int(nRequestID);
+	writer.Key("error_id");
+	writer.Int(pRspInfo->ErrorID);
+	writer.Key("error_msg");
+	writer.String(pRspInfo->ErrorMsg);
+
+	writer.Key("data");
+	writer.StartObject();
+	SerializeCTPInputOrder(writer, pInputOrder);
+	writer.EndObject();
+
+	writer.EndObject();
+	LOG(INFO) << s.GetString();
+}
+void CTPTradeHandler::OutputErrRtnOrderInsert(CThostFtdcInputOrderField *pInputOrder, CThostFtdcRspInfoField *pRspInfo)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("ctp_errrtnorderinsert");
+	writer.Key("error_id");
+	writer.Int(pRspInfo->ErrorID);
+	writer.Key("error_msg");
+	writer.String(pRspInfo->ErrorMsg);
+
+	writer.Key("data");
+	writer.StartObject();
+	SerializeCTPInputOrder(writer, pInputOrder);
+	writer.EndObject();
+
+	writer.EndObject();
+	LOG(INFO) << s.GetString();
+}
+void CTPTradeHandler::OutputRtnOrder(CThostFtdcOrderField *pOrder)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("ctp_rtnorder");
+
+	writer.Key("data");
+	writer.StartObject();
+	SerializeCTPOrder(writer, pOrder);
+	writer.EndObject();
+
+	writer.EndObject();
+	LOG(INFO) << s.GetString();
+}
+void CTPTradeHandler::OutputRtnTrade(CThostFtdcTradeField *pTrade)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("ctp_rtntrade");
+
+	writer.Key("data");
+	writer.StartObject();
+	SerializeCTPTrade(writer, pTrade);
+	writer.EndObject();
+
+	writer.EndObject();
+	LOG(INFO) << s.GetString();
+}
+void CTPTradeHandler::OutputRspOrderAction(CThostFtdcInputOrderActionField *pInputOrderAction, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("ctp_rsporderaction");
+	writer.Key("req_id");
+	writer.Int(nRequestID);
+	writer.Key("error_id");
+	writer.Int(pRspInfo->ErrorID);
+	writer.Key("error_msg");
+	writer.String(pRspInfo->ErrorMsg);
+
+	writer.Key("data");
+	writer.StartObject();
+	SerializeCTPActionOrder(writer, pInputOrderAction);
+	writer.EndObject();
+
+	writer.EndObject();
+	LOG(INFO) << s.GetString();
+}
+void CTPTradeHandler::OutputRspOrderQuery(CThostFtdcOrderField *pOrder, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("ctp_rspqryorder");
+	writer.Key("req_id");
+	writer.Int(nRequestID);
+	writer.Key("is_last");
+	writer.Bool(bIsLast);
+	if (pRspInfo)
+	{
+		writer.Key("error_id");
+		writer.Int(pRspInfo->ErrorID);
+		writer.Key("error_msg");
+		writer.String(pRspInfo->ErrorMsg);
+	}
+	else
+	{
+		writer.Key("error_id");
+		writer.Int(0);
+	}
+
+	writer.Key("data");
+	writer.StartObject();
+	SerializeCTPOrder(writer, pOrder);
+	writer.EndObject();
+
+	writer.EndObject();
+	LOG(INFO) << s.GetString();
+}
+
 char CTPTradeHandler::getOrderType(const char *order_type)
 {
 	static const char ot_limit[] = "limit";
@@ -1142,442 +1816,6 @@ bool CTPTradeHandler::getOrderDir(const char *order_dir, char& action, char& dir
 	}
 
 	return true;
-}
-
-void CTPTradeHandler::ConvertInsertOrderJson2CTP(rapidjson::Value &msg, CThostFtdcInputOrderField &req)
-{
-	// check invalid field
-	if (!(msg.HasMember("exchange") && msg["exchange"].IsString())) {
-		throw std::runtime_error("field \"exchange\" need string");
-	}
-	if (!(msg.HasMember("symbol") && msg["symbol"].IsString())) {
-		throw std::runtime_error("field \"symbol\" need string");
-	}
-	if (!(msg.HasMember("contract") && msg["contract"].IsString())) {
-		throw std::runtime_error("field \"contract\" need string");
-	}
-	if (!(msg.HasMember("order_type") && msg["order_type"].IsString())) {
-		throw std::runtime_error("field \"order_type\" need string");
-	}
-	if (!(msg.HasMember("amount") && (msg["amount"].IsInt() || msg["amount"].IsDouble()))) {
-		throw std::runtime_error("field \"amount\" need numeric");
-	}
-
-	// start convert
-	strncpy(req.BrokerID, conf_.broker_id.c_str(), sizeof(req.BrokerID) - 1);
-	strncpy(req.InvestorID, conf_.user_id.c_str(), sizeof(req.InvestorID) - 1);
-	strncpy(req.ExchangeID, msg["exchange"].GetString(), msg["exchange"].GetStringLength());
-	snprintf(req.InstrumentID, sizeof(req.InstrumentID), "%s%s",
-		msg["symbol"].GetString(), msg["contract"].GetString());
-	strncpy(req.UserID, conf_.user_id.c_str(), sizeof(req.UserID) - 1);
-
-	req.RequestID = req_id_;
-	snprintf(req.OrderRef, sizeof(req.OrderRef), "%d", order_ref_);
-	++order_ref_;
-
-	req.OrderPriceType = getOrderType(msg["order_type"].GetString());
-	if (req.OrderPriceType == (char)0)
-	{
-		throw std::runtime_error("unsupport order type");
-	}
-
-	if (!getOrderDir(msg["dir"].GetString(), req.CombOffsetFlag[0], req.Direction)) {
-		throw std::runtime_error("unsupport order dir");
-	}
-
-	if (msg.HasMember("order_flag1") && msg["order_flag1"].IsString())
-	{
-		req.CombHedgeFlag[0] = getOrderFlag1(msg["order_flag1"].GetString());
-	}
-	else
-	{
-		req.CombHedgeFlag[0] = THOST_FTDC_HF_Speculation;
-	}
-
-	if (req.OrderPriceType == THOST_FTDC_OPT_LimitPrice) {
-		if (!(msg.HasMember("price") && (msg["price"].IsDouble() || msg["price"].IsInt()))) {
-			throw std::runtime_error("field \"price\" need double");
-		}
-
-		if (msg["price"].IsDouble())
-		{
-			req.LimitPrice = msg["price"].GetDouble();
-		}
-		else
-		{
-			req.LimitPrice = (double)msg["price"].GetInt();
-		}
-
-	}
-
-	if (msg["amount"].IsInt())
-	{
-		req.VolumeTotalOriginal = msg["amount"].GetInt();
-	}
-	else if (msg["amount"].IsDouble())
-	{
-		req.VolumeTotalOriginal = (int)msg["amount"].GetDouble();
-	}
-
-	req.TimeCondition = THOST_FTDC_TC_GFD;
-	req.VolumeCondition = THOST_FTDC_VC_AV;
-	req.MinVolume = 1;
-	req.ContingentCondition = THOST_FTDC_CC_Immediately;
-	req.StopPrice = 0;
-	req.ForceCloseReason = THOST_FTDC_FCC_NotForceClose;
-	req.IsAutoSuspend = 0;
-}
-void CTPTradeHandler::ConvertCancelOrderJson2CTP(rapidjson::Value &msg, CThostFtdcInputOrderActionField &req)
-{
-	// check invalid field
-	if (!(msg.HasMember("outside_id") && msg["outside_id"].IsString())) {
-		throw std::runtime_error("field \"outside_id\" need string");
-	}
-	if (msg["outside_id"].GetStringLength() == 0)
-	{
-		throw std::runtime_error("field \"outside_id\" need string");
-	}
-	if (!(msg.HasMember("exchange") && msg["exchange"].IsString())) {
-		throw std::runtime_error("field \"exchange\" need string");
-	}
-	if (!(msg.HasMember("symbol") && msg["symbol"].IsString())) {
-		throw std::runtime_error("field \"symbol\" need string");
-	}
-	if (!(msg.HasMember("contract") && msg["contract"].IsString())) {
-		throw std::runtime_error("field \"contract\" need string");
-	}
-
-	// start convert
-	strncpy(req.BrokerID, conf_.broker_id.c_str(), sizeof(req.BrokerID) - 1);
-	strncpy(req.InvestorID, conf_.user_id.c_str(), sizeof(req.InvestorID) - 1);
-	strncpy(req.UserID, conf_.user_id.c_str(), sizeof(req.UserID) - 1);
-
-	req.RequestID = req_id_;
-	req.OrderActionRef = order_action_ref_;
-	++order_action_ref_;
-
-	GetCTPOrderSysIDFromOutsideId(req.OrderSysID, msg["outside_id"].GetString(), msg["outside_id"].GetStringLength());
-
-	strncpy(req.ExchangeID, msg["exchange"].GetString(), sizeof(req.ExchangeID) - 1);
-	snprintf(req.InstrumentID, sizeof(req.InstrumentID) - 1, "%s%s", msg["symbol"].GetString(), msg["contract"].GetString());
-	req.ActionFlag = THOST_FTDC_AF_Delete;
-}
-
-void CTPTradeHandler::ConvertInsertOrderCTP2Common(CThostFtdcInputOrderField &req, Order &order)
-{
-	order.market = "ctp";
-	order.exchange = req.ExchangeID;
-	order.type = "future";
-	CTPSplitInstrument(req.InstrumentID, order.symbol, order.contract);
-	order.contract_id = order.contract;
-	if (req.OrderPriceType == THOST_FTDC_OPT_AnyPrice)
-	{
-		order.order_type = "market";
-	}
-	else
-	{
-		order.order_type = "limit";
-	}
-
-	switch (req.CombHedgeFlag[0])
-	{
-	case THOST_FTDC_HF_Speculation:
-	{
-		order.order_flag1 = "speculation";
-	}break;
-	case THOST_FTDC_HF_Arbitrage:
-	{
-		order.order_flag1 = "arbitrage";
-	}break;
-	case THOST_FTDC_HF_Hedge:
-	{
-		order.order_flag1 = "hedge";
-	}break;
-	case THOST_FTDC_HF_MarketMaker:
-	{
-		order.order_flag1 = "marketmaker";
-	}break;
-	}
-
-	if (req.Direction == THOST_FTDC_D_Buy)
-	{
-		if (req.CombOffsetFlag[0] == THOST_FTDC_OF_Open)
-		{
-			order.dir = "open_long";
-		}
-		else if (req.CombOffsetFlag[0] == THOST_FTDC_OF_CloseToday)
-		{
-			order.dir = "closetoday_short";
-		}
-		else if (req.CombOffsetFlag[0] == THOST_FTDC_OF_CloseYesterday)
-		{
-			order.dir = "closeyesterday_short";
-		}
-		else
-		{
-			order.dir = "close_short";
-		}
-	}
-	else
-	{
-		if (req.CombOffsetFlag[0] == THOST_FTDC_OF_Open)
-		{
-			order.dir = "open_short";
-		}
-		else if (req.CombOffsetFlag[0] == THOST_FTDC_OF_CloseToday)
-		{
-			order.dir = "closetoday_long";
-		}
-		else if (req.CombOffsetFlag[0] == THOST_FTDC_OF_CloseYesterday)
-		{
-			order.dir = "closeyesterday_long";
-		}
-		else
-		{
-			order.dir = "close_long";
-		}
-	}
-
-	order.price = req.LimitPrice;
-	order.amount = req.VolumeTotalOriginal;
-	order.total_price = 0;
-	order.ts = time(nullptr) * 1000;
-}
-void CTPTradeHandler::ConvertInsertOrderJson2Common(rapidjson::Value &msg, Order &order)
-{
-	if (msg.HasMember("user_id") && msg["user_id"].IsString()) {
-		order.user_id = msg["user_id"].GetString();
-	}
-	
-	if (msg.HasMember("order_id") && msg["order_id"].IsString()) {
-		order.order_id = msg["order_id"].GetString();
-	}
-
-	if (msg.HasMember("client_order_id") && msg["client_order_id"].IsString()) {
-		order.client_order_id = msg["client_order_id"].GetString();
-	}
-
-	if (msg.HasMember("market") && msg["market"].IsString()) {
-		order.market = msg["market"].GetString();
-	}
-
-	if (msg.HasMember("exchange") && msg["exchange"].IsString()) {
-		order.exchange = msg["exchange"].GetString();
-	}
-
-	if (msg.HasMember("type") && msg["type"].IsString()) {
-		order.type = msg["type"].GetString();
-	}
-
-	if (msg.HasMember("symbol") && msg["symbol"].IsString()) {
-		order.symbol = msg["symbol"].GetString();
-	}
-
-	if (msg.HasMember("contract") && msg["contract"].IsString()) {
-		order.contract = msg["contract"].GetString();
-	}
-
-	if (msg.HasMember("contract_id") && msg["contract_id"].IsString()) {
-		order.contract_id = msg["contract_id"].GetString();
-	}
-
-	if (msg.HasMember("order_type") && msg["order_type"].IsString()) {
-		order.order_type = msg["order_type"].GetString();
-	}
-
-	if (msg.HasMember("order_flag1") && msg["order_flag1"].IsString()) {
-		order.order_flag1 = msg["order_flag1"].GetString();
-	}
-
-	if (msg.HasMember("dir") && msg["dir"].IsString()) {
-		order.dir = msg["dir"].GetString();
-	}
-
-	if (msg.HasMember("price")) {
-		if (msg["price"].IsInt())
-		{
-			order.price = msg["price"].GetInt();
-		}
-		else if (msg["price"].IsDouble())
-		{
-			order.price = msg["price"].GetDouble();
-		}
-	}
-
-	if (msg.HasMember("amount")) {
-		if (msg["amount"].IsInt())
-		{
-			order.amount = msg["amount"].GetInt();
-		}
-		else if (msg["amount"].IsDouble())
-		{
-			order.amount = msg["amount"].GetDouble();
-		}
-	}
-
-	if (msg.HasMember("total_price")) {
-		if (msg["total_price"].IsInt())
-		{
-			order.total_price = msg["total_price"].GetInt();
-		}
-		else if (msg["total_price"].IsDouble())
-		{
-			order.total_price = msg["total_price"].GetDouble();
-		}
-	}
-
-	if (msg.HasMember("ts") && msg["ts"].IsInt64()) {
-		order.ts = msg["ts"].GetInt64();
-	}
-}
-void CTPTradeHandler::ConvertRtnOrderCTP2Common(CThostFtdcOrderField *pOrder, Order &order, OrderStatusNotify &order_status_notify)
-{
-	// order
-	{
-		order.outside_id = GenOutsideOrderIdFromOrder(pOrder);
-		order.market = "ctp";
-		order.exchange = pOrder->ExchangeID;
-		order.type = "future";
-		CTPSplitInstrument(pOrder->InstrumentID, order.symbol, order.contract);
-		order.contract_id = order.contract;
-		if (pOrder->OrderPriceType == THOST_FTDC_OPT_AnyPrice)
-		{
-			order.order_type = "market";
-		}
-		else
-		{
-			order.order_type = "limit";
-		}
-
-		GetOrderDirection(pOrder->Direction, pOrder->CombHedgeFlag[0], pOrder->CombOffsetFlag[0], order);
-
-		order.price = pOrder->LimitPrice;
-		order.amount = pOrder->VolumeTotalOriginal;
-		order.total_price = 0;
-
-		order.ts = CTPGetTimestamp(pOrder->InsertDate, pOrder->InsertTime, 0);
-	}
-	
-	// status
-	{
-		order_status_notify.order_status = (OrderStatusEnum)GetOrderStatus(pOrder->OrderStatus);
-		order_status_notify.order_submit_status = (OrderSubmitStatusEnum)GetOrderSubmitStatus(pOrder->OrderSubmitStatus);
-		order_status_notify.amount = pOrder->VolumeTotalOriginal;
-		order_status_notify.dealed_amount = pOrder->VolumeTraded;
-	}
-}
-void CTPTradeHandler::ConvertRtnTradeCTP2Common(CThostFtdcTradeField *pTrade, Order &order, OrderDealNotify &order_deal)
-{
-	// order
-	{
-		order.outside_id = GenOutsideOrderIdFromDeal(pTrade);
-		order.market = "ctp";
-		order.exchange = pTrade->ExchangeID;
-		order.type = "future";
-		CTPSplitInstrument(pTrade->InstrumentID, order.symbol, order.contract);
-		order.contract_id = order.contract;
-		GetOrderDirection(pTrade->Direction, pTrade->HedgeFlag, pTrade->OffsetFlag, order);
-	}
-
-	// deal
-	{
-		order_deal.price = pTrade->Price;
-		order_deal.amount = pTrade->Volume;
-		order_deal.trading_day = pTrade->TradingDay;
-		order_deal.trade_id = GenOutsideTradeIdFromDeal(pTrade);
-		order_deal.ts = CTPGetTimestamp(pTrade->TradeDate, pTrade->TradeTime, 0);
-	}
-}
-
-void CTPTradeHandler::BroadcastOrderConfirm(Order &order, int error_id, const char *error_msg)
-{
-	// serialize
-	rapidjson::StringBuffer s;
-	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
-
-	writer.StartObject();
-	writer.Key("msg");
-	writer.String("confirmorder");
-	writer.Key("error_id");
-	writer.Int(error_id);
-	// don't response error message, it will lead json loads error in python
-	// writer.Key("error_msg");
-	// writer.String(error_msg);
-
-	writer.Key("data");
-	writer.StartObject();
-	SerializeOrder(writer, order);
-	writer.EndObject();
-
-	writer.EndObject();
-
-	LOG(INFO) << s.GetString();
-
-	uws_hub_.getDefaultGroup<uWS::SERVER>().broadcast(s.GetString(), s.GetLength(), uWS::OpCode::TEXT);
-}
-void CTPTradeHandler::BroadcastOrderStatus(Order &order, OrderStatusNotify &order_status_notify, int error_id, const char *error_msg)
-{
-	// serialize
-	rapidjson::StringBuffer s;
-	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
-
-	writer.StartObject();
-	writer.Key("msg");
-	writer.String("orderstatus");
-	writer.Key("error_id");
-	writer.Int(error_id);
-	// don't response error message, it will lead json loads error in python
-	// writer.Key("error_msg");
-	// writer.String(error_msg);
-
-	writer.Key("data");
-	writer.StartObject();
-
-	SerializeOrderStatus(writer, order_status_notify);
-
-	writer.Key("order");
-	writer.StartObject();
-	SerializeOrder(writer, order);
-	writer.EndObject();  // order end
-
-	writer.EndObject();  // data end
-	writer.EndObject();  // object end
-
-	LOG(INFO) << s.GetString();
-
-	uws_hub_.getDefaultGroup<uWS::SERVER>().broadcast(s.GetString(), s.GetLength(), uWS::OpCode::TEXT);
-}
-void CTPTradeHandler::BroadcastOrderDeal(Order &order, OrderDealNotify &order_deal)
-{
-	// serialize
-	rapidjson::StringBuffer s;
-	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
-
-	writer.StartObject();
-	writer.Key("msg");
-	writer.String("orderdeal");
-	writer.Key("error_id");
-	writer.Int(0);
-	// don't response error message, it will lead json loads error in python
-	// writer.Key("error_msg");
-	// writer.String(error_msg);
-
-	writer.Key("data");
-	writer.StartObject();
-
-	SerializeOrderDeal(writer, order_deal);
-
-	writer.Key("order");
-	writer.StartObject();
-	SerializeOrder(writer, order);
-	writer.EndObject();  // order end
-
-	writer.EndObject();  // data end
-	writer.EndObject();  // object end
-
-	LOG(INFO) << s.GetString();
-
-	uws_hub_.getDefaultGroup<uWS::SERVER>().broadcast(s.GetString(), s.GetLength(), uWS::OpCode::TEXT);
 }
 
 void CTPTradeHandler::FillConnectionInfo(const char *tradeing_day, const char *login_time, int front_id, int session_id)
@@ -1831,4 +2069,36 @@ bool CTPTradeHandler::GetCTPOrderSysIDFromOutsideId(TThostFtdcOrderSysIDType &ct
 
 	strncpy(ctp_order_sys_id, p - order_sys_id_len + 1, order_sys_id_len);
 	return true;
+}
+
+std::string CTPTradeHandler::GetQryId(rapidjson::Value &msg)
+{
+	if (!(msg.HasMember("qry_id") && msg["qry_id"].IsString())) {
+		return "";
+	}
+	return msg["qry_id"].GetString();
+}
+
+void CTPTradeHandler::CacheQryOrder(int req_id, uWS::WebSocket<uWS::SERVER>* ws, OrderQuery &&order_qry)
+{
+	std::unique_lock<std::mutex> lock(qry_cache_mtx_);
+	qry_ws_cache_[req_id] = ws;
+	qry_info_cache_[req_id] = std::move(order_qry);
+}
+void CTPTradeHandler::GetAndClearCacheQryOrder(int req_id, uWS::WebSocket<uWS::SERVER>*& ws, OrderQuery &order_qry)
+{
+	std::unique_lock<std::mutex> lock(qry_cache_mtx_);
+	auto it_ws = qry_ws_cache_.find(req_id);
+	if (it_ws != qry_ws_cache_.end())
+	{
+		ws = it_ws->second;
+		qry_ws_cache_.erase(it_ws);
+	}
+
+	auto it_order_qry = qry_info_cache_.find(req_id);
+	if (it_order_qry != qry_info_cache_.end())
+	{
+		order_qry = it_order_qry->second;
+		qry_info_cache_.erase(it_order_qry);
+	}
 }

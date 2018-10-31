@@ -146,6 +146,19 @@ struct OrderDealNotify
 	{}
 };
 
+struct OrderQuery
+{
+	std::string qry_id;
+	std::string user_id;
+	std::string outside_id;
+	std::string market;
+	std::string exchange;
+	std::string type;
+	std::string symbol;
+	std::string contract;
+	std::string contract_id;
+};
+
 
 }
 

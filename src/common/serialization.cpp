@@ -177,6 +177,27 @@ void SerializeOrderDeal(rapidjson::Writer<rapidjson::StringBuffer> &writer, cons
 	writer.Key("ts");
 	writer.Int64(order_deal.ts);
 }
+void SerializeOrderQuery(rapidjson::Writer<rapidjson::StringBuffer> &writer, const OrderQuery &order_query)
+{
+	writer.Key("qry_id");
+	writer.String(order_query.qry_id.c_str());
+	writer.Key("user_id");
+	writer.String(order_query.user_id.c_str());
+	writer.Key("outside_id");
+	writer.String(order_query.outside_id.c_str());
+	writer.Key("market");
+	writer.String(order_query.market.c_str());
+	writer.Key("exchange");
+	writer.String(order_query.exchange.c_str());
+	writer.Key("type");
+	writer.String(order_query.type.c_str());
+	writer.Key("symbol");
+	writer.String(order_query.symbol.c_str());
+	writer.Key("contract");
+	writer.String(order_query.contract.c_str());
+	writer.Key("contract_id");
+	writer.String(order_query.contract_id.c_str());
+}
 
 
 }

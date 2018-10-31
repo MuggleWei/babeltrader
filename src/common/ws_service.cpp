@@ -79,6 +79,14 @@ int WsService::PutMsg(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Document &&doc
 	return 0;
 }
 
+void WsService::SendMsgToClient(uWS::WebSocket<uWS::SERVER> *ws, const char *msg)
+{
+	std::unique_lock<std::mutex> lock(ws_mtx_);
+	if (ws_set_.find(ws) != ws_set_.end()) {
+		ws->send(msg);
+	}
+}
+
 void WsService::MessageLoop()
 {
 	std::queue<WsTunnelMsg> queue;
@@ -96,6 +104,7 @@ void WsService::RegisterCallbacks()
 {
 	callbacks_["insert_order"] = std::bind(&WsService::OnReqInsertOrder, this, std::placeholders::_1, std::placeholders::_2);
 	callbacks_["cancel_order"] = std::bind(&WsService::OnReqCancelOrder, this, std::placeholders::_1, std::placeholders::_2);
+	callbacks_["query_order"] = std::bind(&WsService::OnReqQueryOrder, this, std::placeholders::_1, std::placeholders::_2);
 }
 void WsService::Dispatch(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Document &doc)
 {
@@ -194,6 +203,14 @@ void WsService::OnReqCancelOrder(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Doc
 	}
 
 	trade_->CancelOrder(ws, doc["data"]);
+}
+void WsService::OnReqQueryOrder(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Document &doc)
+{
+	if (!(doc.HasMember("data") && doc["data"].IsObject())) {
+		throw std::runtime_error("field \"data\" need object");
+	}
+
+	trade_->QueryOrder(ws, doc["data"]);
 }
 
 

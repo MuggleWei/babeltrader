@@ -13,7 +13,7 @@ addr = "127.0.0.1:8001"
 # addr = "127.0.0.1:8002"
 
 
-class TraderInsertOrder(Trader):
+class TraderCancelOrder(Trader):
     def __init__(self):
         Trader.__init__(self)
 
@@ -47,7 +47,7 @@ class TraderInsertOrder(Trader):
 
 
 if __name__ == '__main__':
-    trader = TraderInsertOrder()
+    trader = TraderCancelOrder()
 
     ts = time.time()
     trader.insert_order(

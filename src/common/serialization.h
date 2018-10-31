@@ -19,6 +19,7 @@ void SerializeKline(rapidjson::Writer<rapidjson::StringBuffer> &writer, const Kl
 void SerializeOrder(rapidjson::Writer<rapidjson::StringBuffer> &writer, const Order &order);
 void SerializeOrderStatus(rapidjson::Writer<rapidjson::StringBuffer> &writer, const OrderStatusNotify &order_status);
 void SerializeOrderDeal(rapidjson::Writer<rapidjson::StringBuffer> &writer, const OrderDealNotify &order_deal);
+void SerializeOrderQuery(rapidjson::Writer<rapidjson::StringBuffer> &writer, const OrderQuery &order_query);
 
 
 }

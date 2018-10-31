@@ -38,6 +38,8 @@ public:
 
 	int PutMsg(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Document &&doc);
 
+	void SendMsgToClient(uWS::WebSocket<uWS::SERVER> *ws, const char *msg);
+
 private:
 	void MessageLoop();
 
@@ -49,6 +51,7 @@ private:
 
 	void OnReqInsertOrder(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Document &doc);
 	void OnReqCancelOrder(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Document &doc);
+	void OnReqQueryOrder(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Document &doc);
 
 private:
 	QuoteService *quote_;
