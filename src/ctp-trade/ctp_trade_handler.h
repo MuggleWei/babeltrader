@@ -27,6 +27,7 @@ public:
 	virtual void InsertOrder(uWS::WebSocket<uWS::SERVER> *ws, Order &order) override;
 	virtual void CancelOrder(uWS::WebSocket<uWS::SERVER> *ws, Order &order) override;
 	virtual void QueryOrder(uWS::WebSocket<uWS::SERVER> *ws, OrderQuery &query_order) override;
+	virtual void QueryTrade(uWS::WebSocket<uWS::SERVER> *ws, TradeQuery &query_order) override;
 
 	////////////////////////////////////////
 	// spi virtual function
@@ -48,6 +49,7 @@ public:
 	virtual void OnRspOrderAction(CThostFtdcInputOrderActionField *pInputOrderAction, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast) override;
 
 	virtual void OnRspQryOrder(CThostFtdcOrderField *pOrder, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast) override;
+	virtual void OnRspQryTrade(CThostFtdcTradeField *pTrade, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast) override;
 
 private:
 	void RunAPI();
@@ -67,6 +69,7 @@ private:
 	void ConvertInsertOrderCommon2CTP(Order &order, CThostFtdcInputOrderField &req);
 	void ConvertCancelOrderCommon2CTP(Order &order, CThostFtdcInputOrderActionField &req);
 	void ConvertQueryOrderCommon2CTP(OrderQuery &order_qry, CThostFtdcQryOrderField &req);
+	void ConvertQueryTradeCommon2CTP(TradeQuery &trade_qry, CThostFtdcQryTradeField &req);
 
 	////////////////////////////////////////
 	// convert ctp struct to common struct 
@@ -82,12 +85,13 @@ private:
 	void CacheQryOrder(int req_id, uWS::WebSocket<uWS::SERVER>* ws, OrderQuery &order_qry);
 	void GetAndClearCacheQryOrder(int req_id, uWS::WebSocket<uWS::SERVER>*& ws, OrderQuery &order_qry);
 
+	void CacheQryTrade(int req_id, uWS::WebSocket<uWS::SERVER>* ws, TradeQuery &trade_qry);
+	void GetAndClearCacheQryTrade(int req_id, uWS::WebSocket<uWS::SERVER>*& ws, TradeQuery &trade_qry);
+
 	////////////////////////////////////////
 	// field convert
-	std::string GenOutsideOrderIdFromOrder(CThostFtdcOrderField *pOrder);
-	std::string GenOutsideOrderIdFromDeal(CThostFtdcTradeField *pTrade);
-	std::string GenOutsideTradeIdFromDeal(CThostFtdcTradeField *pTrade);
-	bool GetCTPOrderSysIDFromOutsideId(TThostFtdcOrderSysIDType &ctp_order_sys_id, const char *outside_id, int len);
+	std::string ExtendCTPId(const char *investor_id, const char *trading_day, const char *ctp_id);
+	bool GetCTPIdFromExtend(const char *ext_ctp_id, int len, char *ctp_id, int ctp_id_size);
 	
 	char ConvertOrderTypeCommon2CTP(const char *order_type);
 	char ConvertOrderFlag1Common2CTP(const char *order_flag1);
@@ -102,15 +106,17 @@ private:
 	// serialize ctp struct to json
 	void SerializeCTPInputOrder(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcInputOrderField *pInputOrder);
 	void SerializeCTPActionOrder(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcInputOrderActionField *pActionOrder);
-	void SerializeCTPQueryOrder(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcQryOrderField *pQryOrder);
 	void SerializeCTPOrder(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcOrderField *pOrder);
 	void SerializeCTPTrade(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcTradeField *pTrade);
+	void SerializeCTPQueryOrder(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcQryOrderField *pQryOrder);
+	void SerializeCTPQueryTrade(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcQryTradeField *pQryTrade);
 
 	////////////////////////////////////////
 	// output ctp struct 
 	void OutputOrderInsert(CThostFtdcInputOrderField *req);
 	void OutputOrderAction(CThostFtdcInputOrderActionField *req);
 	void OutputOrderQuery(CThostFtdcQryOrderField *req);
+	void OutputTradeQuery(CThostFtdcQryTradeField *req);
 
 	void OutputFrontConnected();
 	void OutputFrontDisconnected(int reason);
@@ -125,6 +131,7 @@ private:
 	void OutputRtnTrade(CThostFtdcTradeField *pTrade);
 	void OutputRspOrderAction(CThostFtdcInputOrderActionField *pInputOrderAction, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
 	void OutputRspOrderQuery(CThostFtdcOrderField *pOrder, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
+	void OutputRspTradeQuery(CThostFtdcTradeField *pTrade, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
 
 private:
 	CThostFtdcTraderApi *api_;
@@ -153,9 +160,12 @@ private:
 	// query results
 	std::mutex qry_cache_mtx_;
 	std::map<int, uWS::WebSocket<uWS::SERVER>*> qry_ws_cache_;
-	std::map<int, OrderQuery> qry_info_cache_;
 
-	std::map<int, std::vector<CThostFtdcOrderField>> qry_order_caches_;
+	std::map<int, OrderQuery> qry_order_cache_;
+	std::map<int, std::vector<CThostFtdcOrderField>> rsp_qry_order_caches_;
+
+	std::map<int, TradeQuery> qry_trade_cache_;
+	std::map<int, std::vector<CThostFtdcTradeField>> rsp_qry_trade_caches_;
 };
 
 #endif

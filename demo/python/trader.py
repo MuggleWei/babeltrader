@@ -18,6 +18,7 @@ class Trader:
         self.rsp_callbacks["error"] = self.on_error
 
         self.rsp_callbacks["rsp_qryorder"] = self.on_qryorder
+        self.rsp_callbacks["rsp_qrytrade"] = self.on_qrytrade
 
         self.ws = websocket.create_connection("ws://" + addr + "/ws")
 
@@ -34,6 +35,9 @@ class Trader:
         print("exception happened: " + str(msg))
 
     def on_qryorder(self, msg):
+        pass
+
+    def on_qrytrade(self, msg):
         pass
 
     def insert_order(self, user_id,
@@ -103,6 +107,25 @@ class Trader:
         })
         self.ws.send(order)
         print("send query order: " + str(order))
+
+    def query_trade(self, qry_id, user_id, trade_id,
+                    market, exchange, type, symbol, contract, contract_id):
+        order = json.dumps({
+            "msg": "query_trade",
+            "data": {
+                "qry_id": qry_id,
+                "user_id": user_id,
+                "trade_id": trade_id,
+                "market": market,
+                "exchange": exchange,
+                "type": type,
+                "symbol": symbol,
+                "contract": contract,
+                "contract_id": contract_id
+            }
+        })
+        self.ws.send(order)
+        print("send query trade: " + str(order))
 
     def message_loop(self):
         try:

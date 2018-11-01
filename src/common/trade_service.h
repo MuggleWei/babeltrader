@@ -18,6 +18,7 @@ public:
 	virtual void InsertOrder(uWS::WebSocket<uWS::SERVER> *ws, Order &order) = 0;
 	virtual void CancelOrder(uWS::WebSocket<uWS::SERVER> *ws, Order &order) = 0;
 	virtual void QueryOrder(uWS::WebSocket<uWS::SERVER> *ws, OrderQuery &query_order) = 0;
+	virtual void QueryTrade(uWS::WebSocket<uWS::SERVER> *ws, TradeQuery &query_order) = 0;
 };
 
 

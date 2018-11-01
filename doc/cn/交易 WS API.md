@@ -1,18 +1,29 @@
 # 交易 WS API
 
+- [使用提示](#使用提示)  
 - [连接](#交易连接)  
 - [交易结构](#交易结构)  
     - [通用结构](#通用结构)  
     - [订单结构](#订单结构)  
+    - [订单状态结构](#订单状态结构)
+    - [订单成交结构](#订单成交结构)
 - [请求指令](#请求指令)  
     - [下单](#下单)
     - [撤单](#撤单)
     - [查询订单](#查询订单)
+    - [查询成交](#查询成交)
 - [应答消息](#应答消息)
     - [上手确认订单接收](#上手确认订单接收)
     - [订单状态变更](#订单状态变更)
     - [订单成交](#订单成交)
     - [查询订单结果](#查询订单结果)
+    - [查询成交结果](#查询成交结果)
+
+
+## 使用提示
+1. 由于babel-trader是作为上手服务，其中一些的字段，是为了直接转发方便(比如 user_id, market), 而对上手服务并没有太多的实际意义
+1. 上手服务, 收到订单之后, 有 上手确认订单接收 消息, 用于关联上下级的订单id
+1. 订单结构被用于很多消息, 但并不是每次每个字段都被填满, 取决于消息类型
 
 ## 交易连接
 url: /ws
@@ -43,7 +54,7 @@ data: 根据msg, 对应不同的类型
 {
     "user_id": "daizi",
     "order_id": "20181026160928625-56",
-    "outside_id": "201810260003s-868766042#1",
+    "outside_id": "104027_20181101_      274491",
     "client_order_id": "daizi-20181026000001",
     "market": "ctp",
     "exchange": "SHFE",
@@ -82,8 +93,53 @@ ts(int64): 时间戳
 ```
 
 
+#### 订单状态结构
+示例:
+```
+{
+    "status": 2,
+    "submit_status": 1,
+    "amount": 5,
+    "dealed_amount": 5,
+    "order": { 订单结构 }
+}
+```
+
+字段说明:
+```
+status(int): 订单状态 - 0(未知), 1(部分成交), 2(完全成交), 3(已撤), 4(撤单中)
+submit_status(int): 订单提交状态 - 0(未知), 1(已提交), 2(已接受), 3(已拒绝)
+amount(int/double): 订单总数量
+dealed_amount(int/double): 订单已成交量
+```
+
+#### 订单成交结构
+示例:
+```
+{
+    "price": 4194,
+    "amount": 1,
+    "trading_day": "20181030",
+    "trade_id": "104027_20181030_97398",
+    "ts": 1540880723000,
+    "order": { 订单结构 }
+}
+```
+
+字段说明:
+```
+price(double): 单笔成交价格
+amount(int/double): 单笔成交量
+trading_day(string): 交易日
+trade_id(string): 成交id
+ts(int64): 成交时间戳
+```
+
+
 ## 请求指令
 #### 下单
+消息名: insert_order  
+
 示例:
 ```
 {
@@ -94,6 +150,8 @@ ts(int64): 时间戳
 
 
 #### 撤单
+消息名: cancel_order  
+
 示例:
 ```
 {
@@ -125,13 +183,14 @@ contract_id(string): 合约id - 例如: 1901, 20181901
 
 
 #### 查询订单
+消息名: query_order  
+
 示例:
 ```
 {
     "msg": "query_order",
     "data": {
         "qry_id": "1",
-        "user_id": "weidaizi",
         "outside_id": "104027_20181031_      256846",
         "market": "ctp",
         "exchange": "SHFE",
@@ -159,6 +218,39 @@ contract_id(string): 合约id - 例如: 1901, 20181901
 说明:   
 当指定了outside_id, 就只查询指定的订单; 没有指定订单信息时, 默认查回整个当日所有符合条件的订单
 
+#### 查询成交
+消息名: query_trade
+
+示例:
+```
+{
+    "msg": "query_trade",
+    "data": {
+        "qry_id": "1",
+        "trade_id": "104027_20181101_      118101",
+        "market": "ctp",
+        "exchange": "SHFE",
+        "type": "future",
+        "symbol": "rb",
+        "contract": "1901",
+        "contract_id": "1901"
+    }
+}
+```
+
+字段说明:
+```
+qry_id(string): 查询请求号
+user_id(string): 用户标识符, 在下单时填入
+trade_id(string): 上手成交号, 在成交消息中得到
+market(string): 市场API - 例如: ctp, xtp, ib, bitmex, okex
+exchange(string): 交易所 - 例如：SHFE, SSE, NYMEX, bitmex, okex
+type(string): 主题类型 - spot(现货), future(期货), option(期权)
+symbol(string): 符号 - 例如: rb, CL, btc, btc_usdt
+contract(string): 合约类型 - 例如: 1901, this_week
+contract_id(string): 合约id - 例如: 1901, 20181901
+```
+
 
 ## 应答消息
 #### 上手确认订单接收
@@ -184,22 +276,8 @@ contract_id(string): 合约id - 例如: 1901, 20181901
 {
     "msg": "orderstatus",
     "error_id": 0,
-    "data": {
-        "status": 2,
-        "submit_status": 1,
-        "amount": 5,
-        "dealed_amount": 5,
-        "order": { 订单结构 }
-    }
+    "data": { 订单状态结构 }
 }
-```
-
-字段说明:
-```
-status(int): 订单状态 - 0(未知), 1(部分成交), 2(完全成交), 3(已撤), 4(撤单中)
-submit_status(int): 订单提交状态 - 0(未知), 1(已提交), 2(已接受), 3(已拒绝)
-amount(int/double): 订单总数量
-dealed_amount(int/double): 订单已成交量
 ```
 
 说明:
@@ -213,24 +291,9 @@ dealed_amount(int/double): 订单已成交量
 {
     "msg": "orderstatus",
     "error_id": 0,
-    "data": {
-        "price": 4194,
-        "amount": 1,
-        "trading_day": "20181030",
-        "trade_id": "104027_20181030_97398",
-        "ts": 1540880723000,
-        "order": { 订单结构 }
+    "data": { 订单成交结构 }
     }
 }
-```
-
-字段说明:
-```
-price(double): 单笔成交价格
-amount(int/double): 单笔成交量
-trading_day(string): 交易日
-trade_id(string): 成交id
-ts(int64): 成交时间戳
 ```
 
 说明:  
@@ -256,31 +319,35 @@ ts(int64): 成交时间戳
         "contract":"1901",
         "contract_id":"1901"
         "data":[
-            {
-                "status":3,
-                "submit_status":2,
-                "amount":1,
-                "dealed_amount":0
-                "order":{
-                    "user_id":"",
-                    "order_id":"",
-                    "outside_id":"104027_20181031_      342074",
-                    "client_order_id":"",
-                    "market":"ctp",
-                    "exchange":"SHFE",
-                    "type":"future",
-                    "symbol":"rb",
-                    "contract":"1901",
-                    "contract_id":"1901",
-                    "order_type":"limit",
-                    "order_flag1":"speculation",
-                    "dir":"open_long",
-                    "price":4100.0,
-                    "amount":1,
-                    "total_price":0.0,
-                    "ts":1540968164000.0
-                }
-            },
+            { 订单状态结构 },
+            { 订单状态结构 },
+            ......
+        ]
+    }
+}
+```
+
+#### 查询成交结果
+消息名: rsp_qrytrade 
+
+示例:
+```
+{
+    "msg": "rsp_qrytrade",
+    "error_id": 0,
+    "data": {
+        "qry_id":"2",
+        "user_id":"weidaizi",
+        "trade_id":"",
+        "market":"ctp",
+        "exchange":"SHFE",
+        "type":"future",
+        "symbol":"rb",
+        "contract":"1901",
+        "contract_id":"1901",
+        "data":[
+            { 订单成交结构 },
+            { 订单成交结构 },
             ......
         ]
     }

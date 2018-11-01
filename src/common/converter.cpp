@@ -198,7 +198,27 @@ void SerializeOrderQuery(rapidjson::Writer<rapidjson::StringBuffer> &writer, con
 	writer.Key("contract_id");
 	writer.String(order_query.contract_id.c_str());
 }
-
+void SerializeTradeQuery(rapidjson::Writer<rapidjson::StringBuffer> &writer, const TradeQuery &trade_query)
+{
+	writer.Key("qry_id");
+	writer.String(trade_query.qry_id.c_str());
+	writer.Key("user_id");
+	writer.String(trade_query.user_id.c_str());
+	writer.Key("trade_id");
+	writer.String(trade_query.trade_id.c_str());
+	writer.Key("market");
+	writer.String(trade_query.market.c_str());
+	writer.Key("exchange");
+	writer.String(trade_query.exchange.c_str());
+	writer.Key("type");
+	writer.String(trade_query.type.c_str());
+	writer.Key("symbol");
+	writer.String(trade_query.symbol.c_str());
+	writer.Key("contract");
+	writer.String(trade_query.contract.c_str());
+	writer.Key("contract_id");
+	writer.String(trade_query.contract_id.c_str());
+}
 
 Order ConvertOrderJson2Common(rapidjson::Value &msg)
 {
@@ -336,6 +356,48 @@ OrderQuery ConvertOrderQueryJson2Common(rapidjson::Value &msg)
 	}
 
 	return order_qry;
+}
+TradeQuery ConvertTradeQueryJson2Common(rapidjson::Value &msg)
+{
+	TradeQuery trade_qry;
+
+	if (msg.HasMember("qry_id") && msg["qry_id"].IsString()) {
+		trade_qry.qry_id = msg["qry_id"].GetString();
+	}
+
+	if (msg.HasMember("user_id") && msg["user_id"].IsString()) {
+		trade_qry.user_id = msg["user_id"].GetString();
+	}
+
+	if (msg.HasMember("trade_id") && msg["trade_id"].IsString()) {
+		trade_qry.trade_id = msg["trade_id"].GetString();
+	}
+
+	if (msg.HasMember("market") && msg["market"].IsString()) {
+		trade_qry.market = msg["market"].GetString();
+	}
+
+	if (msg.HasMember("exchange") && msg["exchange"].IsString()) {
+		trade_qry.exchange = msg["exchange"].GetString();
+	}
+
+	if (msg.HasMember("type") && msg["type"].IsString()) {
+		trade_qry.type = msg["type"].GetString();
+	}
+
+	if (msg.HasMember("symbol") && msg["symbol"].IsString()) {
+		trade_qry.symbol = msg["symbol"].GetString();
+	}
+
+	if (msg.HasMember("contract") && msg["contract"].IsString()) {
+		trade_qry.contract = msg["contract"].GetString();
+	}
+
+	if (msg.HasMember("contract_id") && msg["contract_id"].IsString()) {
+		trade_qry.contract_id = msg["contract_id"].GetString();
+	}
+
+	return trade_qry;
 }
 
 

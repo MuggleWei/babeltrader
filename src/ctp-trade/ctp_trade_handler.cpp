@@ -79,6 +79,23 @@ void CTPTradeHandler::QueryOrder(uWS::WebSocket<uWS::SERVER> *ws, OrderQuery &or
 	}
 	api_->ReqQryOrder(&req, req_id_++);
 }
+void CTPTradeHandler::QueryTrade(uWS::WebSocket<uWS::SERVER> *ws, TradeQuery &trade_query)
+{
+	CThostFtdcQryTradeField req = { 0 };
+	ConvertQueryTradeCommon2CTP(trade_query, req);
+
+	// output
+	OutputTradeQuery(&req);
+
+	// cache query order
+	CacheQryTrade(req_id_, ws, trade_query);
+
+	if (api_ == nullptr || !api_ready_)
+	{
+		throw std::runtime_error("trade api not ready yet");
+	}
+	api_->ReqQryTrade(&req, req_id_++);
+}
 
 void CTPTradeHandler::OnFrontConnected()
 {
@@ -211,12 +228,12 @@ void CTPTradeHandler::OnRspQryOrder(CThostFtdcOrderField *pOrder, CThostFtdcRspI
 	// output
 	OutputRspOrderQuery(pOrder, pRspInfo, nRequestID, bIsLast);
 
-	auto it = qry_order_caches_.find(nRequestID);
-	if (it == qry_order_caches_.end())
+	auto it = rsp_qry_order_caches_.find(nRequestID);
+	if (it == rsp_qry_order_caches_.end())
 	{
 		std::vector<CThostFtdcOrderField> vec;
-		qry_order_caches_[nRequestID] = vec;
-		it = qry_order_caches_.find(nRequestID);
+		rsp_qry_order_caches_[nRequestID] = vec;
+		it = rsp_qry_order_caches_.find(nRequestID);
 	}
 	CThostFtdcOrderField copy_order;
 	memcpy(&copy_order, pOrder, sizeof(copy_order));
@@ -227,7 +244,7 @@ void CTPTradeHandler::OnRspQryOrder(CThostFtdcOrderField *pOrder, CThostFtdcRspI
 		uWS::WebSocket<uWS::SERVER>* ws;
 		OrderQuery order_qry;
 		GetAndClearCacheQryOrder(nRequestID, ws, order_qry);
-		std::vector<CThostFtdcOrderField> &orders = qry_order_caches_[nRequestID];
+		std::vector<CThostFtdcOrderField> &orders = rsp_qry_order_caches_[nRequestID];
 
 		if (ws)
 		{
@@ -249,7 +266,53 @@ void CTPTradeHandler::OnRspQryOrder(CThostFtdcOrderField *pOrder, CThostFtdcRspI
 			ws_service_.RspOrderQry(ws, order_qry, common_orders, common_order_status, error_id);
 		}
 
-		qry_order_caches_.erase(nRequestID);
+		rsp_qry_order_caches_.erase(nRequestID);
+	}
+}
+void CTPTradeHandler::OnRspQryTrade(CThostFtdcTradeField *pTrade, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+{
+	// output
+	OutputRspTradeQuery(pTrade, pRspInfo, nRequestID, bIsLast);
+
+	auto it = rsp_qry_trade_caches_.find(nRequestID);
+	if (it == rsp_qry_trade_caches_.end())
+	{
+		std::vector<CThostFtdcTradeField> vec;
+		rsp_qry_trade_caches_[nRequestID] = vec;
+		it = rsp_qry_trade_caches_.find(nRequestID);
+	}
+	CThostFtdcTradeField copy_trade;
+	memcpy(&copy_trade, pTrade, sizeof(copy_trade));
+	it->second.push_back(copy_trade);
+
+	if (bIsLast)
+	{
+		uWS::WebSocket<uWS::SERVER>* ws;
+		TradeQuery trade_qry;
+		GetAndClearCacheQryTrade(nRequestID, ws, trade_qry);
+		std::vector<CThostFtdcTradeField> &trades = rsp_qry_trade_caches_[nRequestID];
+
+		if (ws)
+		{
+			std::vector<Order> common_orders;
+			std::vector<OrderDealNotify> common_deals;
+			for (CThostFtdcTradeField &ctp_trade : trades)
+			{
+				Order order;
+				OrderDealNotify order_deal;
+				ConvertRtnTradeCTP2Common(&ctp_trade, order, order_deal);
+				common_orders.push_back(std::move(order));
+				common_deals.push_back(std::move(order_deal));
+			}
+
+			int error_id = 0;
+			if (pRspInfo) {
+				error_id = pRspInfo->ErrorID;
+			}
+			ws_service_.RspTradeQry(ws, trade_qry, common_orders, common_deals, error_id);
+		}
+
+		rsp_qry_trade_caches_.erase(nRequestID);
 	}
 }
 
@@ -424,7 +487,7 @@ void CTPTradeHandler::ConvertCancelOrderCommon2CTP(Order &order, CThostFtdcInput
 	strncpy(req.InvestorID, conf_.user_id.c_str(), sizeof(req.InvestorID) - 1);
 	strncpy(req.UserID, conf_.user_id.c_str(), sizeof(req.UserID) - 1);
 
-	GetCTPOrderSysIDFromOutsideId(req.OrderSysID, order.outside_id.c_str(), order.outside_id.length());
+	GetCTPIdFromExtend(order.outside_id.c_str(), order.outside_id.length(), req.OrderSysID, sizeof(req.OrderSysID));
 
 	strncpy(req.ExchangeID, order.exchange.c_str(), sizeof(req.ExchangeID) - 1);
 	snprintf(req.InstrumentID, sizeof(req.InstrumentID) - 1, "%s%s", order.symbol.c_str(), order.contract.c_str());
@@ -441,7 +504,21 @@ void CTPTradeHandler::ConvertQueryOrderCommon2CTP(OrderQuery &order_qry, CThostF
 		snprintf(req.InstrumentID, sizeof(req.InstrumentID) - 1, "%s%s", order_qry.symbol.c_str(), order_qry.contract.c_str());
 	}
 	if (!order_qry.outside_id.empty()) {
-		GetCTPOrderSysIDFromOutsideId(req.OrderSysID, order_qry.outside_id.c_str(), order_qry.outside_id.length());
+		GetCTPIdFromExtend(order_qry.outside_id.c_str(), order_qry.outside_id.length(), req.OrderSysID, sizeof(req.OrderSysID));
+	}
+}
+void CTPTradeHandler::ConvertQueryTradeCommon2CTP(TradeQuery &trade_qry, CThostFtdcQryTradeField &req)
+{
+	strncpy(req.BrokerID, conf_.broker_id.c_str(), sizeof(req.BrokerID) - 1);
+	strncpy(req.InvestorID, conf_.user_id.c_str(), sizeof(req.InvestorID) - 1);
+	if (!trade_qry.exchange.empty()) {
+		strncpy(req.ExchangeID, trade_qry.exchange.c_str(), sizeof(req.ExchangeID) - 1);
+	}
+	if (!trade_qry.symbol.empty() && !trade_qry.contract.empty()) {
+		snprintf(req.InstrumentID, sizeof(req.InstrumentID) - 1, "%s%s", trade_qry.symbol.c_str(), trade_qry.contract.c_str());
+	}
+	if (!trade_qry.trade_id.empty()) {
+		GetCTPIdFromExtend(trade_qry.trade_id.c_str(), trade_qry.trade_id.length(), req.TradeID, sizeof(req.TradeID));
 	}
 }
 
@@ -529,7 +606,7 @@ void CTPTradeHandler::ConvertRtnOrderCTP2Common(CThostFtdcOrderField *pOrder, Or
 {
 	// order
 	{
-		order.outside_id = GenOutsideOrderIdFromOrder(pOrder);
+		order.outside_id = ExtendCTPId(pOrder->InvestorID, pOrder->TradingDay, pOrder->OrderSysID);
 		order.market = "ctp";
 		order.exchange = pOrder->ExchangeID;
 		order.type = "future";
@@ -565,7 +642,7 @@ void CTPTradeHandler::ConvertRtnTradeCTP2Common(CThostFtdcTradeField *pTrade, Or
 {
 	// order
 	{
-		order.outside_id = GenOutsideOrderIdFromDeal(pTrade);
+		order.outside_id = ExtendCTPId(pTrade->InvestorID, pTrade->TradingDay, pTrade->OrderSysID);
 		order.market = "ctp";
 		order.exchange = pTrade->ExchangeID;
 		order.type = "future";
@@ -579,7 +656,7 @@ void CTPTradeHandler::ConvertRtnTradeCTP2Common(CThostFtdcTradeField *pTrade, Or
 		order_deal.price = pTrade->Price;
 		order_deal.amount = pTrade->Volume;
 		order_deal.trading_day = pTrade->TradingDay;
-		order_deal.trade_id = GenOutsideTradeIdFromDeal(pTrade);
+		order_deal.trade_id = ExtendCTPId(pTrade->InvestorID, pTrade->TradingDay, pTrade->TradeID);
 		order_deal.ts = CTPGetTimestamp(pTrade->TradeDate, pTrade->TradeTime, 0);
 	}
 }
@@ -617,7 +694,7 @@ void CTPTradeHandler::CacheQryOrder(int req_id, uWS::WebSocket<uWS::SERVER>* ws,
 {
 	std::unique_lock<std::mutex> lock(qry_cache_mtx_);
 	qry_ws_cache_[req_id] = ws;
-	qry_info_cache_[req_id] = order_qry;
+	qry_order_cache_[req_id] = order_qry;
 }
 void CTPTradeHandler::GetAndClearCacheQryOrder(int req_id, uWS::WebSocket<uWS::SERVER>*& ws, OrderQuery &order_qry)
 {
@@ -629,91 +706,66 @@ void CTPTradeHandler::GetAndClearCacheQryOrder(int req_id, uWS::WebSocket<uWS::S
 		qry_ws_cache_.erase(it_ws);
 	}
 
-	auto it_order_qry = qry_info_cache_.find(req_id);
-	if (it_order_qry != qry_info_cache_.end())
+	auto it_order_qry = qry_order_cache_.find(req_id);
+	if (it_order_qry != qry_order_cache_.end())
 	{
 		order_qry = it_order_qry->second;
-		qry_info_cache_.erase(it_order_qry);
+		qry_order_cache_.erase(it_order_qry);
 	}
 }
 
-std::string CTPTradeHandler::GenOutsideOrderIdFromOrder(CThostFtdcOrderField *pOrder)
+void CTPTradeHandler::CacheQryTrade(int req_id, uWS::WebSocket<uWS::SERVER>* ws, TradeQuery &trade_qry)
 {
-	if (pOrder->OrderSysID[0] == '\0')
+	std::unique_lock<std::mutex> lock(qry_cache_mtx_);
+	qry_ws_cache_[req_id] = ws;
+	qry_trade_cache_[req_id] = trade_qry;
+}
+void CTPTradeHandler::GetAndClearCacheQryTrade(int req_id, uWS::WebSocket<uWS::SERVER>*& ws, TradeQuery &trade_qry)
+{
+	std::unique_lock<std::mutex> lock(qry_cache_mtx_);
+	auto it_ws = qry_ws_cache_.find(req_id);
+	if (it_ws != qry_ws_cache_.end())
+	{
+		ws = it_ws->second;
+		qry_ws_cache_.erase(it_ws);
+	}
+
+	auto it_trade_qry = qry_trade_cache_.find(req_id);
+	if (it_trade_qry != qry_trade_cache_.end())
+	{
+		trade_qry = it_trade_qry->second;
+		qry_trade_cache_.erase(it_trade_qry);
+	}
+}
+
+std::string CTPTradeHandler::ExtendCTPId(const char *investor_id, const char *trading_day, const char *ctp_id)
+{
+	if (ctp_id[0] == '\0')
 	{
 		return "";
 	}
-
 	char buf[256] = { 0 };
-	const char *p = pOrder->OrderSysID;
-	/*
-	while (p) {
-	if (*p == ' ') {
-	++p;
-	continue;
-	}
-	break;
-	}
-	*/
-	snprintf(buf, sizeof(buf), "%s_%s_%s", pOrder->InvestorID, pOrder->TradingDay, p);
+	snprintf(buf, sizeof(buf), "%s_%s_%s", investor_id, trading_day, ctp_id);
 	return std::string(buf);
 }
-std::string CTPTradeHandler::GenOutsideOrderIdFromDeal(CThostFtdcTradeField *pTrade)
+bool CTPTradeHandler::GetCTPIdFromExtend(const char *ext_ctp_id, int len, char *ctp_id, int ctp_id_size)
 {
-	if (pTrade->OrderSysID[0] == '\0')
+	const char *p = ext_ctp_id + len - 1;
+	int ctp_id_len = 0;
+	for (ctp_id_len = 0; ctp_id_len <len; ctp_id_len++)
 	{
-		return "";
-	}
-
-	char buf[256] = { 0 };
-	const char *p = pTrade->OrderSysID;
-	/*
-	while (p) {
-	if (*p == ' ') {
-	++p;
-	continue;
-	}
-	break;
-	}
-	*/
-	snprintf(buf, sizeof(buf), "%s_%s_%s", pTrade->InvestorID, pTrade->TradingDay, p);
-	return std::string(buf);
-}
-std::string CTPTradeHandler::GenOutsideTradeIdFromDeal(CThostFtdcTradeField *pTrade)
-{
-	char buf[256] = { 0 };
-	const char *p = pTrade->TradeID;
-	/*
-	while (p)
-	{
-	if (*p == ' ') {
-	p++;
-	continue;
-	}
-	break;
-	}
-	*/
-	snprintf(buf, sizeof(buf), "%s_%s_%s", pTrade->InvestorID, pTrade->TradingDay, p);
-	return std::string(buf);
-}
-bool CTPTradeHandler::GetCTPOrderSysIDFromOutsideId(TThostFtdcOrderSysIDType &ctp_order_sys_id, const char *outside_id, int len)
-{
-	const char *p = outside_id + len - 1;
-	int order_sys_id_len = 0;
-	for (order_sys_id_len = 0; order_sys_id_len <len; order_sys_id_len++)
-	{
-		if (*(p - order_sys_id_len) == '_')
+		if (*(p - ctp_id_len) == '_')
 		{
 			break;
 		}
 	}
 
-	if (order_sys_id_len >= sizeof(ctp_order_sys_id) || order_sys_id_len == 0)
+	if (ctp_id_len == 0 || ctp_id_len >= ctp_id_size)
 	{
 		return false;
 	}
 
-	strncpy(ctp_order_sys_id, p - order_sys_id_len + 1, order_sys_id_len);
+	strncpy(ctp_id, p - ctp_id_len + 1, ctp_id_len);
 	return true;
 }
 
@@ -1099,32 +1151,6 @@ void CTPTradeHandler::SerializeCTPActionOrder(rapidjson::Writer<rapidjson::Strin
 	writer.Key("MacAddress");
 	writer.String(pActionOrder->MacAddress);
 }
-void CTPTradeHandler::SerializeCTPQueryOrder(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcQryOrderField *pQryOrder)
-{
-	writer.Key("BrokerID");
-	writer.String(pQryOrder->BrokerID);
-
-	writer.Key("InvestorID");
-	writer.String(pQryOrder->InvestorID);
-
-	writer.Key("InstrumentID");
-	writer.String(pQryOrder->InstrumentID);
-
-	writer.Key("ExchangeID");
-	writer.String(pQryOrder->ExchangeID);
-
-	writer.Key("OrderSysID");
-	writer.String(pQryOrder->OrderSysID);
-
-	writer.Key("InsertTimeStart");
-	writer.String(pQryOrder->InsertTimeStart);
-
-	writer.Key("InsertTimeEnd");
-	writer.String(pQryOrder->InsertTimeEnd);
-
-	writer.Key("InvestUnitID");
-	writer.String(pQryOrder->InvestUnitID);
-}
 void CTPTradeHandler::SerializeCTPOrder(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcOrderField *pOrder)
 {
 	char buf[2] = { 0 };
@@ -1429,6 +1455,59 @@ void CTPTradeHandler::SerializeCTPTrade(rapidjson::Writer<rapidjson::StringBuffe
 	writer.Key("InvestUnitID");
 	writer.String(pTrade->InvestUnitID);
 }
+void CTPTradeHandler::SerializeCTPQueryOrder(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcQryOrderField *pQryOrder)
+{
+	writer.Key("BrokerID");
+	writer.String(pQryOrder->BrokerID);
+
+	writer.Key("InvestorID");
+	writer.String(pQryOrder->InvestorID);
+
+	writer.Key("InstrumentID");
+	writer.String(pQryOrder->InstrumentID);
+
+	writer.Key("ExchangeID");
+	writer.String(pQryOrder->ExchangeID);
+
+	writer.Key("OrderSysID");
+	writer.String(pQryOrder->OrderSysID);
+
+	writer.Key("InsertTimeStart");
+	writer.String(pQryOrder->InsertTimeStart);
+
+	writer.Key("InsertTimeEnd");
+	writer.String(pQryOrder->InsertTimeEnd);
+
+	writer.Key("InvestUnitID");
+	writer.String(pQryOrder->InvestUnitID);
+}
+void CTPTradeHandler::SerializeCTPQueryTrade(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcQryTradeField *pQryTrade)
+{
+	writer.Key("BrokerID");
+	writer.String(pQryTrade->BrokerID);
+
+	writer.Key("InvestorID");
+	writer.String(pQryTrade->InvestorID);
+
+	writer.Key("InstrumentID");
+	writer.String(pQryTrade->InstrumentID);
+
+	writer.Key("ExchangeID");
+	writer.String(pQryTrade->ExchangeID);
+
+	writer.Key("TradeID");
+	writer.String(pQryTrade->TradeID);
+
+	writer.Key("TradeTimeStart");
+	writer.String(pQryTrade->TradeTimeStart);
+
+	writer.Key("TradeTimeEnd");
+	writer.String(pQryTrade->TradeTimeEnd);
+
+	writer.Key("InvestUnitID");
+	writer.String(pQryTrade->InvestUnitID);
+}
+
 
 void CTPTradeHandler::OutputOrderInsert(CThostFtdcInputOrderField *req)
 {
@@ -1476,6 +1555,23 @@ void CTPTradeHandler::OutputOrderQuery(CThostFtdcQryOrderField *req)
 	writer.Key("data");
 	writer.StartObject();
 	SerializeCTPQueryOrder(writer, req);
+	writer.EndObject();
+
+	writer.EndObject();
+	LOG(INFO) << s.GetString();
+}
+void CTPTradeHandler::OutputTradeQuery(CThostFtdcQryTradeField *req)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("ctp_tradequery");
+
+	writer.Key("data");
+	writer.StartObject();
+	SerializeCTPQueryTrade(writer, req);
 	writer.EndObject();
 
 	writer.EndObject();
@@ -1786,6 +1882,39 @@ void CTPTradeHandler::OutputRspOrderQuery(CThostFtdcOrderField *pOrder, CThostFt
 	writer.Key("data");
 	writer.StartObject();
 	SerializeCTPOrder(writer, pOrder);
+	writer.EndObject();
+
+	writer.EndObject();
+	LOG(INFO) << s.GetString();
+}
+void CTPTradeHandler::OutputRspTradeQuery(CThostFtdcTradeField *pTrade, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("ctp_rspqryorder");
+	writer.Key("req_id");
+	writer.Int(nRequestID);
+	writer.Key("is_last");
+	writer.Bool(bIsLast);
+	if (pRspInfo)
+	{
+		writer.Key("error_id");
+		writer.Int(pRspInfo->ErrorID);
+		writer.Key("error_msg");
+		writer.String(pRspInfo->ErrorMsg);
+	}
+	else
+	{
+		writer.Key("error_id");
+		writer.Int(0);
+	}
+
+	writer.Key("data");
+	writer.StartObject();
+	SerializeCTPTrade(writer, pTrade);
 	writer.EndObject();
 
 	writer.EndObject();

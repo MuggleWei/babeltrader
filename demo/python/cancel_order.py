@@ -61,7 +61,7 @@ if __name__ == '__main__':
         order_type="limit",
         order_flag1="speculation",  # speculation, hedge, arbitrage
         dir="open_long",  # [action: open, close, close_today, close_yesterday; dir: long, short] or [buy, sell]
-        price=4100,
+        price=4000,
         amount=1,
         total_price=0,
         ts=ts
