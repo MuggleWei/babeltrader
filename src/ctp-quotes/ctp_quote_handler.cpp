@@ -4,7 +4,7 @@
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
 
-#include "common/serialization.h"
+#include "common/converter.h"
 #include "common/utils_func.h"
 
 CTPQuoteHandler::CTPQuoteHandler(CTPQuoteConf &conf)

@@ -1,4 +1,4 @@
-#include "serialization.h"
+#include "converter.h"
 
 namespace babeltrader
 {
@@ -197,6 +197,145 @@ void SerializeOrderQuery(rapidjson::Writer<rapidjson::StringBuffer> &writer, con
 	writer.String(order_query.contract.c_str());
 	writer.Key("contract_id");
 	writer.String(order_query.contract_id.c_str());
+}
+
+
+Order ConvertOrderJson2Common(rapidjson::Value &msg)
+{
+	Order order;
+
+	if (msg.HasMember("user_id") && msg["user_id"].IsString()) {
+		order.user_id = msg["user_id"].GetString();
+	}
+
+	if (msg.HasMember("order_id") && msg["order_id"].IsString()) {
+		order.order_id = msg["order_id"].GetString();
+	}
+
+	if (msg.HasMember("outside_id") && msg["outside_id"].IsString()) {
+		order.outside_id = msg["outside_id"].GetString();
+	}
+
+	if (msg.HasMember("client_order_id") && msg["client_order_id"].IsString()) {
+		order.client_order_id = msg["client_order_id"].GetString();
+	}
+
+	if (msg.HasMember("market") && msg["market"].IsString()) {
+		order.market = msg["market"].GetString();
+	}
+
+	if (msg.HasMember("exchange") && msg["exchange"].IsString()) {
+		order.exchange = msg["exchange"].GetString();
+	}
+
+	if (msg.HasMember("type") && msg["type"].IsString()) {
+		order.type = msg["type"].GetString();
+	}
+
+	if (msg.HasMember("symbol") && msg["symbol"].IsString()) {
+		order.symbol = msg["symbol"].GetString();
+	}
+
+	if (msg.HasMember("contract") && msg["contract"].IsString()) {
+		order.contract = msg["contract"].GetString();
+	}
+
+	if (msg.HasMember("contract_id") && msg["contract_id"].IsString()) {
+		order.contract_id = msg["contract_id"].GetString();
+	}
+
+	if (msg.HasMember("order_type") && msg["order_type"].IsString()) {
+		order.order_type = msg["order_type"].GetString();
+	}
+
+	if (msg.HasMember("order_flag1") && msg["order_flag1"].IsString()) {
+		order.order_flag1 = msg["order_flag1"].GetString();
+	}
+
+	if (msg.HasMember("dir") && msg["dir"].IsString()) {
+		order.dir = msg["dir"].GetString();
+	}
+
+	if (msg.HasMember("price")) {
+		if (msg["price"].IsInt())
+		{
+			order.price = msg["price"].GetInt();
+		}
+		else if (msg["price"].IsDouble())
+		{
+			order.price = msg["price"].GetDouble();
+		}
+	}
+
+	if (msg.HasMember("amount")) {
+		if (msg["amount"].IsInt())
+		{
+			order.amount = msg["amount"].GetInt();
+		}
+		else if (msg["amount"].IsDouble())
+		{
+			order.amount = msg["amount"].GetDouble();
+		}
+	}
+
+	if (msg.HasMember("total_price")) {
+		if (msg["total_price"].IsInt())
+		{
+			order.total_price = msg["total_price"].GetInt();
+		}
+		else if (msg["total_price"].IsDouble())
+		{
+			order.total_price = msg["total_price"].GetDouble();
+		}
+	}
+
+	if (msg.HasMember("ts") && msg["ts"].IsInt64()) {
+		order.ts = msg["ts"].GetInt64();
+	}
+
+	return std::move(order);
+}
+OrderQuery ConvertOrderQueryJson2Common(rapidjson::Value &msg)
+{
+	OrderQuery order_qry;
+
+	if (msg.HasMember("qry_id") && msg["qry_id"].IsString()) {
+		order_qry.qry_id = msg["qry_id"].GetString();
+	}
+
+	if (msg.HasMember("user_id") && msg["user_id"].IsString()) {
+		order_qry.user_id = msg["user_id"].GetString();
+	}
+
+	if (msg.HasMember("outside_id") && msg["outside_id"].IsString()) {
+		order_qry.outside_id = msg["outside_id"].GetString();
+	}
+
+	if (msg.HasMember("market") && msg["market"].IsString()) {
+		order_qry.market = msg["market"].GetString();
+	}
+
+	if (msg.HasMember("exchange") && msg["exchange"].IsString()) {
+		order_qry.exchange = msg["exchange"].GetString();
+	}
+
+	if (msg.HasMember("type") && msg["type"].IsString()) {
+		order_qry.type = msg["type"].GetString();
+	}
+
+	if (msg.HasMember("symbol") && msg["symbol"].IsString()) {
+		order_qry.symbol = msg["symbol"].GetString();
+	}
+
+	if (msg.HasMember("contract") && msg["contract"].IsString()) {
+		order_qry.contract = msg["contract"].GetString();
+	}
+
+	if (msg.HasMember("contract_id") && msg["contract_id"].IsString()) {
+		order_qry.contract_id = msg["contract_id"].GetString();
+	}
+
+	return order_qry;
 }
 
 

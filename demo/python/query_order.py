@@ -28,7 +28,11 @@ class TraderInsertOrder(Trader):
         for data in qry_result:
             print('====================')
             print("status: " + str(data['status']))
+            print("submit_status: " + str(data['submit_status']))
+            print("amount: " + str(data['amount']))
+            print("dealed_amount: " + str(data['dealed_amount']))
             print("order: " + str(data['order']))
+
 
 if __name__ == '__main__':
     trader = TraderInsertOrder()

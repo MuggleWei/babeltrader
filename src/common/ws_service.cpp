@@ -8,6 +8,7 @@
 #include "rapidjson/stringbuffer.h"
 
 #include "err.h"
+#include "converter.h"
 
 
 namespace babeltrader
@@ -85,6 +86,133 @@ void WsService::SendMsgToClient(uWS::WebSocket<uWS::SERVER> *ws, const char *msg
 	if (ws_set_.find(ws) != ws_set_.end()) {
 		ws->send(msg);
 	}
+}
+
+void WsService::BroadcastConfirmOrder(uWS::Hub &hub, Order &order, int error_id, const char *error_msg)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("confirmorder");
+	writer.Key("error_id");
+	writer.Int(error_id);
+	// don't response error message, when error_msg is GB2312 may lead json loads error in python
+	// writer.Key("error_msg");
+	// writer.String(error_msg);
+
+	writer.Key("data");
+	writer.StartObject();
+	SerializeOrder(writer, order);
+	writer.EndObject();
+
+	writer.EndObject();
+
+	LOG(INFO) << s.GetString();
+
+	hub.getDefaultGroup<uWS::SERVER>().broadcast(s.GetString(), s.GetLength(), uWS::OpCode::TEXT);
+}
+void WsService::BroadcastOrderStatus(uWS::Hub &hub, Order &order, OrderStatusNotify &order_status_notify, int error_id, const char *error_msg)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("orderstatus");
+	writer.Key("error_id");
+	writer.Int(error_id);
+	// don't response error message, it will lead json loads error in python
+	// writer.Key("error_msg");
+	// writer.String(error_msg);
+
+	writer.Key("data");
+	writer.StartObject();
+
+	SerializeOrderStatus(writer, order_status_notify);
+
+	writer.Key("order");
+	writer.StartObject();
+	SerializeOrder(writer, order);
+	writer.EndObject();  // order end
+
+	writer.EndObject();  // data end
+	writer.EndObject();  // object end
+
+	LOG(INFO) << s.GetString();
+
+	hub.getDefaultGroup<uWS::SERVER>().broadcast(s.GetString(), s.GetLength(), uWS::OpCode::TEXT);
+}
+void WsService::BroadcastOrderDeal(uWS::Hub &hub, Order &order, OrderDealNotify &order_deal)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("orderdeal");
+	writer.Key("error_id");
+	writer.Int(0);
+
+	writer.Key("data");
+	writer.StartObject();
+
+	SerializeOrderDeal(writer, order_deal);
+
+	writer.Key("order");
+	writer.StartObject();
+	SerializeOrder(writer, order);
+	writer.EndObject();  // order end
+
+	writer.EndObject();  // data end
+	writer.EndObject();  // object end
+
+	LOG(INFO) << s.GetString();
+
+	hub.getDefaultGroup<uWS::SERVER>().broadcast(s.GetString(), s.GetLength(), uWS::OpCode::TEXT);
+}
+void WsService::RspOrderQry(uWS::WebSocket<uWS::SERVER>* ws, OrderQuery &order_qry, std::vector<Order> &orders, std::vector<OrderStatusNotify> &order_status, int error_id)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("rsp_qryorder");
+	writer.Key("error_id");
+	writer.Int(error_id);
+
+	writer.Key("data");
+	writer.StartObject();
+
+	SerializeOrderQuery(writer, order_qry);
+
+	writer.Key("data");
+	writer.StartArray();
+
+	for (auto i = 0; i < orders.size(); i++)
+	{
+		writer.StartObject();
+		SerializeOrderStatus(writer, order_status[i]);
+
+		writer.Key("order");
+		writer.StartObject();
+		SerializeOrder(writer, orders[i]);
+		writer.EndObject();  // order end
+
+		writer.EndObject();  // order status end
+	}
+
+	writer.EndArray();  // orders
+
+	writer.EndObject();  // data end
+
+	writer.EndObject();  // object end
+
+	LOG(INFO) << s.GetString();
+
+	SendMsgToClient(ws, s.GetString());
 }
 
 void WsService::MessageLoop()
@@ -194,7 +322,8 @@ void WsService::OnReqInsertOrder(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Doc
 		throw std::runtime_error("field \"data\" need object");
 	}
 
-	trade_->InsertOrder(ws, doc["data"]);
+	Order order = ConvertOrderJson2Common(doc["data"]);
+	trade_->InsertOrder(ws, order);
 }
 void WsService::OnReqCancelOrder(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Document &doc)
 {
@@ -202,7 +331,8 @@ void WsService::OnReqCancelOrder(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Doc
 		throw std::runtime_error("field \"data\" need object");
 	}
 
-	trade_->CancelOrder(ws, doc["data"]);
+	Order order = ConvertOrderJson2Common(doc["data"]);
+	trade_->CancelOrder(ws, order);
 }
 void WsService::OnReqQueryOrder(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Document &doc)
 {
@@ -210,7 +340,8 @@ void WsService::OnReqQueryOrder(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Docu
 		throw std::runtime_error("field \"data\" need object");
 	}
 
-	trade_->QueryOrder(ws, doc["data"]);
+	OrderQuery order_qry = ConvertOrderQueryJson2Common(doc["data"]);
+	trade_->QueryOrder(ws, order_qry);
 }
 
 

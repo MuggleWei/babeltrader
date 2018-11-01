@@ -257,12 +257,10 @@ ts(int64): 成交时间戳
         "contract_id":"1901"
         "data":[
             {
-                "status":{
-                    "status":3,
-                    "submit_status":2,
-                    "amount":1,
-                    "dealed_amount":0
-                },
+                "status":3,
+                "submit_status":2,
+                "amount":1,
+                "dealed_amount":0
                 "order":{
                     "user_id":"",
                     "order_id":"",

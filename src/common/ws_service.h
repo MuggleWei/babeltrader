@@ -40,6 +40,11 @@ public:
 
 	void SendMsgToClient(uWS::WebSocket<uWS::SERVER> *ws, const char *msg);
 
+	void BroadcastConfirmOrder(uWS::Hub &hub, Order &order, int error_id, const char *error_msg);
+	void BroadcastOrderStatus(uWS::Hub &hub, Order &order, OrderStatusNotify &order_status_notify, int error_id, const char *error_msg);
+	void BroadcastOrderDeal(uWS::Hub &hub, Order &order, OrderDealNotify &order_deal);
+	void RspOrderQry(uWS::WebSocket<uWS::SERVER>* ws, OrderQuery &order_qry, std::vector<Order> &orders, std::vector<OrderStatusNotify> &order_status, int error_id);
+
 private:
 	void MessageLoop();
 

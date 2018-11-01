@@ -4,7 +4,7 @@
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
 
-#include "common/serialization.h"
+#include "common/converter.h"
 
 const char *exchange_SSE = "SSE";
 const char *exchange_SZSE = "SZSE";

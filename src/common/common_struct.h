@@ -104,7 +104,7 @@ struct Order
 	std::string order_flag1;	// e.g. speculation, hedge, arbitrage
 	std::string dir;
 	double price;
-	int amount;
+	double amount;
 	double total_price;
 	int64_t ts;
 

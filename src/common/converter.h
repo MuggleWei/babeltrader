@@ -1,6 +1,7 @@
 #ifndef BABELTRADER_SERIALIZATION_H_
 #define BABELTRADER_SERIALIZATION_H_
 
+#include "rapidjson/document.h"
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
 
@@ -20,6 +21,10 @@ void SerializeOrder(rapidjson::Writer<rapidjson::StringBuffer> &writer, const Or
 void SerializeOrderStatus(rapidjson::Writer<rapidjson::StringBuffer> &writer, const OrderStatusNotify &order_status);
 void SerializeOrderDeal(rapidjson::Writer<rapidjson::StringBuffer> &writer, const OrderDealNotify &order_deal);
 void SerializeOrderQuery(rapidjson::Writer<rapidjson::StringBuffer> &writer, const OrderQuery &order_query);
+
+
+Order ConvertOrderJson2Common(rapidjson::Value &msg);
+OrderQuery ConvertOrderQueryJson2Common(rapidjson::Value &msg);
 
 
 }
