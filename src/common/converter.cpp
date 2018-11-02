@@ -219,6 +219,67 @@ void SerializeTradeQuery(rapidjson::Writer<rapidjson::StringBuffer> &writer, con
 	writer.Key("contract_id");
 	writer.String(trade_query.contract_id.c_str());
 }
+void SerializePositionQuery(rapidjson::Writer<rapidjson::StringBuffer> &writer, const PositionQuery &position_query)
+{
+	writer.Key("qry_id");
+	writer.String(position_query.qry_id.c_str());
+	writer.Key("user_id");
+	writer.String(position_query.user_id.c_str());
+	writer.Key("market");
+	writer.String(position_query.market.c_str());
+	writer.Key("exchange");
+	writer.String(position_query.exchange.c_str());
+	writer.Key("type");
+	writer.String(position_query.type.c_str());
+	writer.Key("symbol");
+	writer.String(position_query.symbol.c_str());
+	writer.Key("contract");
+	writer.String(position_query.contract.c_str());
+	writer.Key("contract_id");
+	writer.String(position_query.contract_id.c_str());
+}
+
+void SerializePositionSummaryType1(rapidjson::Writer<rapidjson::StringBuffer> &writer, const PositionSummaryType1 &position_summary)
+{
+	writer.Key("market");
+	writer.String(position_summary.market.c_str());
+	writer.Key("exchange");
+	writer.String(position_summary.exchange.c_str());
+	writer.Key("type");
+	writer.String(position_summary.type.c_str());
+	writer.Key("symbol");
+	writer.String(position_summary.symbol.c_str());
+	writer.Key("contract");
+	writer.String(position_summary.contract.c_str());
+	writer.Key("contract_id");
+	writer.String(position_summary.contract.c_str());
+	writer.Key("dir");
+	writer.String(position_summary.dir.c_str());
+	writer.Key("order_flag1");
+	writer.String(position_summary.order_flag1.c_str());
+	writer.Key("amount");
+	writer.Double(position_summary.amount);
+	writer.Key("today_amount");
+	writer.Double(position_summary.today_amount);
+	writer.Key("margin");
+	writer.Double(position_summary.margin);
+	writer.Key("long_frozen");
+	writer.Double(position_summary.long_frozen);
+	writer.Key("short_frozen");
+	writer.Double(position_summary.short_frozen);
+	writer.Key("frozen_margin");
+	writer.Double(position_summary.frozen_margin);
+	writer.Key("trading_day");
+	writer.String(position_summary.trading_day.c_str());
+	writer.Key("pre_settlement_price");
+	writer.Double(position_summary.pre_settlement_price);
+	writer.Key("settlement_price");
+	writer.Double(position_summary.settlement_price);
+	writer.Key("open_cost");
+	writer.Double(position_summary.open_cost);
+	writer.Key("position_cost");
+	writer.Double(position_summary.position_cost);
+}
 
 Order ConvertOrderJson2Common(rapidjson::Value &msg)
 {
@@ -398,6 +459,44 @@ TradeQuery ConvertTradeQueryJson2Common(rapidjson::Value &msg)
 	}
 
 	return trade_qry;
+}
+PositionQuery ConvertPositionQueryJson2Common(rapidjson::Value &msg)
+{
+	PositionQuery position_qry;
+
+	if (msg.HasMember("qry_id") && msg["qry_id"].IsString()) {
+		position_qry.qry_id = msg["qry_id"].GetString();
+	}
+
+	if (msg.HasMember("user_id") && msg["user_id"].IsString()) {
+		position_qry.user_id = msg["user_id"].GetString();
+	}
+
+	if (msg.HasMember("market") && msg["market"].IsString()) {
+		position_qry.market = msg["market"].GetString();
+	}
+
+	if (msg.HasMember("exchange") && msg["exchange"].IsString()) {
+		position_qry.exchange = msg["exchange"].GetString();
+	}
+
+	if (msg.HasMember("type") && msg["type"].IsString()) {
+		position_qry.type = msg["type"].GetString();
+	}
+
+	if (msg.HasMember("symbol") && msg["symbol"].IsString()) {
+		position_qry.symbol = msg["symbol"].GetString();
+	}
+
+	if (msg.HasMember("contract") && msg["contract"].IsString()) {
+		position_qry.contract = msg["contract"].GetString();
+	}
+
+	if (msg.HasMember("contract_id") && msg["contract_id"].IsString()) {
+		position_qry.contract_id = msg["contract_id"].GetString();
+	}
+
+	return position_qry;
 }
 
 

@@ -120,8 +120,8 @@ struct OrderStatusNotify
 {
 	OrderStatusEnum order_status;
 	OrderSubmitStatusEnum order_submit_status;
-	int amount;
-	int dealed_amount;
+	double amount;
+	double dealed_amount;
 
 	OrderStatusNotify()
 		: order_status(OrderStatus_Unknown)
@@ -134,7 +134,7 @@ struct OrderStatusNotify
 struct OrderDealNotify
 {
 	double price;
-	int amount;
+	double amount;
 	std::string trading_day;
 	std::string trade_id;
 	int64_t ts;
@@ -170,6 +170,40 @@ struct TradeQuery
 	std::string symbol;
 	std::string contract;
 	std::string contract_id;
+};
+
+struct PositionQuery
+{
+	std::string qry_id;
+	std::string user_id;
+	std::string market;
+	std::string exchange;
+	std::string type;
+	std::string symbol;
+	std::string contract;
+	std::string contract_id;
+};
+
+struct PositionSummaryType1
+{
+	std::string market;
+	std::string exchange;
+	std::string type;
+	std::string symbol;
+	std::string contract;
+	std::string dir;					// e.g. net, long, short
+	std::string order_flag1;			// e.g. speculation, hedge, arbitrage
+	double amount;
+	double today_amount;
+	double margin;
+	double long_frozen;
+	double short_frozen;
+	double frozen_margin;
+	std::string trading_day;
+	double pre_settlement_price;
+	double settlement_price;
+	double open_cost;
+	double position_cost;
 };
 
 

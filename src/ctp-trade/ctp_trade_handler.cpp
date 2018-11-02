@@ -96,6 +96,23 @@ void CTPTradeHandler::QueryTrade(uWS::WebSocket<uWS::SERVER> *ws, TradeQuery &tr
 	}
 	api_->ReqQryTrade(&req, req_id_++);
 }
+void CTPTradeHandler::QueryPosition(uWS::WebSocket<uWS::SERVER> *ws, PositionQuery &position_query)
+{
+	CThostFtdcQryInvestorPositionField req = { 0 };
+	ConvertQueryPositionCommon2CTP(position_query, req);
+
+	// output
+	OutputPositionQuery(&req);
+
+	// cache query position
+	CacheQryPosition(req_id_, ws, position_query);
+
+	if (api_ == nullptr || !api_ready_)
+	{
+		throw std::runtime_error("trade api not ready yet");
+	}
+	api_->ReqQryInvestorPosition(&req, req_id_++);
+}
 
 void CTPTradeHandler::OnFrontConnected()
 {
@@ -232,12 +249,15 @@ void CTPTradeHandler::OnRspQryOrder(CThostFtdcOrderField *pOrder, CThostFtdcRspI
 	if (it == rsp_qry_order_caches_.end())
 	{
 		std::vector<CThostFtdcOrderField> vec;
-		rsp_qry_order_caches_[nRequestID] = vec;
+		rsp_qry_order_caches_[nRequestID] = std::move(vec);
 		it = rsp_qry_order_caches_.find(nRequestID);
 	}
-	CThostFtdcOrderField copy_order;
-	memcpy(&copy_order, pOrder, sizeof(copy_order));
-	it->second.push_back(copy_order);
+	if (pOrder)
+	{
+		CThostFtdcOrderField copy_order;
+		memcpy(&copy_order, pOrder, sizeof(copy_order));
+		it->second.push_back(copy_order);
+	}
 
 	if (bIsLast)
 	{
@@ -278,12 +298,15 @@ void CTPTradeHandler::OnRspQryTrade(CThostFtdcTradeField *pTrade, CThostFtdcRspI
 	if (it == rsp_qry_trade_caches_.end())
 	{
 		std::vector<CThostFtdcTradeField> vec;
-		rsp_qry_trade_caches_[nRequestID] = vec;
+		rsp_qry_trade_caches_[nRequestID] = std::move(vec);
 		it = rsp_qry_trade_caches_.find(nRequestID);
 	}
-	CThostFtdcTradeField copy_trade;
-	memcpy(&copy_trade, pTrade, sizeof(copy_trade));
-	it->second.push_back(copy_trade);
+	if (pTrade)
+	{
+		CThostFtdcTradeField copy_trade;
+		memcpy(&copy_trade, pTrade, sizeof(copy_trade));
+		it->second.push_back(copy_trade);
+	}
 
 	if (bIsLast)
 	{
@@ -313,6 +336,52 @@ void CTPTradeHandler::OnRspQryTrade(CThostFtdcTradeField *pTrade, CThostFtdcRspI
 		}
 
 		rsp_qry_trade_caches_.erase(nRequestID);
+	}
+}
+void CTPTradeHandler::OnRspQryInvestorPosition(CThostFtdcInvestorPositionField *pInvestorPosition, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+{
+	// output
+	OutputRspPositionQuery(pInvestorPosition, pRspInfo, nRequestID, bIsLast);
+
+	auto it = rsp_qry_position_caches_.find(nRequestID);
+	if (it == rsp_qry_position_caches_.end())
+	{
+		std::vector<CThostFtdcInvestorPositionField> vec;
+		rsp_qry_position_caches_[nRequestID] = std::move(vec);
+		it = rsp_qry_position_caches_.find(nRequestID);
+	}
+	if (pInvestorPosition)
+	{
+		CThostFtdcInvestorPositionField copy_position;
+		memcpy(&copy_position, pInvestorPosition, sizeof(copy_position));
+		it->second.push_back(copy_position);
+	}
+
+	if (bIsLast)
+	{
+		uWS::WebSocket<uWS::SERVER>* ws;
+		PositionQuery position_qry;
+		GetAndCleanCacheQryPosition(nRequestID, ws, position_qry);
+		std::vector<CThostFtdcInvestorPositionField> &ctp_positions = rsp_qry_position_caches_[nRequestID];
+
+		if (ws)
+		{
+			std::vector<PositionSummaryType1> positions;
+			for (CThostFtdcInvestorPositionField &ctp_position : ctp_positions)
+			{
+				PositionSummaryType1 position;
+				ConvertPositionCTP2Common(&ctp_position, position);
+				positions.push_back(std::move(position));
+			}
+
+			int error_id = 0;
+			if (pRspInfo) {
+				error_id = pRspInfo->ErrorID;
+			}
+			ws_service_.RspPositionQry(ws, position_qry, positions, error_id);
+		}
+
+		rsp_qry_position_caches_.erase(nRequestID);
 	}
 }
 
@@ -521,6 +590,17 @@ void CTPTradeHandler::ConvertQueryTradeCommon2CTP(TradeQuery &trade_qry, CThostF
 		GetCTPIdFromExtend(trade_qry.trade_id.c_str(), trade_qry.trade_id.length(), req.TradeID, sizeof(req.TradeID));
 	}
 }
+void CTPTradeHandler::ConvertQueryPositionCommon2CTP(PositionQuery &position_qry, CThostFtdcQryInvestorPositionField &req)
+{
+	strncpy(req.BrokerID, conf_.broker_id.c_str(), sizeof(req.BrokerID) - 1);
+	strncpy(req.InvestorID, conf_.user_id.c_str(), sizeof(req.InvestorID) - 1);
+	if (!position_qry.exchange.empty()) {
+		strncpy(req.ExchangeID, position_qry.exchange.c_str(), sizeof(req.ExchangeID) - 1);
+	}
+	if (!position_qry.symbol.empty() && !position_qry.contract.empty()) {
+		snprintf(req.InstrumentID, sizeof(req.InstrumentID) - 1, "%s%s", position_qry.symbol.c_str(), position_qry.contract.c_str());
+	}
+}
 
 void CTPTradeHandler::ConvertInsertOrderCTP2Common(CThostFtdcInputOrderField &req, Order &order)
 {
@@ -660,6 +740,25 @@ void CTPTradeHandler::ConvertRtnTradeCTP2Common(CThostFtdcTradeField *pTrade, Or
 		order_deal.ts = CTPGetTimestamp(pTrade->TradeDate, pTrade->TradeTime, 0);
 	}
 }
+void CTPTradeHandler::ConvertPositionCTP2Common(CThostFtdcInvestorPositionField *pPosition, PositionSummaryType1 &position_summary)
+{
+	position_summary.market = "ctp";
+	position_summary.exchange = pPosition->ExchangeID;
+	CTPSplitInstrument(pPosition->InstrumentID, position_summary.symbol, position_summary.contract);
+	position_summary.dir = ConvertPositionDirCTP2Common(pPosition->PosiDirection);
+	position_summary.order_flag1 = ConvertHedgeFlagCTP2Common(pPosition->HedgeFlag);
+	position_summary.amount = pPosition->Position;
+	position_summary.today_amount = pPosition->TodayPosition;
+	position_summary.margin = pPosition->UseMargin;
+	position_summary.long_frozen = pPosition->LongFrozen;
+	position_summary.short_frozen = pPosition->ShortFrozen;
+	position_summary.frozen_margin = pPosition->FrozenMargin;
+	position_summary.trading_day = pPosition->TradingDay;
+	position_summary.pre_settlement_price = pPosition->PreSettlementPrice;
+	position_summary.settlement_price = pPosition->SettlementPrice;
+	position_summary.open_cost = pPosition->OpenCost;
+	position_summary.position_cost = pPosition->PositionCost;
+}
 
 void CTPTradeHandler::RecordOrder(Order &order, const std::string &order_ref, int front_id, int session_id)
 {
@@ -735,6 +834,30 @@ void CTPTradeHandler::GetAndClearCacheQryTrade(int req_id, uWS::WebSocket<uWS::S
 	{
 		trade_qry = it_trade_qry->second;
 		qry_trade_cache_.erase(it_trade_qry);
+	}
+}
+
+void CTPTradeHandler::CacheQryPosition(int req_id, uWS::WebSocket<uWS::SERVER>* ws, PositionQuery &position_qry)
+{
+	std::unique_lock<std::mutex> lock(qry_cache_mtx_);
+	qry_ws_cache_[req_id] = ws;
+	qry_position_cache_[req_id] = position_qry;
+}
+void CTPTradeHandler::GetAndCleanCacheQryPosition(int req_id, uWS::WebSocket<uWS::SERVER>*& ws, PositionQuery &position_qry)
+{
+	std::unique_lock<std::mutex> lock(qry_cache_mtx_);
+	auto it_ws = qry_ws_cache_.find(req_id);
+	if (it_ws != qry_ws_cache_.end())
+	{
+		ws = it_ws->second;
+		qry_ws_cache_.erase(it_ws);
+	}
+
+	auto it_position_qry = qry_position_cache_.find(req_id);
+	if (it_position_qry != qry_position_cache_.end())
+	{
+		position_qry = it_position_qry->second;
+		qry_position_cache_.erase(it_position_qry);
 	}
 }
 
@@ -994,6 +1117,34 @@ void CTPTradeHandler::ConvertOrderDirCTP2Common(const char ctp_dir, const char c
 	}
 }
 
+std::string CTPTradeHandler::ConvertPositionDirCTP2Common(TThostFtdcPosiDirectionType ctp_position_dir)
+{
+	switch (ctp_position_dir)
+	{
+	case THOST_FTDC_PD_Long:
+		return "long";
+	case THOST_FTDC_PD_Short:
+		return "short";
+	case THOST_FTDC_PD_Net: 
+	default:
+		return "net";
+	}
+}
+std::string CTPTradeHandler::ConvertHedgeFlagCTP2Common(TThostFtdcHedgeFlagType ctp_hedge_flag)
+{
+	switch (ctp_hedge_flag)
+	{
+	case THOST_FTDC_HF_Arbitrage:
+		return "arbitrage";
+	case THOST_FTDC_HF_Hedge:
+		return "hedge";
+	case THOST_FTDC_HF_MarketMaker:
+		return "marketmaker";
+	case THOST_FTDC_HF_Speculation:
+	default:
+		return "speculation";
+	}
+}
 
 void CTPTradeHandler::SerializeCTPInputOrder(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcInputOrderField *pInputOrder)
 {
@@ -1150,6 +1301,75 @@ void CTPTradeHandler::SerializeCTPActionOrder(rapidjson::Writer<rapidjson::Strin
 
 	writer.Key("MacAddress");
 	writer.String(pActionOrder->MacAddress);
+}
+void CTPTradeHandler::SerializeCTPQueryOrder(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcQryOrderField *pQryOrder)
+{
+	writer.Key("BrokerID");
+	writer.String(pQryOrder->BrokerID);
+
+	writer.Key("InvestorID");
+	writer.String(pQryOrder->InvestorID);
+
+	writer.Key("InstrumentID");
+	writer.String(pQryOrder->InstrumentID);
+
+	writer.Key("ExchangeID");
+	writer.String(pQryOrder->ExchangeID);
+
+	writer.Key("OrderSysID");
+	writer.String(pQryOrder->OrderSysID);
+
+	writer.Key("InsertTimeStart");
+	writer.String(pQryOrder->InsertTimeStart);
+
+	writer.Key("InsertTimeEnd");
+	writer.String(pQryOrder->InsertTimeEnd);
+
+	writer.Key("InvestUnitID");
+	writer.String(pQryOrder->InvestUnitID);
+}
+void CTPTradeHandler::SerializeCTPQueryTrade(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcQryTradeField *pQryTrade)
+{
+	writer.Key("BrokerID");
+	writer.String(pQryTrade->BrokerID);
+
+	writer.Key("InvestorID");
+	writer.String(pQryTrade->InvestorID);
+
+	writer.Key("InstrumentID");
+	writer.String(pQryTrade->InstrumentID);
+
+	writer.Key("ExchangeID");
+	writer.String(pQryTrade->ExchangeID);
+
+	writer.Key("TradeID");
+	writer.String(pQryTrade->TradeID);
+
+	writer.Key("TradeTimeStart");
+	writer.String(pQryTrade->TradeTimeStart);
+
+	writer.Key("TradeTimeEnd");
+	writer.String(pQryTrade->TradeTimeEnd);
+
+	writer.Key("InvestUnitID");
+	writer.String(pQryTrade->InvestUnitID);
+}
+void CTPTradeHandler::SerializeCTPQueryPosition(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcQryInvestorPositionField *pQryPosition)
+{
+	writer.Key("BrokerID");
+	writer.String(pQryPosition->BrokerID);
+
+	writer.Key("InvestorID");
+	writer.String(pQryPosition->InvestorID);
+
+	writer.Key("ExchangeID");
+	writer.String(pQryPosition->ExchangeID);
+
+	writer.Key("InstrumentID");
+	writer.String(pQryPosition->InstrumentID);
+
+	writer.Key("InvestUnitID");
+	writer.String(pQryPosition->InvestUnitID);
 }
 void CTPTradeHandler::SerializeCTPOrder(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcOrderField *pOrder)
 {
@@ -1455,57 +1675,150 @@ void CTPTradeHandler::SerializeCTPTrade(rapidjson::Writer<rapidjson::StringBuffe
 	writer.Key("InvestUnitID");
 	writer.String(pTrade->InvestUnitID);
 }
-void CTPTradeHandler::SerializeCTPQueryOrder(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcQryOrderField *pQryOrder)
+void CTPTradeHandler::SerializeCTPPosition(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcInvestorPositionField *pInvestorPosition)
 {
-	writer.Key("BrokerID");
-	writer.String(pQryOrder->BrokerID);
-
-	writer.Key("InvestorID");
-	writer.String(pQryOrder->InvestorID);
+	char buf[2] = { 0 };
 
 	writer.Key("InstrumentID");
-	writer.String(pQryOrder->InstrumentID);
+	writer.String(pInvestorPosition->InstrumentID);
 
-	writer.Key("ExchangeID");
-	writer.String(pQryOrder->ExchangeID);
-
-	writer.Key("OrderSysID");
-	writer.String(pQryOrder->OrderSysID);
-
-	writer.Key("InsertTimeStart");
-	writer.String(pQryOrder->InsertTimeStart);
-
-	writer.Key("InsertTimeEnd");
-	writer.String(pQryOrder->InsertTimeEnd);
-
-	writer.Key("InvestUnitID");
-	writer.String(pQryOrder->InvestUnitID);
-}
-void CTPTradeHandler::SerializeCTPQueryTrade(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcQryTradeField *pQryTrade)
-{
 	writer.Key("BrokerID");
-	writer.String(pQryTrade->BrokerID);
+	writer.String(pInvestorPosition->BrokerID);
 
 	writer.Key("InvestorID");
-	writer.String(pQryTrade->InvestorID);
+	writer.String(pInvestorPosition->InvestorID);
 
-	writer.Key("InstrumentID");
-	writer.String(pQryTrade->InstrumentID);
+	buf[0] = pInvestorPosition->PosiDirection;
+	writer.Key("PosiDirection");
+	writer.String(buf);
+
+	buf[0] = pInvestorPosition->HedgeFlag;
+	writer.Key("HedgeFlag");
+	writer.String(buf);
+
+	buf[0] = pInvestorPosition->PositionDate;
+	writer.Key("PositionDate");
+	writer.String(buf);
+
+	writer.Key("YdPosition");
+	writer.Int(pInvestorPosition->YdPosition);
+
+	writer.Key("Position");
+	writer.Int(pInvestorPosition->Position);
+
+	writer.Key("LongFrozen");
+	writer.Int(pInvestorPosition->LongFrozen);
+
+	writer.Key("ShortFrozen");
+	writer.Int(pInvestorPosition->ShortFrozen);
+
+	writer.Key("LongFrozenAmount");
+	writer.Double(pInvestorPosition->LongFrozenAmount);
+
+	writer.Key("ShortFrozenAmount");
+	writer.Double(pInvestorPosition->ShortFrozenAmount);
+
+	writer.Key("OpenVolume");
+	writer.Int(pInvestorPosition->OpenVolume);
+
+	writer.Key("CloseVolume");
+	writer.Int(pInvestorPosition->CloseVolume);
+
+	writer.Key("OpenAmount");
+	writer.Double(pInvestorPosition->OpenAmount);
+
+	writer.Key("CloseAmount");
+	writer.Double(pInvestorPosition->CloseAmount);
+
+	writer.Key("PositionCost");
+	writer.Double(pInvestorPosition->PositionCost);
+
+	writer.Key("PreMargin");
+	writer.Double(pInvestorPosition->PreMargin);
+
+	writer.Key("UseMargin");
+	writer.Double(pInvestorPosition->UseMargin);
+
+	writer.Key("FrozenMargin");
+	writer.Double(pInvestorPosition->FrozenMargin);
+
+	writer.Key("FrozenCash");
+	writer.Double(pInvestorPosition->FrozenCash);
+
+	writer.Key("FrozenCommission");
+	writer.Double(pInvestorPosition->FrozenCommission);
+
+	writer.Key("CashIn");
+	writer.Double(pInvestorPosition->CashIn);
+
+	writer.Key("Commission");
+	writer.Double(pInvestorPosition->Commission);
+
+	writer.Key("CloseProfit");
+	writer.Double(pInvestorPosition->CloseProfit);
+
+	writer.Key("PositionProfit");
+	writer.Double(pInvestorPosition->PositionProfit);
+
+	writer.Key("PreSettlementPrice");
+	writer.Double(pInvestorPosition->PreSettlementPrice);
+
+	writer.Key("SettlementPrice");
+	writer.Double(pInvestorPosition->SettlementPrice);
+
+	writer.Key("TradingDay");
+	writer.String(pInvestorPosition->TradingDay);
+
+	writer.Key("SettlementID");
+	writer.Int(pInvestorPosition->SettlementID);
+
+	writer.Key("OpenCost");
+	writer.Double(pInvestorPosition->OpenCost);
+
+	writer.Key("ExchangeMargin");
+	writer.Double(pInvestorPosition->ExchangeMargin);
+
+	writer.Key("CombPosition");
+	writer.Int(pInvestorPosition->CombPosition);
+
+	writer.Key("CombLongFrozen");
+	writer.Int(pInvestorPosition->CombLongFrozen);
+
+	writer.Key("CombShortFrozen");
+	writer.Int(pInvestorPosition->CombShortFrozen);
+
+	writer.Key("CloseProfitByDate");
+	writer.Double(pInvestorPosition->CloseProfitByDate);
+
+	writer.Key("CloseProfitByTrade");
+	writer.Double(pInvestorPosition->CloseProfitByTrade);
+
+	writer.Key("TodayPosition");
+	writer.Int(pInvestorPosition->TodayPosition);
+
+	writer.Key("MarginRateByMoney");
+	writer.Double(pInvestorPosition->MarginRateByMoney);
+
+	writer.Key("MarginRateByVolume");
+	writer.Double(pInvestorPosition->MarginRateByVolume);
+
+	writer.Key("StrikeFrozen");
+	writer.Int(pInvestorPosition->StrikeFrozen);
+
+	writer.Key("StrikeFrozenAmount");
+	writer.Double(pInvestorPosition->StrikeFrozenAmount);
+
+	writer.Key("AbandonFrozen");
+	writer.Int(pInvestorPosition->AbandonFrozen);
 
 	writer.Key("ExchangeID");
-	writer.String(pQryTrade->ExchangeID);
+	writer.String(pInvestorPosition->ExchangeID);
 
-	writer.Key("TradeID");
-	writer.String(pQryTrade->TradeID);
-
-	writer.Key("TradeTimeStart");
-	writer.String(pQryTrade->TradeTimeStart);
-
-	writer.Key("TradeTimeEnd");
-	writer.String(pQryTrade->TradeTimeEnd);
+	writer.Key("YdStrikeFrozen");
+	writer.Int(pInvestorPosition->YdStrikeFrozen);
 
 	writer.Key("InvestUnitID");
-	writer.String(pQryTrade->InvestUnitID);
+	writer.String(pInvestorPosition->InvestUnitID);
 }
 
 
@@ -1572,6 +1885,23 @@ void CTPTradeHandler::OutputTradeQuery(CThostFtdcQryTradeField *req)
 	writer.Key("data");
 	writer.StartObject();
 	SerializeCTPQueryTrade(writer, req);
+	writer.EndObject();
+
+	writer.EndObject();
+	LOG(INFO) << s.GetString();
+}
+void CTPTradeHandler::OutputPositionQuery(CThostFtdcQryInvestorPositionField *req)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("ctp_positionquery");
+
+	writer.Key("data");
+	writer.StartObject();
+	SerializeCTPQueryPosition(writer, req);
 	writer.EndObject();
 
 	writer.EndObject();
@@ -1881,7 +2211,10 @@ void CTPTradeHandler::OutputRspOrderQuery(CThostFtdcOrderField *pOrder, CThostFt
 
 	writer.Key("data");
 	writer.StartObject();
-	SerializeCTPOrder(writer, pOrder);
+	if (pOrder)
+	{
+		SerializeCTPOrder(writer, pOrder);
+	}
 	writer.EndObject();
 
 	writer.EndObject();
@@ -1914,7 +2247,46 @@ void CTPTradeHandler::OutputRspTradeQuery(CThostFtdcTradeField *pTrade, CThostFt
 
 	writer.Key("data");
 	writer.StartObject();
-	SerializeCTPTrade(writer, pTrade);
+	if (pTrade)
+	{
+		SerializeCTPTrade(writer, pTrade);
+	}
+	writer.EndObject();
+
+	writer.EndObject();
+	LOG(INFO) << s.GetString();
+}
+void CTPTradeHandler::OutputRspPositionQuery(CThostFtdcInvestorPositionField *pInvestorPosition, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("ctp_rspqryposition");
+	writer.Key("req_id");
+	writer.Int(nRequestID);
+	writer.Key("is_last");
+	writer.Bool(bIsLast);
+	if (pRspInfo)
+	{
+		writer.Key("error_id");
+		writer.Int(pRspInfo->ErrorID);
+		writer.Key("error_msg");
+		writer.String(pRspInfo->ErrorMsg);
+	}
+	else
+	{
+		writer.Key("error_id");
+		writer.Int(0);
+	}
+
+	writer.Key("data");
+	writer.StartObject();
+	if (pInvestorPosition)
+	{
+		SerializeCTPPosition(writer, pInvestorPosition);
+	}
 	writer.EndObject();
 
 	writer.EndObject();

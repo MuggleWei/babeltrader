@@ -92,6 +92,12 @@ total_price(double): 共开多少价格, 此字段在某些币所的现货交易
 ts(int64): 时间戳
 ```
 
+注意:  
+- user_id, market, type: 其实在上手当中, 并没有用到这些字段, 只是为了系统内的结构字段统一, 在这里写出来
+- outside_id: 这个是上手的订单id, 下单时不填写
+- dir: buy/sell适用于股票, 而期货的方向, 使用 open/close _ long/short
+- price: 当使用市价单时, 此时price是无效字段, 请注意, 某些交易所(SHFE, okex合约)不支持市价单
+
 
 #### 订单状态结构
 示例:
