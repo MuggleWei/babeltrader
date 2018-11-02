@@ -1,5 +1,6 @@
 #include "utils_func.h"
 #include <time.h>
+#include <string.h>
 
 namespace babeltrader
 {
