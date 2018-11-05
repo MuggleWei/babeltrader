@@ -122,6 +122,8 @@ void SerializeOrder(rapidjson::Writer<rapidjson::StringBuffer> &writer, const Or
 	writer.String(order.user_id.c_str());
 	writer.Key("order_id");
 	writer.String(order.order_id.c_str());
+	writer.Key("outside_user_id");
+	writer.String(order.outside_user_id.c_str());
 	writer.Key("outside_id");
 	writer.String(order.outside_id.c_str());
 	writer.Key("client_order_id");
@@ -254,6 +256,8 @@ void SerializePositionSummaryType1(rapidjson::Writer<rapidjson::StringBuffer> &w
 {
 	writer.Key("market");
 	writer.String(position_summary.market.c_str());
+	writer.Key("outside_user_id");
+	writer.String(position_summary.outside_user_id.c_str());
 	writer.Key("exchange");
 	writer.String(position_summary.exchange.c_str());
 	writer.Key("type");
@@ -309,6 +313,8 @@ void SerializePositionDetailType1(rapidjson::Writer<rapidjson::StringBuffer> &wr
 {
 	writer.Key("market");
 	writer.String(position_detail.market.c_str());
+	writer.Key("outside_user_id");
+	writer.String(position_detail.outside_user_id.c_str());
 	writer.Key("exchange");
 	writer.String(position_detail.exchange.c_str());
 	writer.Key("type");
@@ -358,6 +364,8 @@ void SerializePositionDetailType1(rapidjson::Writer<rapidjson::StringBuffer> &wr
 }
 void SerializeTradeAccountType1(rapidjson::Writer<rapidjson::StringBuffer> &writer, const TradeAccountType1 &trade_account)
 {
+	writer.Key("market");
+	writer.String(trade_account.market.c_str());
 	writer.Key("outside_user_id");
 	writer.String(trade_account.outside_user_id.c_str());
 	writer.Key("pre_credit");

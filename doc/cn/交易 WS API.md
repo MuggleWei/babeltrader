@@ -64,6 +64,7 @@ data: 根据msg, 对应不同的类型
 {
     "user_id": "daizi",
     "order_id": "20181026160928625-56",
+    "outside_user_id":"104027",
     "outside_id": "104027_20181101_      274491",
     "client_order_id": "daizi-20181026000001",
     "market": "ctp",
@@ -85,6 +86,7 @@ data: 根据msg, 对应不同的类型
 ```
 user_id(string): 用户标识符, 在下单时填入
 order_id(string): 系统内部订单标识, 下单时填入, 规则由开发者自定义
+outside_user_id(string): 上手交易账户id
 outside_id(string): 上手订单唯一标识, 注意, 这里有可能是BabelTrader的拼凑结果
 client_order_id(string): 客户订单标识, 由使用开发者系统的客户填入, 规则由开发者自定义
 market(string): 市场API - 例如: ctp, xtp, ib, bitmex, okex
@@ -160,6 +162,7 @@ ts(int64): 成交时间戳
 ```
 {
     "market":"ctp",
+    "outside_user_id":"104027",
     "exchange":"",
     "type":"",
     "symbol":"rb",
@@ -191,6 +194,7 @@ ts(int64): 成交时间戳
 字段说明:
 ```
 market(string): 市场API - 例如: ctp, xtp, ib, bitmex, okex
+outside_user_id(string): 上手交易账户id
 exchange(string): 交易所 - 例如：SHFE, SSE, NYMEX, bitmex, okex
 type(string): 主题类型 - spot(现货), future(期货), option(期权)
 symbol(string): 符号 - 例如: rb, CL, btc, btc_usdt
@@ -226,6 +230,7 @@ close_profit_by_trade(double): 逐笔平仓盈亏
 ```
 {
     "market":"ctp",
+    "outside_user_id":"104027",
     "exchange":"SHFE",
     "type":"",
     "symbol":"rb",
@@ -255,6 +260,7 @@ close_profit_by_trade(double): 逐笔平仓盈亏
 字段说明:
 ```
 market(string): 市场API - 例如: ctp, xtp, ib, bitmex, okex
+outside_user_id(string): 上手交易账户id
 exchange(string): 交易所 - 例如：SHFE, SSE, NYMEX, bitmex, okex
 type(string): 主题类型 - spot(现货), future(期货), option(期权)
 symbol(string): 符号 - 例如: rb, CL, btc, btc_usdt
@@ -288,6 +294,7 @@ position_profit_by_trade(double): 持仓盈亏(逐笔)
 示例:
 ```
 {
+    "market": "ctp",
     "outside_user_id":"104027",
     "pre_credit":0.0,
     "pre_balance":1000094.71,
@@ -312,6 +319,7 @@ position_profit_by_trade(double): 持仓盈亏(逐笔)
 
 字段说明:
 ```
+market(string): 交易市场API
 outside_user_id(string): 上手交易账户id
 pre_credit(double): 上次信用额度
 pre_balance(double): 上次结算准备金
@@ -651,7 +659,8 @@ currency_id(string): 币种代码 (不填会根据对应的市场取默认值)
         "contract":"1901",
         "contract_id":"1901",
         "position_summary_type":"type1",
-        "data":[
+        "data":
+        [
             { 持仓结构 },
             { 持仓结构 },
             ......
@@ -698,10 +707,10 @@ currency_id(string): 币种代码 (不填会根据对应的市场取默认值)
     "data":
     {
         "qry_id":"3",
-		"user_id":"",
-		"market":"",
-		"currency_id":"",
-		"trade_account_type":"type1",
+        "user_id":"",
+        "market":"",
+        "currency_id":"",
+        "trade_account_type":"type1",
         "data":
         [
             { 交易账户结果 },

@@ -92,6 +92,7 @@ struct Order
 {
 	std::string user_id;
 	std::string order_id;
+	std::string outside_user_id;
 	std::string outside_id;
 	std::string client_order_id;
 	std::string market;
@@ -195,6 +196,7 @@ struct TradeAccountQuery
 struct PositionSummaryType1
 {
 	std::string market;
+	std::string outside_user_id;
 	std::string exchange;
 	std::string type;
 	std::string symbol;
@@ -244,6 +246,7 @@ struct PositionSummaryType1
 struct PositionDetailType1
 {
 	std::string market;
+	std::string outside_user_id;
 	std::string exchange;
 	std::string type;
 	std::string symbol;
@@ -287,6 +290,7 @@ struct PositionDetailType1
 
 struct TradeAccountType1
 {
+	std::string market;
 	std::string outside_user_id;
 	double pre_credit;
 	double pre_balance;

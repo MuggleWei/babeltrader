@@ -757,6 +757,7 @@ void CTPTradeHandler::ConvertQueryTradeAccountCommon2CTP(TradeAccountQuery &trad
 void CTPTradeHandler::ConvertInsertOrderCTP2Common(CThostFtdcInputOrderField &req, Order &order)
 {
 	order.market = "ctp";
+	order.outside_user_id = req.InvestorID;
 	order.exchange = req.ExchangeID;
 	order.type = "future";
 	CTPSplitInstrument(req.InstrumentID, order.symbol, order.contract);
@@ -840,6 +841,7 @@ void CTPTradeHandler::ConvertRtnOrderCTP2Common(CThostFtdcOrderField *pOrder, Or
 	{
 		order.outside_id = ExtendCTPId(pOrder->InvestorID, pOrder->TradingDay, pOrder->OrderSysID);
 		order.market = "ctp";
+		order.outside_user_id = pOrder->InvestorID;
 		order.exchange = pOrder->ExchangeID;
 		order.type = "future";
 		CTPSplitInstrument(pOrder->InstrumentID, order.symbol, order.contract);
@@ -876,6 +878,7 @@ void CTPTradeHandler::ConvertRtnTradeCTP2Common(CThostFtdcTradeField *pTrade, Or
 	{
 		order.outside_id = ExtendCTPId(pTrade->InvestorID, pTrade->TradingDay, pTrade->OrderSysID);
 		order.market = "ctp";
+		order.outside_user_id = pTrade->InvestorID;
 		order.exchange = pTrade->ExchangeID;
 		order.type = "future";
 		CTPSplitInstrument(pTrade->InstrumentID, order.symbol, order.contract);
@@ -895,6 +898,7 @@ void CTPTradeHandler::ConvertRtnTradeCTP2Common(CThostFtdcTradeField *pTrade, Or
 void CTPTradeHandler::ConvertPositionCTP2Common(CThostFtdcInvestorPositionField *pPosition, PositionSummaryType1 &position_summary)
 {
 	position_summary.market = "ctp";
+	position_summary.outside_user_id = pPosition->InvestorID;
 	position_summary.exchange = pPosition->ExchangeID;
 	CTPSplitInstrument(pPosition->InstrumentID, position_summary.symbol, position_summary.contract);
 	position_summary.contract_id = position_summary.contract;
@@ -922,6 +926,7 @@ void CTPTradeHandler::ConvertPositionCTP2Common(CThostFtdcInvestorPositionField 
 void CTPTradeHandler::ConvertPositionDetailCTP2Common(CThostFtdcInvestorPositionDetailField *pPositionDetail, PositionDetailType1 &position_detail)
 {
 	position_detail.market = "ctp";
+	position_detail.outside_user_id = pPositionDetail->InvestorID;
 	position_detail.exchange = pPositionDetail->ExchangeID;
 	CTPSplitInstrument(pPositionDetail->InstrumentID, position_detail.symbol, position_detail.contract);
 	position_detail.contract_id = position_detail.contract;
@@ -953,6 +958,7 @@ void CTPTradeHandler::ConvertPositionDetailCTP2Common(CThostFtdcInvestorPosition
 }
 void CTPTradeHandler::ConvertTradeAccountCTP2Common(CThostFtdcTradingAccountField *pTradingAccount, TradeAccountType1 &trade_account)
 {
+	trade_account.market = "ctp";
 	trade_account.outside_user_id = pTradingAccount->AccountID;
 	trade_account.pre_balance = pTradingAccount->PreCredit;
 	trade_account.pre_balance = pTradingAccount->PreBalance;
