@@ -9,6 +9,7 @@
     - [订单成交结构](#订单成交结构)
     - [持仓结构](#持仓结构)
     - [持仓明细结构](#持仓明细结构)
+    - [交易账户结构](#交易账户结构)
 - [请求指令](#请求指令)  
     - [下单](#下单)
     - [撤单](#撤单)
@@ -16,6 +17,7 @@
     - [查询成交](#查询成交)
     - [查询持仓](#查询持仓)
     - [查询持仓明细](#查询持仓明细)
+    - [查询交易账户](#查询交易账户)
 - [应答消息](#应答消息)
     - [上手确认订单接收](#上手确认订单接收)
     - [订单状态变更](#订单状态变更)
@@ -23,12 +25,15 @@
     - [查询订单结果](#查询订单结果)
     - [查询成交结果](#查询成交结果)
     - [查询持仓结果](#查询持仓结果)
+    - [查询持仓明细结果](#查询持仓明细结果)
+    - [查询交易账户结果](#查询交易账户结果)
 
 
 ## 使用提示
 1. 由于babel-trader是作为上手服务，其中一些的字段，是为了直接转发方便(比如 user_id, market), 而对上手服务并没有太多的实际意义
 1. 上手服务, 收到订单之后, 有 上手确认订单接收 消息, 用于关联上下级的订单id
 1. 订单结构被用于很多消息, 但并不是每次每个字段都被填满, 取决于消息类型
+1. 一般情况下, 查询 成交/持仓/持仓明细/交易账户 只在上下级清算时使用, 不要让交易策略频繁的调用这几个接口
 
 ## 交易连接
 url: /ws
@@ -275,6 +280,59 @@ position_profit_by_date(double): 持仓盈亏(盯市)
 position_profit_by_trade(double): 持仓盈亏(逐笔)
 ```
 
+#### 交易账户结构
+注意: 资金账户结构根据上手的不同, 将会返回不同的类型, 要根据返回的trade_account_type来判断data内是什么结构体
+
+类型: type1
+上手: CTP
+示例:
+```
+{
+    "outside_user_id":"104027",
+    "pre_credit":0.0,
+    "pre_balance":1000094.71,
+    "pre_margin":8100.0,
+    "interest":0.0,
+    "deposit":0.0,
+    "withdraw":0.0,
+    "credit":0.0,
+    "margin":8100.0,
+    "commission":16.095,
+    "close_profit":-650.0,
+    "position_profit":-840.0,
+    "frozen_margin":0.0,
+    "frozen_cash":0.0,
+    "frozen_commision":0.0,
+    "balance":998588.615,
+    "available":990488.615,
+    "currency_id":"CNY",
+    "trading_day":"20181105"
+}
+```
+
+字段说明:
+```
+outside_user_id(string): 上手交易账户id
+pre_credit(double): 上次信用额度
+pre_balance(double): 上次结算准备金
+pre_margin(double): 上次占用的保证金
+interest(double): 利息收入
+deposit(double): 入金金额
+withdraw(double): 出金金额
+credit(double): 信用额度
+margin(double): 当前保证金总额
+commission(double): 手续费
+close_profit(double): 平仓盈亏
+position_profit(double): 持仓盈亏
+frozen_margin(double): 冻结保证金
+frozen_cash(double): 冻结资金
+frozen_commision(double): 冻结手续费
+balance(double): 结算准备金
+available(double): 可用资金
+currency_id(string): 币种代码
+trading_day(string): 交易日
+```
+
 ## 请求指令
 #### 下单
 消息名: insert_order  
@@ -450,6 +508,28 @@ contract(string): 合约类型 - 例如: 1901, this_week
 contract_id(string): 合约id - 例如: 1901, 20181901
 ```
 
+#### 查询交易账户
+消息名: query_tradeaccount  
+
+示例:
+```
+{
+    "msg": "query_tradeaccount",
+    "data": {
+        "qry_id": "3",
+        "market": "ctp",
+        "currency_id": ""
+    }
+}
+```
+
+字段说明:
+```
+qry_id(string): 查询请求号
+market(string): 市场API
+currency_id(string): 币种代码 (不填会根据对应的市场取默认值)
+```
+
 
 ## 应答消息
 #### 上手确认订单接收
@@ -574,6 +654,58 @@ contract_id(string): 合约id - 例如: 1901, 20181901
         "data":[
             { 持仓结构 },
             { 持仓结构 },
+            ......
+        ]
+    }
+}
+```
+
+#### 查询持仓明细结果
+消息名: rsp_qrypositiondetail
+
+```
+{
+    "msg":"rsp_qrypositiondetail",
+    "error_id":0,
+    "data":
+    {
+        "qry_id":"",
+        "user_id":"",
+        "market":"",
+        "exchange":"",
+        "type":"",
+        "symbol":"",
+        "contract":"",
+        "contract_id":"",
+        "position_detail_type":"type1",
+        "data":
+        [
+            { 持仓明细结构 },
+            { 持仓明细结构 },
+            ......
+        ]
+    }
+}
+```
+
+#### 查询交易账户结果
+消息名: rsp_qrytradeaccount
+
+```
+{
+    "msg":"rsp_qrytradeaccount",
+    "error_id":0,
+    "data":
+    {
+        "qry_id":"3",
+		"user_id":"",
+		"market":"",
+		"currency_id":"",
+		"trade_account_type":"type1",
+        "data":
+        [
+            { 交易账户结果 },
+            { 交易账户结果 },
             ......
         ]
     }

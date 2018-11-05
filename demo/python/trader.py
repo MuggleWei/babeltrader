@@ -151,7 +151,7 @@ class Trader:
 
     def query_positiondetail(self, qry_id, user_id,
                              market, exchange, type, symbol, contract, contract_id):
-        order = json.dumps({
+        qry = json.dumps({
             "msg": "query_positiondetail",
             "data": {
                 "qry_id": qry_id,
@@ -164,8 +164,23 @@ class Trader:
                 "contract_id": contract_id
             }
         })
-        self.ws.send(order)
-        print("send query position: " + str(order))
+        self.ws.send(qry)
+        print("send query position detail: " + str(qry))
+
+    def query_tradeaccount(self, qry_id, user_id,
+                           market, currency_id=""):
+        qry = json.dumps({
+            "msg": "query_tradeaccount",
+            "data": {
+                "qry_id": qry_id,
+                "user_id": user_id,
+                "market": market,
+                "currency_id": currency_id
+            }
+        })
+        self.ws.send(qry)
+        print("send query trade account: " + str(qry))
+
 
     def message_loop(self):
         try:

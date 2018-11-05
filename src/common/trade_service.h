@@ -21,6 +21,7 @@ public:
 	virtual void QueryTrade(uWS::WebSocket<uWS::SERVER> *ws, TradeQuery &query_order) { throw std::runtime_error("'QueryTrade' not implement"); }
 	virtual void QueryPosition(uWS::WebSocket<uWS::SERVER> *ws, PositionQuery &query_position) { throw std::runtime_error("'QueryPosition' not implement"); }
 	virtual void QueryPositionDetail(uWS::WebSocket<uWS::SERVER> *ws, PositionQuery &query_position) { throw std::runtime_error("'QueryPositionDetail' not implement"); }
+	virtual void QueryTradeAccount(uWS::WebSocket<uWS::SERVER> *ws, TradeAccountQuery &query_tradeaccount) { throw std::runtime_error("'QueryTradeAccount' not implement"); }
 };
 
 

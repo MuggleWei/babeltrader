@@ -184,6 +184,14 @@ struct PositionQuery
 	std::string contract_id;
 };
 
+struct TradeAccountQuery
+{
+	std::string qry_id;
+	std::string user_id;
+	std::string market;
+	std::string currency_id;
+};
+
 struct PositionSummaryType1
 {
 	std::string market;
@@ -212,6 +220,25 @@ struct PositionSummaryType1
 	double position_profit;
 	double close_profit_by_date;
 	double close_profit_by_trade;
+
+	PositionSummaryType1()
+		: amount(0)
+		, closed_amount(0)
+		, today_amount(0)
+		, margin(0)
+		, margin_rate_by_money(0)
+		, margin_rate_by_vol(0)
+		, long_frozen(0)
+		, short_frozen(0)
+		, frozen_margin(0)
+		, pre_settlement_price(0)
+		, settlement_price(0)
+		, open_cost(0)
+		, position_cost(0)
+		, position_profit(0)
+		, close_profit_by_date(0)
+		, close_profit_by_trade(0)
+	{}
 };
 
 struct PositionDetailType1
@@ -240,6 +267,64 @@ struct PositionDetailType1
 	double close_profit_by_trade;
 	double position_profit_by_date;
 	double position_profit_by_trade;
+
+	PositionDetailType1()
+		: amount(0)
+		, closed_amount(0)
+		, closed_money(0)
+		, pre_settlement_price(0)
+		, settlement_price(0)
+		, open_price(0)
+		, margin(0)
+		, margin_rate_by_money(0)
+		, margin_rate_by_vol(0)
+		, close_profit_by_date(0)
+		, close_profit_by_trade(0)
+		, position_profit_by_date(0)
+		, position_profit_by_trade(0)
+	{}
+};
+
+struct TradeAccountType1
+{
+	std::string outside_user_id;
+	double pre_credit;
+	double pre_balance;
+	double pre_margin;
+	double interest;
+	double deposit;
+	double withdraw;
+	double credit;
+	double margin;
+	double commission;
+	double close_profit;
+	double position_profit;
+	double frozen_margin;
+	double frozen_cash;
+	double frozen_commision;
+	double balance;
+	double available;
+	std::string currency_id;
+	std::string trading_day;
+
+	TradeAccountType1()
+		: pre_credit(0)
+		, pre_balance(0)
+		, pre_margin(0)
+		, interest(0)
+		, deposit(0)
+		, withdraw(0)
+		, credit(0)
+		, margin(0)
+		, commission(0)
+		, close_profit(0)
+		, position_profit(0)
+		, frozen_margin(0)
+		, frozen_cash(0)
+		, frozen_commision(0)
+		, balance(0)
+		, available(0)
+	{}
 };
 
 

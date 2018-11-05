@@ -238,6 +238,17 @@ void SerializePositionQuery(rapidjson::Writer<rapidjson::StringBuffer> &writer, 
 	writer.Key("contract_id");
 	writer.String(position_query.contract_id.c_str());
 }
+void SerializeTradeAccountQuery(rapidjson::Writer<rapidjson::StringBuffer> &writer, const TradeAccountQuery &tradeaccount_query)
+{
+	writer.Key("qry_id");
+	writer.String(tradeaccount_query.qry_id.c_str());
+	writer.Key("user_id");
+	writer.String(tradeaccount_query.user_id.c_str());
+	writer.Key("market");
+	writer.String(tradeaccount_query.market.c_str());
+	writer.Key("currency_id");
+	writer.String(tradeaccount_query.currency_id.c_str());
+}
 
 void SerializePositionSummaryType1(rapidjson::Writer<rapidjson::StringBuffer> &writer, const PositionSummaryType1 &position_summary)
 {
@@ -344,6 +355,47 @@ void SerializePositionDetailType1(rapidjson::Writer<rapidjson::StringBuffer> &wr
 	writer.Double(position_detail.position_profit_by_date);
 	writer.Key("position_profit_by_trade");
 	writer.Double(position_detail.position_profit_by_trade);
+}
+void SerializeTradeAccountType1(rapidjson::Writer<rapidjson::StringBuffer> &writer, const TradeAccountType1 &trade_account)
+{
+	writer.Key("outside_user_id");
+	writer.String(trade_account.outside_user_id.c_str());
+	writer.Key("pre_credit");
+	writer.Double(trade_account.pre_credit);
+	writer.Key("pre_balance");
+	writer.Double(trade_account.pre_balance);
+	writer.Key("pre_margin");
+	writer.Double(trade_account.pre_margin);
+	writer.Key("interest");
+	writer.Double(trade_account.interest);
+	writer.Key("deposit");
+	writer.Double(trade_account.deposit);
+	writer.Key("withdraw");
+	writer.Double(trade_account.withdraw);
+	writer.Key("credit");
+	writer.Double(trade_account.credit);
+	writer.Key("margin");
+	writer.Double(trade_account.margin);
+	writer.Key("commission");
+	writer.Double(trade_account.commission);
+	writer.Key("close_profit");
+	writer.Double(trade_account.close_profit);
+	writer.Key("position_profit");
+	writer.Double(trade_account.position_profit);
+	writer.Key("frozen_margin");
+	writer.Double(trade_account.frozen_margin);
+	writer.Key("frozen_cash");
+	writer.Double(trade_account.frozen_cash);
+	writer.Key("frozen_commision");
+	writer.Double(trade_account.frozen_commision);
+	writer.Key("balance");
+	writer.Double(trade_account.balance);
+	writer.Key("available");
+	writer.Double(trade_account.available);
+	writer.Key("currency_id");
+	writer.String(trade_account.currency_id.c_str());
+	writer.Key("trading_day");
+	writer.String(trade_account.trading_day.c_str());
 }
 
 Order ConvertOrderJson2Common(rapidjson::Value &msg)
@@ -562,6 +614,19 @@ PositionQuery ConvertPositionQueryJson2Common(rapidjson::Value &msg)
 	}
 
 	return position_qry;
+}
+TradeAccountQuery ConvertTradeAccountJson2Common(rapidjson::Value &msg)
+{
+	TradeAccountQuery tradeaccount_qry;
+
+	if (msg.HasMember("qry_id") && msg["qry_id"].IsString()) {
+		tradeaccount_qry.qry_id = msg["qry_id"].GetString();
+	}
+	if (msg.HasMember("currency_id") && msg["currency_id"].IsString()) {
+		tradeaccount_qry.currency_id = msg["currency_id"].GetString();
+	}
+
+	return tradeaccount_qry;
 }
 
 

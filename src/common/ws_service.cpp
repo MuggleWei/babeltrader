@@ -256,6 +256,7 @@ void WsService::RspTradeQry(uWS::WebSocket<uWS::SERVER>* ws, TradeQuery &trade_q
 
 	SendMsgToClient(ws, s.GetString());
 }
+
 void WsService::RspPositionQryType1(uWS::WebSocket<uWS::SERVER>* ws, PositionQuery &position_qry, std::vector<PositionSummaryType1> &positions, int error_id)
 {
 	rapidjson::StringBuffer s;
@@ -334,6 +335,45 @@ void WsService::RspPositionDetailQryType1(uWS::WebSocket<uWS::SERVER>* ws, Posit
 
 	SendMsgToClient(ws, s.GetString());
 }
+void WsService::RspTradeAccountQryType1(uWS::WebSocket<uWS::SERVER>* ws, TradeAccountQuery &tradeaccount_qry, std::vector<TradeAccountType1> &trade_accounts, int error_id)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("rsp_qrytradeaccount");
+	writer.Key("error_id");
+	writer.Int(error_id);
+
+	writer.Key("data");
+	writer.StartObject();
+
+	SerializeTradeAccountQuery(writer, tradeaccount_qry);
+
+	writer.Key("trade_account_type");
+	writer.String("type1");
+
+	writer.Key("data");
+	writer.StartArray();
+
+	for (auto i = 0; i < trade_accounts.size(); i++)
+	{
+		writer.StartObject();
+		SerializeTradeAccountType1(writer, trade_accounts[i]);
+		writer.EndObject();
+	}
+
+	writer.EndArray();  // positions
+
+	writer.EndObject();  // data end
+
+	writer.EndObject();  // object end
+
+	LOG(INFO) << s.GetString();
+
+	SendMsgToClient(ws, s.GetString());
+}
 
 void WsService::MessageLoop()
 {
@@ -356,6 +396,7 @@ void WsService::RegisterCallbacks()
 	callbacks_["query_trade"] = std::bind(&WsService::OnReqQueryTrade, this, std::placeholders::_1, std::placeholders::_2);
 	callbacks_["query_position"] = std::bind(&WsService::OnReqQueryPosition, this, std::placeholders::_1, std::placeholders::_2);
 	callbacks_["query_positiondetail"] = std::bind(&WsService::OnReqQueryPositionDetail, this, std::placeholders::_1, std::placeholders::_2);
+	callbacks_["query_tradeaccount"] = std::bind(&WsService::OnReqQueryTradeAccount, this, std::placeholders::_1, std::placeholders::_2);
 }
 void WsService::Dispatch(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Document &doc)
 {
@@ -492,6 +533,15 @@ void WsService::OnReqQueryPositionDetail(uWS::WebSocket<uWS::SERVER> *ws, rapidj
 
 	PositionQuery position_qry = ConvertPositionQueryJson2Common(doc["data"]);
 	trade_->QueryPositionDetail(ws, position_qry);
+}
+void WsService::OnReqQueryTradeAccount(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Document &doc)
+{
+	if (!(doc.HasMember("data") && doc["data"].IsObject())) {
+		throw std::runtime_error("field \"data\" need object");
+	}
+
+	TradeAccountQuery trade_account_qry = ConvertTradeAccountJson2Common(doc["data"]);
+	trade_->QueryTradeAccount(ws, trade_account_qry);
 }
 
 

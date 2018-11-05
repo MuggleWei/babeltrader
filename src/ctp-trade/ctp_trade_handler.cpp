@@ -130,6 +130,23 @@ void CTPTradeHandler::QueryPositionDetail(uWS::WebSocket<uWS::SERVER> *ws, Posit
 	}
 	api_->ReqQryInvestorPositionDetail(&req, req_id_++);
 }
+void CTPTradeHandler::QueryTradeAccount(uWS::WebSocket<uWS::SERVER> *ws, TradeAccountQuery &tradeaccount_query)
+{
+	CThostFtdcQryTradingAccountField req = { 0 };
+	ConvertQueryTradeAccountCommon2CTP(tradeaccount_query, req);
+
+	// output
+	OutputTradeAccountQuery(&req);
+
+	// cache query trade account
+	CacheQryTradeAccount(req_id_, ws, tradeaccount_query);
+
+	if (api_ == nullptr || !api_ready_)
+	{
+		throw std::runtime_error("trade api not ready yet");
+	}
+	api_->ReqQryTradingAccount(&req, req_id_++);
+}
 
 void CTPTradeHandler::OnFrontConnected()
 {
@@ -449,6 +466,52 @@ void CTPTradeHandler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionD
 		rsp_qry_position_detail_caches_.erase(nRequestID);
 	}
 }
+void CTPTradeHandler::OnRspQryTradingAccount(CThostFtdcTradingAccountField *pTradingAccount, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+{
+	// output
+	OutputRspTradingAccountQuery(pTradingAccount, pRspInfo, nRequestID, bIsLast);
+
+	auto it = rsp_qry_trade_account_caches_.find(nRequestID);
+	if (it == rsp_qry_trade_account_caches_.end())
+	{
+		std::vector<CThostFtdcTradingAccountField> vec;
+		rsp_qry_trade_account_caches_[nRequestID] = std::move(vec);
+		it = rsp_qry_trade_account_caches_.find(nRequestID);
+	}
+	if (pTradingAccount)
+	{
+		CThostFtdcTradingAccountField copy_trade_account;
+		memcpy(&copy_trade_account, pTradingAccount, sizeof(copy_trade_account));
+		it->second.push_back(copy_trade_account);
+	}
+
+	if (bIsLast)
+	{
+		uWS::WebSocket<uWS::SERVER>* ws;
+		TradeAccountQuery trade_account_qry;
+		GetAndCleanCacheQryTradeAccount(nRequestID, ws, trade_account_qry);
+		std::vector<CThostFtdcTradingAccountField> &ctp_trade_accounts = rsp_qry_trade_account_caches_[nRequestID];
+
+		if (ws)
+		{
+			std::vector<TradeAccountType1> trade_accounts;
+			for (CThostFtdcTradingAccountField &ctp_trade_account : ctp_trade_accounts)
+			{
+				TradeAccountType1 trade_account;
+				ConvertTradeAccountCTP2Common(&ctp_trade_account, trade_account);
+				trade_accounts.push_back(std::move(trade_account));
+			}
+
+			int error_id = 0;
+			if (pRspInfo) {
+				error_id = pRspInfo->ErrorID;
+			}
+			ws_service_.RspTradeAccountQryType1(ws, trade_account_qry, trade_accounts, error_id);
+		}
+
+		rsp_qry_trade_account_caches_.erase(nRequestID);
+	}
+}
 
 void CTPTradeHandler::RunAPI()
 {
@@ -677,6 +740,19 @@ void CTPTradeHandler::ConvertQueryPositionDetailCommon2CTP(PositionQuery &positi
 		snprintf(req.InstrumentID, sizeof(req.InstrumentID) - 1, "%s%s", position_qry.symbol.c_str(), position_qry.contract.c_str());
 	}
 }
+void CTPTradeHandler::ConvertQueryTradeAccountCommon2CTP(TradeAccountQuery &tradeaccount_query, CThostFtdcQryTradingAccountField &req)
+{
+	strncpy(req.BrokerID, conf_.broker_id.c_str(), sizeof(req.BrokerID) - 1);
+	strncpy(req.InvestorID, conf_.user_id.c_str(), sizeof(req.InvestorID) - 1);
+	if (tradeaccount_query.currency_id.size() > 0)
+	{
+		strncpy(req.CurrencyID, tradeaccount_query.currency_id.c_str(), sizeof(req.CurrencyID) - 1);
+	}
+	else
+	{
+		strncpy(req.CurrencyID, "CNY", sizeof(req.CurrencyID) - 1);
+	}
+}
 
 void CTPTradeHandler::ConvertInsertOrderCTP2Common(CThostFtdcInputOrderField &req, Order &order)
 {
@@ -875,7 +951,28 @@ void CTPTradeHandler::ConvertPositionDetailCTP2Common(CThostFtdcInvestorPosition
 	position_detail.position_profit_by_date = pPositionDetail->PositionProfitByDate;
 	position_detail.position_profit_by_trade = pPositionDetail->PositionProfitByTrade;
 }
-
+void CTPTradeHandler::ConvertTradeAccountCTP2Common(CThostFtdcTradingAccountField *pTradingAccount, TradeAccountType1 &trade_account)
+{
+	trade_account.outside_user_id = pTradingAccount->AccountID;
+	trade_account.pre_balance = pTradingAccount->PreCredit;
+	trade_account.pre_balance = pTradingAccount->PreBalance;
+	trade_account.pre_margin = pTradingAccount->PreMargin;
+	trade_account.interest = pTradingAccount->Interest;
+	trade_account.deposit = pTradingAccount->Deposit;
+	trade_account.withdraw = pTradingAccount->Withdraw;
+	trade_account.credit = pTradingAccount->Credit;
+	trade_account.margin = pTradingAccount->CurrMargin;
+	trade_account.commission = pTradingAccount->Commission;
+	trade_account.close_profit = pTradingAccount->CloseProfit;
+	trade_account.position_profit = pTradingAccount->PositionProfit;
+	trade_account.frozen_margin = pTradingAccount->FrozenMargin;
+	trade_account.frozen_cash = pTradingAccount->FrozenCash;
+	trade_account.frozen_commision = pTradingAccount->FrozenCommission;
+	trade_account.balance = pTradingAccount->Balance;
+	trade_account.available = pTradingAccount->Available;
+	trade_account.currency_id = pTradingAccount->CurrencyID;
+	trade_account.trading_day = pTradingAccount->TradingDay;
+}
 
 void CTPTradeHandler::RecordOrder(Order &order, const std::string &order_ref, int front_id, int session_id)
 {
@@ -999,6 +1096,30 @@ void CTPTradeHandler::GetAndCleanCacheQryPositionDetail(int req_id, uWS::WebSock
 	{
 		position_detail_qry = it_position_detail_qry->second;
 		qry_position_detail_cache_.erase(it_position_detail_qry);
+	}
+}
+
+void CTPTradeHandler::CacheQryTradeAccount(int req_id, uWS::WebSocket<uWS::SERVER>* ws, TradeAccountQuery &tradeaccount_qry)
+{
+	std::unique_lock<std::mutex> lock(qry_cache_mtx_);
+	qry_ws_cache_[req_id] = ws;
+	qry_trade_account_cache_[req_id] = tradeaccount_qry;
+}
+void CTPTradeHandler::GetAndCleanCacheQryTradeAccount(int req_id, uWS::WebSocket<uWS::SERVER>*& ws, TradeAccountQuery &tradeaccount_qry)
+{
+	std::unique_lock<std::mutex> lock(qry_cache_mtx_);
+	auto it_ws = qry_ws_cache_.find(req_id);
+	if (it_ws != qry_ws_cache_.end())
+	{
+		ws = it_ws->second;
+		qry_ws_cache_.erase(it_ws);
+	}
+
+	auto it_trade_account_qry = qry_trade_account_cache_.find(req_id);
+	if (it_trade_account_qry != qry_trade_account_cache_.end())
+	{
+		tradeaccount_qry = it_trade_account_qry->second;
+		qry_trade_account_cache_.erase(it_trade_account_qry);
 	}
 }
 
@@ -1541,6 +1662,26 @@ void CTPTradeHandler::SerializeCTPQueryPositionDetail(rapidjson::Writer<rapidjso
 	writer.Key("InvestUnitID");
 	writer.String(pQryPosition->InvestUnitID);
 }
+void CTPTradeHandler::SerializeCTPQueryTradeAccount(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcQryTradingAccountField *pTradeingAccount)
+{
+	char buf[2] = { 0 };
+
+	writer.Key("BrokerID");
+	writer.String(pTradeingAccount->BrokerID);
+
+	writer.Key("InvestorID");
+	writer.String(pTradeingAccount->InvestorID);
+
+	writer.Key("CurrencyID");
+	writer.String(pTradeingAccount->CurrencyID);
+
+	buf[0] = pTradeingAccount->BizType;
+	writer.Key("BizType");
+	writer.String(buf);
+
+	writer.Key("AccountID");
+	writer.String(pTradeingAccount->AccountID);
+}
 void CTPTradeHandler::SerializeCTPOrder(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcOrderField *pOrder)
 {
 	char buf[2] = { 0 };
@@ -2078,6 +2219,158 @@ void CTPTradeHandler::SerializeCTPPositionDetail(rapidjson::Writer<rapidjson::St
 	writer.Key("InvestUnitID");
 	writer.String(pInvestorPositionDetail->InvestUnitID);
 }
+void CTPTradeHandler::SerializeCTPTradingAccount(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcTradingAccountField *pTradingAccount)
+{
+	char buf[2] = { 0 };
+
+	writer.Key("BrokerID");
+	writer.String(pTradingAccount->BrokerID);
+
+	writer.Key("AccountID");
+	writer.String(pTradingAccount->AccountID);
+
+	writer.Key("PreMortgage");
+	writer.Double(pTradingAccount->PreMortgage);
+
+	writer.Key("PreCredit");
+	writer.Double(pTradingAccount->PreCredit);
+
+	writer.Key("PreDeposit");
+	writer.Double(pTradingAccount->PreDeposit);
+
+	writer.Key("PreBalance");
+	writer.Double(pTradingAccount->PreBalance);
+
+	writer.Key("PreMargin");
+	writer.Double(pTradingAccount->PreMargin);
+
+	writer.Key("InterestBase");
+	writer.Double(pTradingAccount->InterestBase);
+
+	writer.Key("Interest");
+	writer.Double(pTradingAccount->Interest);
+
+	writer.Key("Deposit");
+	writer.Double(pTradingAccount->Deposit);
+
+	writer.Key("Withdraw");
+	writer.Double(pTradingAccount->Withdraw);
+
+	writer.Key("FrozenMargin");
+	writer.Double(pTradingAccount->FrozenMargin);
+
+	writer.Key("FrozenCash");
+	writer.Double(pTradingAccount->FrozenCash);
+
+	writer.Key("FrozenCommission");
+	writer.Double(pTradingAccount->FrozenCommission);
+
+	writer.Key("CurrMargin");
+	writer.Double(pTradingAccount->CurrMargin);
+
+	writer.Key("CashIn");
+	writer.Double(pTradingAccount->CashIn);
+
+	writer.Key("Commission");
+	writer.Double(pTradingAccount->Commission);
+
+	writer.Key("CloseProfit");
+	writer.Double(pTradingAccount->CloseProfit);
+
+	writer.Key("PositionProfit");
+	writer.Double(pTradingAccount->PositionProfit);
+
+	writer.Key("Balance");
+	writer.Double(pTradingAccount->Balance);
+
+	writer.Key("Available");
+	writer.Double(pTradingAccount->Available);
+
+	writer.Key("WithdrawQuota");
+	writer.Double(pTradingAccount->WithdrawQuota);
+
+	writer.Key("Reserve");
+	writer.Double(pTradingAccount->Reserve);
+
+	writer.Key("TradingDay");
+	writer.String(pTradingAccount->TradingDay);
+
+	writer.Key("SettlementID");
+	writer.Int(pTradingAccount->SettlementID);
+
+	writer.Key("Credit");
+	writer.Double(pTradingAccount->Credit);
+
+	writer.Key("Mortgage");
+	writer.Double(pTradingAccount->Mortgage);
+
+	writer.Key("ExchangeMargin");
+	writer.Double(pTradingAccount->ExchangeMargin);
+
+	writer.Key("DeliveryMargin");
+	writer.Double(pTradingAccount->DeliveryMargin);
+
+	writer.Key("ExchangeDeliveryMargin");
+	writer.Double(pTradingAccount->ExchangeDeliveryMargin);
+
+	writer.Key("ReserveBalance");
+	writer.Double(pTradingAccount->ReserveBalance);
+
+	writer.Key("CurrencyID");
+	writer.String(pTradingAccount->CurrencyID);
+
+	writer.Key("PreFundMortgageIn");
+	writer.Double(pTradingAccount->PreFundMortgageIn);
+
+	writer.Key("PreFundMortgageOut");
+	writer.Double(pTradingAccount->PreFundMortgageOut);
+
+	writer.Key("FundMortgageIn");
+	writer.Double(pTradingAccount->FundMortgageIn);
+
+	writer.Key("FundMortgageOut");
+	writer.Double(pTradingAccount->FundMortgageOut);
+
+	writer.Key("FundMortgageAvailable");
+	writer.Double(pTradingAccount->FundMortgageAvailable);
+
+	writer.Key("MortgageableFund");
+	writer.Double(pTradingAccount->MortgageableFund);
+
+	writer.Key("SpecProductMargin");
+	writer.Double(pTradingAccount->SpecProductMargin);
+
+	writer.Key("SpecProductFrozenMargin");
+	writer.Double(pTradingAccount->SpecProductFrozenMargin);
+
+	writer.Key("SpecProductCommission");
+	writer.Double(pTradingAccount->SpecProductCommission);
+
+	writer.Key("SpecProductFrozenCommission");
+	writer.Double(pTradingAccount->SpecProductFrozenCommission);
+
+	writer.Key("SpecProductPositionProfit");
+	writer.Double(pTradingAccount->SpecProductPositionProfit);
+
+	writer.Key("SpecProductCloseProfit");
+	writer.Double(pTradingAccount->SpecProductCloseProfit);
+
+	writer.Key("SpecProductPositionProfitByAlg");
+	writer.Double(pTradingAccount->SpecProductPositionProfitByAlg);
+
+	writer.Key("SpecProductExchangeMargin");
+	writer.Double(pTradingAccount->SpecProductExchangeMargin);
+
+	buf[0] = pTradingAccount->BizType;
+	writer.Key("BizType");
+	writer.String(buf);
+
+	writer.Key("FrozenSwap");
+	writer.Double(pTradingAccount->FrozenSwap);
+
+	writer.Key("RemainSwap");
+	writer.Double(pTradingAccount->RemainSwap);
+}
 
 void CTPTradeHandler::OutputOrderInsert(CThostFtdcInputOrderField *req)
 {
@@ -2176,6 +2469,23 @@ void CTPTradeHandler::OutputPositionDetailQuery(CThostFtdcQryInvestorPositionDet
 	writer.Key("data");
 	writer.StartObject();
 	SerializeCTPQueryPositionDetail(writer, req);
+	writer.EndObject();
+
+	writer.EndObject();
+	LOG(INFO) << s.GetString();
+}
+void CTPTradeHandler::OutputTradeAccountQuery(CThostFtdcQryTradingAccountField *req)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("ctp_tradeaccountquery");
+
+	writer.Key("data");
+	writer.StartObject();
+	SerializeCTPQueryTradeAccount(writer, req);
 	writer.EndObject();
 
 	writer.EndObject();
@@ -2596,6 +2906,42 @@ void CTPTradeHandler::OutputRspPositionDetailQuery(CThostFtdcInvestorPositionDet
 	if (pInvestorPositionDetail)
 	{
 		SerializeCTPPositionDetail(writer, pInvestorPositionDetail);
+	}
+	writer.EndObject();
+
+	writer.EndObject();
+	LOG(INFO) << s.GetString();
+}
+void CTPTradeHandler::OutputRspTradingAccountQuery(CThostFtdcTradingAccountField *pTradingAccount, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("ctp_rspqrytradingaccount");
+	writer.Key("req_id");
+	writer.Int(nRequestID);
+	writer.Key("is_last");
+	writer.Bool(bIsLast);
+	if (pRspInfo)
+	{
+		writer.Key("error_id");
+		writer.Int(pRspInfo->ErrorID);
+		writer.Key("error_msg");
+		writer.String(pRspInfo->ErrorMsg);
+	}
+	else
+	{
+		writer.Key("error_id");
+		writer.Int(0);
+	}
+
+	writer.Key("data");
+	writer.StartObject();
+	if (pTradingAccount)
+	{
+		SerializeCTPTradingAccount(writer, pTradingAccount);
 	}
 	writer.EndObject();
 
