@@ -25,6 +25,7 @@ void SerializeTradeQuery(rapidjson::Writer<rapidjson::StringBuffer> &writer, con
 void SerializePositionQuery(rapidjson::Writer<rapidjson::StringBuffer> &writer, const PositionQuery &position_query);
 
 void SerializePositionSummaryType1(rapidjson::Writer<rapidjson::StringBuffer> &writer, const PositionSummaryType1 &position_summary);
+void SerializePositionDetailType1(rapidjson::Writer<rapidjson::StringBuffer> &writer, const PositionDetailType1 &position_detail);
 
 
 Order ConvertOrderJson2Common(rapidjson::Value &msg);

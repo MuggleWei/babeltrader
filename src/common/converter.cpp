@@ -252,7 +252,7 @@ void SerializePositionSummaryType1(rapidjson::Writer<rapidjson::StringBuffer> &w
 	writer.Key("contract");
 	writer.String(position_summary.contract.c_str());
 	writer.Key("contract_id");
-	writer.String(position_summary.contract.c_str());
+	writer.String(position_summary.contract_id.c_str());
 	writer.Key("dir");
 	writer.String(position_summary.dir.c_str());
 	writer.Key("order_flag1");
@@ -261,10 +261,16 @@ void SerializePositionSummaryType1(rapidjson::Writer<rapidjson::StringBuffer> &w
 	writer.String(position_summary.date_type.c_str());
 	writer.Key("amount");
 	writer.Double(position_summary.amount);
+	writer.Key("closed_amount");
+	writer.Double(position_summary.closed_amount);
 	writer.Key("today_amount");
 	writer.Double(position_summary.today_amount);
 	writer.Key("margin");
 	writer.Double(position_summary.margin);
+	writer.Key("margin_rate_by_money");
+	writer.Double(position_summary.margin_rate_by_money);
+	writer.Key("margin_rate_by_vol");
+	writer.Double(position_summary.margin_rate_by_vol);
 	writer.Key("long_frozen");
 	writer.Double(position_summary.long_frozen);
 	writer.Key("short_frozen");
@@ -281,6 +287,63 @@ void SerializePositionSummaryType1(rapidjson::Writer<rapidjson::StringBuffer> &w
 	writer.Double(position_summary.open_cost);
 	writer.Key("position_cost");
 	writer.Double(position_summary.position_cost);
+	writer.Key("position_profit");
+	writer.Double(position_summary.position_profit);
+	writer.Key("close_profit_by_date");
+	writer.Double(position_summary.close_profit_by_date);
+	writer.Key("close_profit_by_trade");
+	writer.Double(position_summary.close_profit_by_trade);
+}
+void SerializePositionDetailType1(rapidjson::Writer<rapidjson::StringBuffer> &writer, const PositionDetailType1 &position_detail)
+{
+	writer.Key("market");
+	writer.String(position_detail.market.c_str());
+	writer.Key("exchange");
+	writer.String(position_detail.exchange.c_str());
+	writer.Key("type");
+	writer.String(position_detail.type.c_str());
+	writer.Key("symbol");
+	writer.String(position_detail.symbol.c_str());
+	writer.Key("contract");
+	writer.String(position_detail.contract.c_str());
+	writer.Key("contract_id");
+	writer.String(position_detail.contract_id.c_str());
+	writer.Key("dir");
+	writer.String(position_detail.dir.c_str());
+	writer.Key("order_flag1");
+	writer.String(position_detail.order_flag1.c_str());
+	writer.Key("open_date");
+	writer.String(position_detail.open_date.c_str());
+	writer.Key("trading_day");
+	writer.String(position_detail.trading_day.c_str());
+	writer.Key("trade_id");
+	writer.String(position_detail.trade_id.c_str());
+	writer.Key("amount");
+	writer.Double(position_detail.amount);
+	writer.Key("closed_amount");
+	writer.Double(position_detail.closed_amount);
+	writer.Key("closed_money");
+	writer.Double(position_detail.closed_money);
+	writer.Key("pre_settlement_price");
+	writer.Double(position_detail.pre_settlement_price);
+	writer.Key("settlement_price");
+	writer.Double(position_detail.settlement_price);
+	writer.Key("open_price");
+	writer.Double(position_detail.open_price);
+	writer.Key("margin");
+	writer.Double(position_detail.margin);
+	writer.Key("margin_rate_by_money");
+	writer.Double(position_detail.margin_rate_by_money);
+	writer.Key("margin_rate_by_vol");
+	writer.Double(position_detail.margin_rate_by_vol);
+	writer.Key("close_profit_by_date");
+	writer.Double(position_detail.close_profit_by_date);
+	writer.Key("close_profit_by_trade");
+	writer.Double(position_detail.close_profit_by_trade);
+	writer.Key("position_profit_by_date");
+	writer.Double(position_detail.position_profit_by_date);
+	writer.Key("position_profit_by_trade");
+	writer.Double(position_detail.position_profit_by_trade);
 }
 
 Order ConvertOrderJson2Common(rapidjson::Value &msg)

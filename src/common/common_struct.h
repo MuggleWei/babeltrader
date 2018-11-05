@@ -191,12 +191,16 @@ struct PositionSummaryType1
 	std::string type;
 	std::string symbol;
 	std::string contract;
+	std::string contract_id;
 	std::string dir;					// e.g. net, long, short
 	std::string order_flag1;			// e.g. speculation, hedge, arbitrage
 	std::string date_type;				// e.g. today, history
 	double amount;
+	double closed_amount;
 	double today_amount;
 	double margin;
+	double margin_rate_by_money;
+	double margin_rate_by_vol;
 	double long_frozen;
 	double short_frozen;
 	double frozen_margin;
@@ -205,6 +209,37 @@ struct PositionSummaryType1
 	double settlement_price;
 	double open_cost;
 	double position_cost;
+	double position_profit;
+	double close_profit_by_date;
+	double close_profit_by_trade;
+};
+
+struct PositionDetailType1
+{
+	std::string market;
+	std::string exchange;
+	std::string type;
+	std::string symbol;
+	std::string contract;
+	std::string contract_id;
+	std::string dir;					// e.g. net, long, short
+	std::string order_flag1;			// e.g. speculation, hedge, arbitrage
+	std::string open_date;
+	std::string trading_day;
+	std::string trade_id;
+	double amount;
+	double closed_amount;
+	double closed_money;
+	double pre_settlement_price;
+	double settlement_price;
+	double open_price;
+	double margin;
+	double margin_rate_by_money;
+	double margin_rate_by_vol;
+	double close_profit_by_date;
+	double close_profit_by_trade;
+	double position_profit_by_date;
+	double position_profit_by_trade;
 };
 
 

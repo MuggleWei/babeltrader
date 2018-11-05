@@ -20,6 +20,7 @@ public:
 	virtual void QueryOrder(uWS::WebSocket<uWS::SERVER> *ws, OrderQuery &query_order) { throw std::runtime_error("'QueryOrder' not implement"); }
 	virtual void QueryTrade(uWS::WebSocket<uWS::SERVER> *ws, TradeQuery &query_order) { throw std::runtime_error("'QueryTrade' not implement"); }
 	virtual void QueryPosition(uWS::WebSocket<uWS::SERVER> *ws, PositionQuery &query_position) { throw std::runtime_error("'QueryPosition' not implement"); }
+	virtual void QueryPositionDetail(uWS::WebSocket<uWS::SERVER> *ws, PositionQuery &query_position) { throw std::runtime_error("'QueryPositionDetail' not implement"); }
 };
 
 

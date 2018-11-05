@@ -8,12 +8,14 @@
     - [订单状态结构](#订单状态结构)
     - [订单成交结构](#订单成交结构)
     - [持仓结构](#持仓结构)
+    - [持仓明细结构](#持仓明细结构)
 - [请求指令](#请求指令)  
     - [下单](#下单)
     - [撤单](#撤单)
     - [查询订单](#查询订单)
     - [查询成交](#查询成交)
     - [查询持仓](#查询持仓)
+    - [查询持仓明细](#查询持仓明细)
 - [应答消息](#应答消息)
     - [上手确认订单接收](#上手确认订单接收)
     - [订单状态变更](#订单状态变更)
@@ -161,17 +163,23 @@ ts(int64): 成交时间戳
     "dir":"long",
     "order_flag1":"speculation",
     "date_type":"history",
-    "amount":1.0,
+    "amount":0.0,
+    "closed_amount":2.0,
     "today_amount":0.0,
-    "margin":4050.0,
+    "margin":0.0,
+    "margin_rate_by_money": 0.1,
+    "margin_rate_by_vol": 0.0,
     "long_frozen":0.0,
     "short_frozen":0.0,
     "frozen_margin":0.0,
     "trading_day":"20181105",
     "pre_settlement_price":4050.0,
-    "settlement_price":4011.0,
-    "open_cost":40630.0,
-    "position_cost":40500.0
+    "settlement_price":4021.0,
+    "open_cost":0.0,
+    "position_cost":0.0,
+    "position_profit":0.0,
+    "close_profit_by_date":-650.0,
+    "close_profit_by_trade":-900.0
 }
 ```
 
@@ -185,9 +193,12 @@ contract(string): 合约类型 - 例如: 1901, this_week
 contract_id(string): 合约id - 例如: 1901, 20181901
 dir(string): 持仓方向 - long(多头), short(空头)
 date_type(string): 持仓的日期类型 - today(今仓), history(昨仓)
-amount(double/int): 数量
+amount(double/int): 当前仓位
+closed_amount(double/int): 已平仓位
 today_amount(double/int): 今仓数量
 margin(double): 保证金
+margin_rate_by_money(double): 保证金率
+margin_rate_by_vol(double): 保证金率(按手数)
 long_frozen(double/int): 多头冻结(未成交的单)
 short_frozen(double/int): 空头冻结(未成交的单)
 frozen_margin(double): 冻结占用保证金
@@ -196,6 +207,72 @@ pre_settlement_price(double): 昨日结算价格
 settelment_price(double): 结算价
 open_cost(double): 开仓成本
 position_cost(double): 持仓成本
+position_profit(double): 持仓盈亏
+close_profit_by_date(double): 盯市平仓盈亏
+close_profit_by_trade(double): 逐笔平仓盈亏
+```
+
+#### 持仓明细结构
+注意: 持仓结构根据上手的不同, 将会返回不同的类型, 要根据返回的position_detail_type来判断data内是什么结构体
+
+类型: type1
+上手: CTP
+示例:
+```
+{
+    "market":"ctp",
+    "exchange":"SHFE",
+    "type":"",
+    "symbol":"rb",
+    "contract":"1901",
+    "contract_id":"1901",
+    "dir":"long",
+    "order_flag1":"speculation",
+    "open_date":"20181102",
+    "trading_day":"20181105",
+    "trade_id":"104027_20181105_      150645",
+    "amount":0.0,
+    "closed_amount":1.0,
+    "closed_money":40140.0,
+    "pre_settlement_price":4050.0,
+    "settlement_price":4014.0,
+    "open_price":4062.0,
+    "margin":0.0,
+    "margin_rate_by_money":0.1,
+    "margin_rate_by_vol":0.0,
+    "close_profit_by_date":-360.0,
+    "close_profit_by_trade":-480.0,
+    "position_profit_by_date":0.0,
+    "position_profit_by_trade":0.0
+}
+```
+
+字段说明:
+```
+market(string): 市场API - 例如: ctp, xtp, ib, bitmex, okex
+exchange(string): 交易所 - 例如：SHFE, SSE, NYMEX, bitmex, okex
+type(string): 主题类型 - spot(现货), future(期货), option(期权)
+symbol(string): 符号 - 例如: rb, CL, btc, btc_usdt
+contract(string): 合约类型 - 例如: 1901, this_week
+contract_id(string): 合约id - 例如: 1901, 20181901
+dir(string): 持仓方向 - long(多头), short(空头)
+order_flag1(string): 订单标识 - speculation(投机), hedge(套保), arbitrage(套利), marketmaker(做市商)
+open_date(string): 开仓日期
+trading_day(string): 当前交易日
+trade_id(string): 成交编号
+amount(double): 当前持仓数量
+closed_amount(double): 已平仓数量
+closed_money(double): 已平仓金额
+pre_settlement_price(double): 昨日结算价
+settlement_price(double): 结算价
+open_price(double): 开仓价
+margin(double): 保证金
+margin_rate_by_money(double): 保证金率
+margin_rate_by_vol(double): 保证金率(按手数)
+close_profit_by_date(double): 平仓盈亏(盯市)
+close_profit_by_trade(double): 平仓盈亏(逐笔)
+position_profit_by_date(double): 持仓盈亏(盯市)
+position_profit_by_trade(double): 持仓盈亏(逐笔)
 ```
 
 ## 请求指令
@@ -342,6 +419,37 @@ symbol(string): 符号 - 例如: rb, CL, btc, btc_usdt
 contract(string): 合约类型 - 例如: 1901, this_week
 contract_id(string): 合约id - 例如: 1901, 20181901
 ```
+
+#### 查询持仓明细
+消息名: query_positiondetail  
+
+示例:
+```
+{
+    "msg": "query_positiondetail",
+    "data": {
+        "qry_id": "1",
+        "market": "ctp",
+        "exchange": "SHFE",
+        "type": "future",
+        "symbol": "rb",
+        "contract": "1901",
+        "contract_id": "1901"
+    }
+}
+```
+
+字段说明:
+```
+qry_id(string): 查询请求号
+market(string): 市场API - 例如: ctp, xtp, ib, bitmex, okex
+exchange(string): 交易所 - 例如：SHFE, SSE, NYMEX, bitmex, okex
+type(string): 主题类型 - spot(现货), future(期货), option(期权)
+symbol(string): 符号 - 例如: rb, CL, btc, btc_usdt
+contract(string): 合约类型 - 例如: 1901, this_week
+contract_id(string): 合约id - 例如: 1901, 20181901
+```
+
 
 ## 应答消息
 #### 上手确认订单接收

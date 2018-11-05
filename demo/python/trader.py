@@ -132,9 +132,27 @@ class Trader:
         print("send query trade: " + str(order))
 
     def query_position(self, qry_id, user_id,
-                    market, exchange, type, symbol, contract, contract_id):
+                       market, exchange, type, symbol, contract, contract_id):
         order = json.dumps({
             "msg": "query_position",
+            "data": {
+                "qry_id": qry_id,
+                "user_id": user_id,
+                "market": market,
+                "exchange": exchange,
+                "type": type,
+                "symbol": symbol,
+                "contract": contract,
+                "contract_id": contract_id
+            }
+        })
+        self.ws.send(order)
+        print("send query position: " + str(order))
+
+    def query_positiondetail(self, qry_id, user_id,
+                             market, exchange, type, symbol, contract, contract_id):
+        order = json.dumps({
+            "msg": "query_positiondetail",
             "data": {
                 "qry_id": qry_id,
                 "user_id": user_id,

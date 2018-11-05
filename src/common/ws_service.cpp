@@ -295,6 +295,45 @@ void WsService::RspPositionQryType1(uWS::WebSocket<uWS::SERVER>* ws, PositionQue
 
 	SendMsgToClient(ws, s.GetString());
 }
+void WsService::RspPositionDetailQryType1(uWS::WebSocket<uWS::SERVER>* ws, PositionQuery &position_qry, std::vector<PositionDetailType1> &positions, int error_id)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("rsp_qrypositiondetail");
+	writer.Key("error_id");
+	writer.Int(error_id);
+
+	writer.Key("data");
+	writer.StartObject();
+
+	SerializePositionQuery(writer, position_qry);
+
+	writer.Key("position_detail_type");
+	writer.String("type1");
+
+	writer.Key("data");
+	writer.StartArray();
+
+	for (auto i = 0; i < positions.size(); i++)
+	{
+		writer.StartObject();
+		SerializePositionDetailType1(writer, positions[i]);
+		writer.EndObject();
+	}
+
+	writer.EndArray();  // positions
+
+	writer.EndObject();  // data end
+
+	writer.EndObject();  // object end
+
+	LOG(INFO) << s.GetString();
+
+	SendMsgToClient(ws, s.GetString());
+}
 
 void WsService::MessageLoop()
 {
@@ -316,6 +355,7 @@ void WsService::RegisterCallbacks()
 	callbacks_["query_order"] = std::bind(&WsService::OnReqQueryOrder, this, std::placeholders::_1, std::placeholders::_2);
 	callbacks_["query_trade"] = std::bind(&WsService::OnReqQueryTrade, this, std::placeholders::_1, std::placeholders::_2);
 	callbacks_["query_position"] = std::bind(&WsService::OnReqQueryPosition, this, std::placeholders::_1, std::placeholders::_2);
+	callbacks_["query_positiondetail"] = std::bind(&WsService::OnReqQueryPositionDetail, this, std::placeholders::_1, std::placeholders::_2);
 }
 void WsService::Dispatch(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Document &doc)
 {
@@ -443,6 +483,15 @@ void WsService::OnReqQueryPosition(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::D
 
 	PositionQuery position_qry = ConvertPositionQueryJson2Common(doc["data"]);
 	trade_->QueryPosition(ws, position_qry);
+}
+void WsService::OnReqQueryPositionDetail(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Document &doc)
+{
+	if (!(doc.HasMember("data") && doc["data"].IsObject())) {
+		throw std::runtime_error("field \"data\" need object");
+	}
+
+	PositionQuery position_qry = ConvertPositionQueryJson2Common(doc["data"]);
+	trade_->QueryPositionDetail(ws, position_qry);
 }
 
 
