@@ -86,8 +86,8 @@ if __name__ == '__main__':
         contract_id="1901",
         order_type="limit",
         order_flag1="speculation",  # speculation, hedge, arbitrage
-        dir="open_long",  # [action: open, close, close_today, close_yesterday; dir: long, short] or [buy, sell]
-        price=4200,
+        dir="closehistory_long",  # [action: open, close, closetoday, closehistory; dir: long, short] or [buy, sell]
+        price=3900,
         amount=1,
         total_price=0,
         ts=ts

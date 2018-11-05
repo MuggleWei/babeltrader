@@ -7,17 +7,20 @@
     - [订单结构](#订单结构)  
     - [订单状态结构](#订单状态结构)
     - [订单成交结构](#订单成交结构)
+    - [持仓结构](#持仓结构)
 - [请求指令](#请求指令)  
     - [下单](#下单)
     - [撤单](#撤单)
     - [查询订单](#查询订单)
     - [查询成交](#查询成交)
+    - [查询持仓](#查询持仓)
 - [应答消息](#应答消息)
     - [上手确认订单接收](#上手确认订单接收)
     - [订单状态变更](#订单状态变更)
     - [订单成交](#订单成交)
     - [查询订单结果](#查询订单结果)
     - [查询成交结果](#查询成交结果)
+    - [查询持仓结果](#查询持仓结果)
 
 
 ## 使用提示
@@ -85,7 +88,7 @@ contract(string): 合约类型 - 例如: 1901, this_week
 contract_id(string): 合约id - 例如: 1901, 20181901
 order_type(string): 订单类型 - limit(限价单), market(市价单)
 order_flag1(string): 订单标识 - speculation(投机), hedge(套保), arbitrage(套利), marketmaker(做市商)
-dir(string): 订单方向 - buy(买), sell(卖), open_long(开多), open_short(开空), close_long(平多), close_short(平空), closetoday_long(平今多), closetoday_short(平今空), closeyesterday_long(平昨多), closeyesterday_short(平昨空)
+dir(string): 订单方向 - buy(买), sell(卖), open_long(开多), open_short(开空), close_long(平多), close_short(平空), closetoday_long(平今多), closetoday_short(平今空), closehistory_long(平昨多), closehistory_short(平昨空)
 price(double): 限价单价格, 当为市价单时, 此字段无效
 amount(double/int): 开仓头寸大小
 total_price(double): 共开多少价格, 此字段在某些币所的现货交易中有用到
@@ -141,6 +144,59 @@ trade_id(string): 成交id
 ts(int64): 成交时间戳
 ```
 
+#### 持仓结构
+注意: 持仓结构根据上手的不同, 将会返回不同的类型, 要根据返回的position_summary_type来判断data内是什么结构体
+
+类型: type1
+上手: CTP
+示例:
+```
+{
+    "market":"ctp",
+    "exchange":"",
+    "type":"",
+    "symbol":"rb",
+    "contract":"1901",
+    "contract_id":"1901",
+    "dir":"long",
+    "order_flag1":"speculation",
+    "date_type":"history",
+    "amount":1.0,
+    "today_amount":0.0,
+    "margin":4050.0,
+    "long_frozen":0.0,
+    "short_frozen":0.0,
+    "frozen_margin":0.0,
+    "trading_day":"20181105",
+    "pre_settlement_price":4050.0,
+    "settlement_price":4011.0,
+    "open_cost":40630.0,
+    "position_cost":40500.0
+}
+```
+
+字段说明:
+```
+market(string): 市场API - 例如: ctp, xtp, ib, bitmex, okex
+exchange(string): 交易所 - 例如：SHFE, SSE, NYMEX, bitmex, okex
+type(string): 主题类型 - spot(现货), future(期货), option(期权)
+symbol(string): 符号 - 例如: rb, CL, btc, btc_usdt
+contract(string): 合约类型 - 例如: 1901, this_week
+contract_id(string): 合约id - 例如: 1901, 20181901
+dir(string): 持仓方向 - long(多头), short(空头)
+date_type(string): 持仓的日期类型 - today(今仓), history(昨仓)
+amount(double/int): 数量
+today_amount(double/int): 今仓数量
+margin(double): 保证金
+long_frozen(double/int): 多头冻结(未成交的单)
+short_frozen(double/int): 空头冻结(未成交的单)
+frozen_margin(double): 冻结占用保证金
+trading_day(string): 交易日
+pre_settlement_price(double): 昨日结算价格
+settelment_price(double): 结算价
+open_cost(double): 开仓成本
+position_cost(double): 持仓成本
+```
 
 ## 请求指令
 #### 下单
@@ -257,6 +313,35 @@ contract(string): 合约类型 - 例如: 1901, this_week
 contract_id(string): 合约id - 例如: 1901, 20181901
 ```
 
+#### 查询持仓
+消息名: query_position  
+
+示例:
+```
+{
+    "msg": "query_position",
+    "data": {
+        "qry_id": "1",
+        "market": "ctp",
+        "exchange": "SHFE",
+        "type": "future",
+        "symbol": "rb",
+        "contract": "1901",
+        "contract_id": "1901"
+    }
+}
+```
+
+字段说明:
+```
+qry_id(string): 查询请求号
+market(string): 市场API - 例如: ctp, xtp, ib, bitmex, okex
+exchange(string): 交易所 - 例如：SHFE, SSE, NYMEX, bitmex, okex
+type(string): 主题类型 - spot(现货), future(期货), option(期权)
+symbol(string): 符号 - 例如: rb, CL, btc, btc_usdt
+contract(string): 合约类型 - 例如: 1901, this_week
+contract_id(string): 合约id - 例如: 1901, 20181901
+```
 
 ## 应答消息
 #### 上手确认订单接收
@@ -354,6 +439,33 @@ contract_id(string): 合约id - 例如: 1901, 20181901
         "data":[
             { 订单成交结构 },
             { 订单成交结构 },
+            ......
+        ]
+    }
+}
+```
+
+#### 查询持仓结果
+消息名: rsp_qryposition
+
+示例:
+```
+{
+    "msg":"rsp_qryposition",
+    "error_id":0,
+    "data":{
+        "qry_id":"3",
+        "user_id":"weidaizi",
+        "market":"ctp",
+        "exchange":"SHFE",
+        "type":"future",
+        "symbol":"rb",
+        "contract":"1901",
+        "contract_id":"1901",
+        "position_summary_type":"type1",
+        "data":[
+            { 持仓结构 },
+            { 持仓结构 },
             ......
         ]
     }

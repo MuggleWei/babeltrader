@@ -168,6 +168,8 @@ void CTPTradeHandler::OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin,
 	// confirm settlement
 	DoSettlementConfirm();
 
+	ctp_tradeing_day_ = pRspUserLogin->TradingDay;
+	ctp_login_time_ = pRspUserLogin->LoginTime;
 	api_ready_ = true;
 }
 void CTPTradeHandler::OnRspUserLogout(CThostFtdcUserLogoutField *pUserLogout, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
@@ -378,7 +380,7 @@ void CTPTradeHandler::OnRspQryInvestorPosition(CThostFtdcInvestorPositionField *
 			if (pRspInfo) {
 				error_id = pRspInfo->ErrorID;
 			}
-			ws_service_.RspPositionQry(ws, position_qry, positions, error_id);
+			ws_service_.RspPositionQryType1(ws, position_qry, positions, error_id);
 		}
 
 		rsp_qry_position_caches_.erase(nRequestID);
@@ -650,7 +652,7 @@ void CTPTradeHandler::ConvertInsertOrderCTP2Common(CThostFtdcInputOrderField &re
 		}
 		else if (req.CombOffsetFlag[0] == THOST_FTDC_OF_CloseYesterday)
 		{
-			order.dir = "closeyesterday_short";
+			order.dir = "closehistory_short";
 		}
 		else
 		{
@@ -669,7 +671,7 @@ void CTPTradeHandler::ConvertInsertOrderCTP2Common(CThostFtdcInputOrderField &re
 		}
 		else if (req.CombOffsetFlag[0] == THOST_FTDC_OF_CloseYesterday)
 		{
-			order.dir = "closeyesterday_long";
+			order.dir = "closehistory_long";
 		}
 		else
 		{
@@ -747,6 +749,7 @@ void CTPTradeHandler::ConvertPositionCTP2Common(CThostFtdcInvestorPositionField 
 	CTPSplitInstrument(pPosition->InstrumentID, position_summary.symbol, position_summary.contract);
 	position_summary.dir = ConvertPositionDirCTP2Common(pPosition->PosiDirection);
 	position_summary.order_flag1 = ConvertHedgeFlagCTP2Common(pPosition->HedgeFlag);
+	position_summary.date_type = ConvertDateTypeCTP2Common(pPosition->PositionDate);
 	position_summary.amount = pPosition->Position;
 	position_summary.today_amount = pPosition->TodayPosition;
 	position_summary.margin = pPosition->UseMargin;
@@ -934,7 +937,7 @@ bool CTPTradeHandler::ConvertOrderDirCommon2CTP(const char *order_dir, char& act
 	static const char od_open[] = "open";
 	static const char od_close[] = "close";
 	static const char od_closetoday[] = "closetoday";
-	static const char od_closeyesterday[] = "closeyesterday";
+	static const char od_closehistory[] = "closehistory";
 	static const char od_long[] = "long";
 	static const char od_short[] = "short";
 
@@ -968,7 +971,7 @@ bool CTPTradeHandler::ConvertOrderDirCommon2CTP(const char *order_dir, char& act
 	{
 		action = THOST_FTDC_OF_CloseToday;
 	}
-	else if (strncmp(order_dir, od_closeyesterday, split_pos) == 0)
+	else if (strncmp(order_dir, od_closehistory, split_pos) == 0)
 	{
 		action = THOST_FTDC_OF_CloseYesterday;
 	}
@@ -1089,7 +1092,7 @@ void CTPTradeHandler::ConvertOrderDirCTP2Common(const char ctp_dir, const char c
 		}
 		else if (ctp_offset_flag == THOST_FTDC_OF_CloseYesterday)
 		{
-			order.dir = "closeyesterday_short";
+			order.dir = "closehistory_short";
 		}
 		else
 		{
@@ -1108,7 +1111,7 @@ void CTPTradeHandler::ConvertOrderDirCTP2Common(const char ctp_dir, const char c
 		}
 		else if (ctp_offset_flag == THOST_FTDC_OF_CloseYesterday)
 		{
-			order.dir = "closeyesterday_long";
+			order.dir = "closehistory_long";
 		}
 		else
 		{
@@ -1143,6 +1146,18 @@ std::string CTPTradeHandler::ConvertHedgeFlagCTP2Common(TThostFtdcHedgeFlagType 
 	case THOST_FTDC_HF_Speculation:
 	default:
 		return "speculation";
+	}
+}
+
+std::string CTPTradeHandler::ConvertDateTypeCTP2Common(TThostFtdcPositionDateType ctp_date_type)
+{
+	switch (ctp_date_type)
+	{
+	case THOST_FTDC_PSD_Today:
+		return "today";
+	case THOST_FTDC_PSD_History:
+	default:
+		return "history";
 	}
 }
 

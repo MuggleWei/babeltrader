@@ -110,6 +110,7 @@ private:
 
 	std::string ConvertPositionDirCTP2Common(TThostFtdcPosiDirectionType ctp_position_dir);
 	std::string ConvertHedgeFlagCTP2Common(TThostFtdcHedgeFlagType ctp_hedge_flag);
+	std::string ConvertDateTypeCTP2Common(TThostFtdcPositionDateType ctp_date_type);
 
 	////////////////////////////////////////
 	// serialize ctp struct to json

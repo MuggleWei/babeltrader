@@ -193,6 +193,7 @@ struct PositionSummaryType1
 	std::string contract;
 	std::string dir;					// e.g. net, long, short
 	std::string order_flag1;			// e.g. speculation, hedge, arbitrage
+	std::string date_type;				// e.g. today, history
 	double amount;
 	double today_amount;
 	double margin;

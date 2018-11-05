@@ -257,6 +257,8 @@ void SerializePositionSummaryType1(rapidjson::Writer<rapidjson::StringBuffer> &w
 	writer.String(position_summary.dir.c_str());
 	writer.Key("order_flag1");
 	writer.String(position_summary.order_flag1.c_str());
+	writer.Key("date_type");
+	writer.String(position_summary.date_type.c_str());
 	writer.Key("amount");
 	writer.Double(position_summary.amount);
 	writer.Key("today_amount");

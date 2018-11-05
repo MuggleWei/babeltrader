@@ -256,7 +256,7 @@ void WsService::RspTradeQry(uWS::WebSocket<uWS::SERVER>* ws, TradeQuery &trade_q
 
 	SendMsgToClient(ws, s.GetString());
 }
-void WsService::RspPositionQry(uWS::WebSocket<uWS::SERVER>* ws, PositionQuery &position_qry, std::vector<PositionSummaryType1> &positions, int error_id)
+void WsService::RspPositionQryType1(uWS::WebSocket<uWS::SERVER>* ws, PositionQuery &position_qry, std::vector<PositionSummaryType1> &positions, int error_id)
 {
 	rapidjson::StringBuffer s;
 	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
@@ -271,6 +271,9 @@ void WsService::RspPositionQry(uWS::WebSocket<uWS::SERVER>* ws, PositionQuery &p
 	writer.StartObject();
 
 	SerializePositionQuery(writer, position_qry);
+
+	writer.Key("position_summary_type");
+	writer.String("type1");
 
 	writer.Key("data");
 	writer.StartArray();
