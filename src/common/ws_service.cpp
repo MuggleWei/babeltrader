@@ -374,6 +374,45 @@ void WsService::RspTradeAccountQryType1(uWS::WebSocket<uWS::SERVER>* ws, TradeAc
 
 	SendMsgToClient(ws, s.GetString());
 }
+void WsService::RspProductQryType1(uWS::WebSocket<uWS::SERVER>* ws, ProductQuery &product_qry, std::vector<ProductType1> &product_types, int error_id)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("rsp_qryproduct");
+	writer.Key("error_id");
+	writer.Int(error_id);
+
+	writer.Key("data");
+	writer.StartObject();
+
+	SerializeProductQuery(writer, product_qry);
+
+	writer.Key("product_type");
+	writer.String("type1");
+
+	writer.Key("data");
+	writer.StartArray();
+
+	for (auto i = 0; i < product_types.size(); i++)
+	{
+		writer.StartObject();
+		SerializeProductType1(writer, product_types[i]);
+		writer.EndObject();
+	}
+
+	writer.EndArray();  // positions
+
+	writer.EndObject();  // data end
+
+	writer.EndObject();  // object end
+
+	LOG(INFO) << s.GetString();
+
+	SendMsgToClient(ws, s.GetString());
+}
 
 void WsService::MessageLoop()
 {
@@ -397,6 +436,7 @@ void WsService::RegisterCallbacks()
 	callbacks_["query_position"] = std::bind(&WsService::OnReqQueryPosition, this, std::placeholders::_1, std::placeholders::_2);
 	callbacks_["query_positiondetail"] = std::bind(&WsService::OnReqQueryPositionDetail, this, std::placeholders::_1, std::placeholders::_2);
 	callbacks_["query_tradeaccount"] = std::bind(&WsService::OnReqQueryTradeAccount, this, std::placeholders::_1, std::placeholders::_2);
+	callbacks_["query_product"] = std::bind(&WsService::OnReqQueryProduct, this, std::placeholders::_1, std::placeholders::_2);
 }
 void WsService::Dispatch(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Document &doc)
 {
@@ -542,6 +582,15 @@ void WsService::OnReqQueryTradeAccount(uWS::WebSocket<uWS::SERVER> *ws, rapidjso
 
 	TradeAccountQuery trade_account_qry = ConvertTradeAccountJson2Common(doc["data"]);
 	trade_->QueryTradeAccount(ws, trade_account_qry);
+}
+void WsService::OnReqQueryProduct(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Document &doc)
+{
+	if (!(doc.HasMember("data") && doc["data"].IsObject())) {
+		throw std::runtime_error("field \"data\" need object");
+	}
+
+	ProductQuery product_qry = ConvertProductQueryJson2Common(doc["data"]);
+	trade_->QueryProduct(ws, product_qry);
 }
 
 

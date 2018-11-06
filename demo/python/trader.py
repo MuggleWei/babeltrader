@@ -181,6 +181,22 @@ class Trader:
         self.ws.send(qry)
         print("send query trade account: " + str(qry))
 
+    def query_product(self, qry_id, user_id,
+                      market, exchange, type, symbol, contract):
+        qry = json.dumps({
+            "msg": "query_product",
+            "data": {
+                "qry_id": qry_id,
+                "user_id": user_id,
+                "market": market,
+                "exchange": exchange,
+                "type": type,
+                "symbol": symbol,
+                "contract": contract,
+            }
+        })
+        self.ws.send(qry)
+        print("send query product: " + str(qry))
 
     def message_loop(self):
         try:

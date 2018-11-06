@@ -31,6 +31,7 @@ public:
 	virtual void QueryPosition(uWS::WebSocket<uWS::SERVER> *ws, PositionQuery &position_query) override;
 	virtual void QueryPositionDetail(uWS::WebSocket<uWS::SERVER> *ws, PositionQuery &position_query) override;
 	virtual void QueryTradeAccount(uWS::WebSocket<uWS::SERVER> *ws, TradeAccountQuery &tradeaccount_query) override;
+	virtual void QueryProduct(uWS::WebSocket<uWS::SERVER> *ws, ProductQuery &query_product) override;
 
 	////////////////////////////////////////
 	// spi virtual function
@@ -56,6 +57,8 @@ public:
 	virtual void OnRspQryInvestorPosition(CThostFtdcInvestorPositionField *pInvestorPosition, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast) override;
 	virtual void OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionDetailField *pInvestorPositionDetail, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast) override;
 	virtual void OnRspQryTradingAccount(CThostFtdcTradingAccountField *pTradingAccount, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast) override;
+	virtual void OnRspQryProduct(CThostFtdcProductField *pProduct, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast) override;
+	virtual void OnRspQryInstrument(CThostFtdcInstrumentField *pInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast) override;
 
 private:
 	void RunAPI();
@@ -88,6 +91,8 @@ private:
 	void ConvertPositionCTP2Common(CThostFtdcInvestorPositionField *pPosition, PositionSummaryType1 &position_summary);
 	void ConvertPositionDetailCTP2Common(CThostFtdcInvestorPositionDetailField *pPositionDetail, PositionDetailType1 &position_detail);
 	void ConvertTradeAccountCTP2Common(CThostFtdcTradingAccountField *pTradingAccount, TradeAccountType1 &trade_account);
+	void ConvertProductCTP2Common(CThostFtdcProductField *pProduct, ProductType1 &product);
+	void ConvertInstrumentCTP2Common(CThostFtdcInstrumentField *pInstrument, ProductType1 &product);
 
 	////////////////////////////////////////
 	// order cache
@@ -109,6 +114,9 @@ private:
 	void CacheQryTradeAccount(int req_id, uWS::WebSocket<uWS::SERVER>* ws, TradeAccountQuery &tradeaccount_qry);
 	void GetAndCleanCacheQryTradeAccount(int req_id, uWS::WebSocket<uWS::SERVER>*& ws, TradeAccountQuery &tradeaccount_qry);
 
+	void CacheQryProduct(int req_id, uWS::WebSocket<uWS::SERVER>* ws, ProductQuery &product_qry);
+	void GetAndCleanCacheQryProduct(int req_id, uWS::WebSocket<uWS::SERVER>*& ws, ProductQuery &product_qry);
+
 	////////////////////////////////////////
 	// field convert
 	std::string ExtendCTPId(const char *investor_id, const char *trading_day, const char *ctp_id);
@@ -125,6 +133,7 @@ private:
 	std::string ConvertPositionDirCTP2Common(TThostFtdcPosiDirectionType ctp_position_dir);
 	std::string ConvertHedgeFlagCTP2Common(TThostFtdcHedgeFlagType ctp_hedge_flag);
 	std::string ConvertDateTypeCTP2Common(TThostFtdcPositionDateType ctp_date_type);
+	std::string ConvertProductTypeCTP2Common(TThostFtdcProductClassType ctp_product_type);
 
 	////////////////////////////////////////
 	// serialize ctp struct to json
@@ -135,11 +144,15 @@ private:
 	void SerializeCTPQueryPosition(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcQryInvestorPositionField *pQryPosition);
 	void SerializeCTPQueryPositionDetail(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcQryInvestorPositionDetailField *pQryPosition);
 	void SerializeCTPQueryTradeAccount(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcQryTradingAccountField *pTradeingAccount);
+	void SerializeCTPQueryProduct(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcQryProductField *pQryProduct);
+	void SerializeCTPQueryInstrument(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcQryInstrumentField *pQryInstrument);
 	void SerializeCTPOrder(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcOrderField *pOrder);
 	void SerializeCTPTrade(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcTradeField *pTrade);
 	void SerializeCTPPosition(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcInvestorPositionField *pInvestorPosition);
 	void SerializeCTPPositionDetail(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcInvestorPositionDetailField *pInvestorPositionDetail);
 	void SerializeCTPTradingAccount(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcTradingAccountField *pTradingAccount);
+	void SerializeCTPProduct(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcProductField *pProduct);
+	void SerializeCTPInstrument(rapidjson::Writer<rapidjson::StringBuffer> &writer, CThostFtdcInstrumentField *pInstrument);
 
 	////////////////////////////////////////
 	// output ctp struct 
@@ -150,6 +163,8 @@ private:
 	void OutputPositionQuery(CThostFtdcQryInvestorPositionField *req);
 	void OutputPositionDetailQuery(CThostFtdcQryInvestorPositionDetailField *req);
 	void OutputTradeAccountQuery(CThostFtdcQryTradingAccountField *req);
+	void OutputProductQuery(CThostFtdcQryProductField *req);
+	void OutputInstrumentQuery(CThostFtdcQryInstrumentField *req);
 
 	void OutputFrontConnected();
 	void OutputFrontDisconnected(int reason);
@@ -168,6 +183,8 @@ private:
 	void OutputRspPositionQuery(CThostFtdcInvestorPositionField *pInvestorPosition, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
 	void OutputRspPositionDetailQuery(CThostFtdcInvestorPositionDetailField *pInvestorPositionDetail, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
 	void OutputRspTradingAccountQuery(CThostFtdcTradingAccountField *pTradingAccount, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
+	void OutputRspProductQuery(CThostFtdcProductField *pProduct, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
+	void OutputRspInstrumentQuery(CThostFtdcInstrumentField *pInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
 
 private:
 	CThostFtdcTraderApi *api_;
@@ -211,6 +228,10 @@ private:
 
 	std::map<int, TradeAccountQuery> qry_trade_account_cache_;
 	std::map<int, std::vector<CThostFtdcTradingAccountField>> rsp_qry_trade_account_caches_;
+
+	std::map<int, ProductQuery> qry_product_cache_;
+	std::map<int, std::vector<CThostFtdcProductField>> rsp_qry_product_caches_;
+	std::map<int, std::vector<CThostFtdcInstrumentField>> rsp_qry_instrument_caches_;
 };
 
 #endif

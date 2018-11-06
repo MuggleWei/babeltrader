@@ -193,6 +193,15 @@ struct TradeAccountQuery
 	std::string currency_id;
 };
 
+struct ProductQuery
+{
+	std::string qry_id;
+	std::string market;
+	std::string exchange;
+	std::string symbol;
+	std::string contract;
+};
+
 struct PositionSummaryType1
 {
 	std::string market;
@@ -328,6 +337,27 @@ struct TradeAccountType1
 		, frozen_commision(0)
 		, balance(0)
 		, available(0)
+	{}
+};
+
+struct ProductType1
+{
+	std::string market;
+	std::string exchange;
+	std::string type;
+	std::string symbol;
+	std::string contract;
+	std::string contract_id;
+	double vol_multiple;
+	double price_tick;
+	double long_margin_ratio;
+	double short_margin_ratio;
+
+	ProductType1()
+		: vol_multiple(0)
+		, price_tick(0)
+		, long_margin_ratio(0)
+		, short_margin_ratio(0)
 	{}
 };
 
