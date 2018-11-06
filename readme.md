@@ -36,7 +36,10 @@ clientn ------> |==========================| ---> BabelTrader服务n ---> APIn s
 
 ## 使用文档
 具体的接口, 参考doc目录中的文档
-在demo目录中, 有不同语言的例子: python, java, golang 等
+在demo目录中, 有不同语言的例子: python, java, golang 等  
+
+注意:   
+如果是自己构建, 需要将目录中的 config-template 改名为 config, 并正确配置其中的账号。make时, 会自动将config拷贝到build/bin目录中。 具体的配置文件字段，参考doc文档。
 
 ## Build
 整个工程，直接使用CMake构建即可，注意先安装依赖性以及初始化第三方库。对于不熟悉cmake的朋友，可以直接按照下面步骤使用即可。
@@ -44,11 +47,12 @@ clientn ------> |==========================| ---> BabelTrader服务n ---> APIn s
 #### Linux
 安装依赖项：sudo apt-get install libssl-dev  
 首次构建前: 进入根目录，运行 git submodule update --init  
-构建：进入工程的根目录，运行 build.sh  
+构建: 进入工程的根目录，运行 build.sh  
+编译: 进入build目录, 运行 make 即可
 
 #### Windows
 先安装好 vcpkg (https://github.com/Microsoft/vcpkg.git), 并在环境变量中, 设置VCPKG_ROOT为vcpkg所在目录。
 
 安装依赖项：vcpkg.exe install openssl:x64-windows zlib:x64-windows  
-首次构建前: 进入根目录，运行 git submodule update --init  
-构建：进入工程的根目录，运行build.bat  
+首次构建前: 进入根目录, 运行 git submodule update --init  
+构建: 进入工程的根目录, 运行build.bat  

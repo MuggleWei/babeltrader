@@ -7,7 +7,7 @@
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
 
-bool LoadConfig(const std::string &file_path, XTPQuoteConf &conf)
+bool LoadConfig(const std::string &file_path, XTPTradeConf &conf)
 {
 	FILE *fp = nullptr;
 	char *buf = nullptr;
@@ -20,7 +20,7 @@ bool LoadConfig(const std::string &file_path, XTPQuoteConf &conf)
 	bool ret = true;
 	try {
 		fseek(fp, 0, SEEK_END);
-		auto cnt = ftell(fp);
+		long cnt = ftell(fp);
 		fseek(fp, 0, SEEK_SET);
 
 		buf = (char*)malloc((size_t)cnt + 1);
@@ -38,10 +38,10 @@ bool LoadConfig(const std::string &file_path, XTPQuoteConf &conf)
 		}
 
 		conf.client_id = doc["custom_client_id"].GetUint();
-		conf.quote_protocol = doc["quote_protocol"].GetUint();
+		conf.trade_protocol = doc["trade_protocol"].GetUint();
 		conf.user_id = doc["user_id"].GetString();
 		conf.password = doc["password"].GetString();
-		std::string addr = doc["quote_addr"].GetString();
+		std::string addr = doc["trade_addr"].GetString();
 		auto pos = addr.find(":");
 		char buf[32] = { 0 };
 		strncpy(buf, addr.c_str(), pos);
@@ -49,16 +49,8 @@ bool LoadConfig(const std::string &file_path, XTPQuoteConf &conf)
 		strncpy(buf, addr.c_str() + pos + 1, sizeof(buf) - 1);
 		conf.port = atoi(buf);
 		conf.key = doc["key"].GetString();
-		conf.quote_ip = doc["quote_listen_ip"].GetString();
-		conf.quote_port = doc["quote_listen_port"].GetInt();
-		auto topics = doc["default_sub_topics"].GetArray();
-		for (auto i = 0; i < topics.Size(); i++) {
-			const auto &topic = topics[i].GetArray();
-			Quote quote;
-			quote.exchange = topic[0].GetString();
-			quote.symbol = topic[1].GetString();
-			conf.default_sub_topics.push_back(std::move(quote));
-		}
+		conf.trade_ip = doc["trade_listen_ip"].GetString();
+		conf.trade_port = doc["trade_listen_port"].GetInt();
 	}
 	catch (std::exception e) {
 		LOG(ERROR) << e.what();
