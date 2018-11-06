@@ -1,6 +1,7 @@
 {
 	"custom_client_id": 1,
 	"quote_protocol": 1,
+	"trade_protocol": 1,
 	"user_id": "xxx",
 	"password": "xxx",
 	"trade_addr": "120.27.164.69:6001",
