@@ -10,6 +10,7 @@
     - [持仓结构](#持仓结构)
     - [持仓明细结构](#持仓明细结构)
     - [交易账户结构](#交易账户结构)
+    - [产品信息结构](#产品信息结构)
 - [请求指令](#请求指令)  
     - [下单](#下单)
     - [撤单](#撤单)
@@ -18,6 +19,7 @@
     - [查询持仓](#查询持仓)
     - [查询持仓明细](#查询持仓明细)
     - [查询交易账户](#查询交易账户)
+    - [查询产品信息](#查询产品信息)
 - [应答消息](#应答消息)
     - [上手确认订单接收](#上手确认订单接收)
     - [订单状态变更](#订单状态变更)
@@ -27,6 +29,7 @@
     - [查询持仓结果](#查询持仓结果)
     - [查询持仓明细结果](#查询持仓明细结果)
     - [查询交易账户结果](#查询交易账户结果)
+    - [查询产品信息结果](#查询产品信息结果)
 
 
 ## 使用提示
@@ -341,6 +344,43 @@ currency_id(string): 币种代码
 trading_day(string): 交易日
 ```
 
+#### 产品信息结构
+注意: 资金账户结构根据上手的不同, 将会返回不同的类型, 要根据返回的product_type来判断data内是什么结构体
+
+类型: type1
+上手: CTP
+示例:
+```
+{
+    "market":"ctp",
+    "outside_user_id":"104027",
+    "exchange":"SHFE",
+    "type":"future",
+    "symbol":"rb",
+    "contract":"1901",
+    "contract_id":"1901",
+    "vol_multiple":10.0,
+    "price_tick":1.0,
+    "long_margin_ratio":0.1,
+    "short_margin_ratio":0.1
+}
+```
+
+字段说明:
+```
+market(string): 交易市场API
+outside_user_id(string): 上手交易账户id
+exchange(string): 交易所 - 例如：SHFE, SSE, NYMEX, bitmex, okex
+type(string): 主题类型 - spot(现货), future(期货), option(期权)
+symbol(string): 符号 - 例如: rb, CL, btc, btc_usdt
+contract(string): 合约类型 - 例如: 1901, this_week
+contract_id(string): 合约id - 例如: 1901, 20181901
+vol_multiple(double): 合约乘数
+price_tick(double): 最小变动价
+long_margin_ratio(double): 多头保证金比例 (当contract为空时, 此字段无效)
+short_margin_ratio(double): 空头保证金比例 (当contract为空时, 此字段无效)
+```
+
 ## 请求指令
 #### 下单
 消息名: insert_order  
@@ -538,6 +578,37 @@ market(string): 市场API
 currency_id(string): 币种代码 (不填会根据对应的市场取默认值)
 ```
 
+#### 查询产品信息
+消息名: query_product
+
+示例:
+```
+{
+    "msg": "query_tradeaccount",
+    "data": {
+        "qry_id": "6",
+        "market": "ctp",
+        "exchange": "SHFE",
+        "type": "future",
+        "symbol": "rb",
+        "contract": "1901"
+    }
+}
+```
+
+字段说明:
+```
+qry_id(string): 查询请求号
+market(string): 市场API
+exchange(string): 交易所 - 例如：SHFE, SSE, NYMEX, bitmex, okex
+type(string): 主题类型 - spot(现货), future(期货), option(期权)
+symbol(string): 符号 - 例如: rb, CL, btc, btc_usdt
+contract(string): 合约类型 - 例如: 1901, this_week
+```
+
+说明:
+如果是期货品种, 当contract为空时，查的品种信息, 当contract部位空时, 查的是合约信息
+
 
 ## 应答消息
 #### 上手确认订单接收
@@ -700,6 +771,7 @@ currency_id(string): 币种代码 (不填会根据对应的市场取默认值)
 #### 查询交易账户结果
 消息名: rsp_qrytradeaccount
 
+示例:
 ```
 {
     "msg":"rsp_qrytradeaccount",
@@ -715,6 +787,32 @@ currency_id(string): 币种代码 (不填会根据对应的市场取默认值)
         [
             { 交易账户结果 },
             { 交易账户结果 },
+            ......
+        ]
+    }
+}
+```
+
+#### 查询产品信息结果
+消息名: rsp_qryproduct
+
+示例:
+```
+{
+    "msg":"rsp_qryproduct",
+    "error_id":0,
+    "data":
+    {
+        "qry_id":"2",
+        "market":"ctp",
+        "exchange":"SHFE",
+        "symbol":"rb",
+        "contract":"1901",
+        "product_type":"type1",
+        "data":
+        [
+            { 产品信息 },
+            { 产品信息 },
             ......
         ]
     }

@@ -422,6 +422,8 @@ void SerializeProductType1(rapidjson::Writer<rapidjson::StringBuffer> &writer, c
 {
 	writer.Key("market");
 	writer.String(product_type.market.c_str());
+	writer.Key("outside_user_id");
+	writer.String(product_type.outside_user_id.c_str());
 	writer.Key("exchange");
 	writer.String(product_type.exchange.c_str());
 	writer.Key("type");
@@ -687,6 +689,9 @@ TradeAccountQuery ConvertTradeAccountJson2Common(rapidjson::Value &msg)
 
 	if (msg.HasMember("qry_id") && msg["qry_id"].IsString()) {
 		tradeaccount_qry.qry_id = msg["qry_id"].GetString();
+	}
+	if (msg.HasMember("market") && msg["market"].IsString()) {
+		tradeaccount_qry.market = msg["market"].GetString();
 	}
 	if (msg.HasMember("currency_id") && msg["currency_id"].IsString()) {
 		tradeaccount_qry.currency_id = msg["currency_id"].GetString();

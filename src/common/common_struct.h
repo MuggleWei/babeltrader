@@ -343,6 +343,7 @@ struct TradeAccountType1
 struct ProductType1
 {
 	std::string market;
+	std::string outside_user_id;
 	std::string exchange;
 	std::string type;
 	std::string symbol;

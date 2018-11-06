@@ -1122,6 +1122,7 @@ void CTPTradeHandler::ConvertTradeAccountCTP2Common(CThostFtdcTradingAccountFiel
 void CTPTradeHandler::ConvertProductCTP2Common(CThostFtdcProductField *pProduct, ProductType1 &product)
 {
 	product.market = "ctp";
+	product.outside_user_id = conf_.user_id;
 	product.exchange = pProduct->ExchangeID;
 	product.type = ConvertProductTypeCTP2Common(pProduct->ProductClass);
 	product.symbol = pProduct->ProductID;
@@ -1133,6 +1134,7 @@ void CTPTradeHandler::ConvertProductCTP2Common(CThostFtdcProductField *pProduct,
 void CTPTradeHandler::ConvertInstrumentCTP2Common(CThostFtdcInstrumentField *pInstrument, ProductType1 &product)
 {
 	product.market = "ctp";
+	product.outside_user_id = conf_.user_id;
 	product.exchange = pInstrument->ExchangeID;
 	product.type = ConvertProductTypeCTP2Common(pInstrument->ProductClass);
 	CTPSplitInstrument(pInstrument->InstrumentID, product.symbol, product.contract);
