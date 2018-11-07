@@ -743,9 +743,9 @@ void CTPTradeHandler::DoSettlementConfirm()
 void CTPTradeHandler::ConvertInsertOrderCommon2CTP(Order &order, CThostFtdcInputOrderField &req)
 {
 	// check invalid field
-	if (order.exchange.empty()) {
-		throw std::runtime_error("field \"exchange\" need string");
-	}
+//	if (order.exchange.empty()) {
+//		throw std::runtime_error("field \"exchange\" need string");
+//	}
 	if (order.symbol.empty()) {
 		throw std::runtime_error("field \"symbol\" need string");
 	}
@@ -896,19 +896,19 @@ void CTPTradeHandler::ConvertQueryTradeAccountCommon2CTP(TradeAccountQuery &trad
 
 void CTPTradeHandler::ConvertInsertOrderCTP2Common(CThostFtdcInputOrderField &req, Order &order)
 {
-	order.market = "ctp";
+	order.market = g_markets[Market_CTP];
 	order.outside_user_id = req.InvestorID;
 	order.exchange = req.ExchangeID;
-	order.type = "future";
+	order.type = g_product_types[ProductType_Future];
 	CTPSplitInstrument(req.InstrumentID, order.symbol, order.contract);
 	order.contract_id = order.contract;
 	if (req.OrderPriceType == THOST_FTDC_OPT_AnyPrice)
 	{
-		order.order_type = "market";
+		order.order_type = g_order_types[OrderType_Market];
 	}
 	else
 	{
-		order.order_type = "limit";
+		order.order_type = g_order_types[OrderType_Limit];
 	}
 
 	switch (req.CombHedgeFlag[0])
@@ -980,19 +980,19 @@ void CTPTradeHandler::ConvertRtnOrderCTP2Common(CThostFtdcOrderField *pOrder, Or
 	// order
 	{
 		order.outside_id = ExtendCTPId(pOrder->InvestorID, pOrder->TradingDay, pOrder->OrderSysID);
-		order.market = "ctp";
+		order.market = g_markets[Market_CTP];
 		order.outside_user_id = pOrder->InvestorID;
 		order.exchange = pOrder->ExchangeID;
-		order.type = "future";
+		order.type = g_product_types[ProductType_Future];
 		CTPSplitInstrument(pOrder->InstrumentID, order.symbol, order.contract);
 		order.contract_id = order.contract;
 		if (pOrder->OrderPriceType == THOST_FTDC_OPT_AnyPrice)
 		{
-			order.order_type = "market";
+			order.order_type = g_order_types[OrderType_Market];
 		}
 		else
 		{
-			order.order_type = "limit";
+			order.order_type = g_order_types[OrderType_Limit];
 		}
 
 		ConvertOrderDirCTP2Common(pOrder->Direction, pOrder->CombHedgeFlag[0], pOrder->CombOffsetFlag[0], order);
@@ -1017,10 +1017,10 @@ void CTPTradeHandler::ConvertRtnTradeCTP2Common(CThostFtdcTradeField *pTrade, Or
 	// order
 	{
 		order.outside_id = ExtendCTPId(pTrade->InvestorID, pTrade->TradingDay, pTrade->OrderSysID);
-		order.market = "ctp";
+		order.market = g_markets[Market_CTP];
 		order.outside_user_id = pTrade->InvestorID;
 		order.exchange = pTrade->ExchangeID;
-		order.type = "future";
+		order.type = g_product_types[ProductType_Future];
 		CTPSplitInstrument(pTrade->InstrumentID, order.symbol, order.contract);
 		order.contract_id = order.contract;
 		ConvertOrderDirCTP2Common(pTrade->Direction, pTrade->HedgeFlag, pTrade->OffsetFlag, order);
@@ -1037,7 +1037,7 @@ void CTPTradeHandler::ConvertRtnTradeCTP2Common(CThostFtdcTradeField *pTrade, Or
 }
 void CTPTradeHandler::ConvertPositionCTP2Common(CThostFtdcInvestorPositionField *pPosition, PositionSummaryType1 &position_summary)
 {
-	position_summary.market = "ctp";
+	position_summary.market = g_markets[Market_CTP];
 	position_summary.outside_user_id = pPosition->InvestorID;
 	position_summary.exchange = pPosition->ExchangeID;
 	CTPSplitInstrument(pPosition->InstrumentID, position_summary.symbol, position_summary.contract);
@@ -1065,7 +1065,7 @@ void CTPTradeHandler::ConvertPositionCTP2Common(CThostFtdcInvestorPositionField 
 }
 void CTPTradeHandler::ConvertPositionDetailCTP2Common(CThostFtdcInvestorPositionDetailField *pPositionDetail, PositionDetailType1 &position_detail)
 {
-	position_detail.market = "ctp";
+	position_detail.market = g_markets[Market_CTP];
 	position_detail.outside_user_id = pPositionDetail->InvestorID;
 	position_detail.exchange = pPositionDetail->ExchangeID;
 	CTPSplitInstrument(pPositionDetail->InstrumentID, position_detail.symbol, position_detail.contract);
@@ -1098,7 +1098,7 @@ void CTPTradeHandler::ConvertPositionDetailCTP2Common(CThostFtdcInvestorPosition
 }
 void CTPTradeHandler::ConvertTradeAccountCTP2Common(CThostFtdcTradingAccountField *pTradingAccount, TradeAccountType1 &trade_account)
 {
-	trade_account.market = "ctp";
+	trade_account.market = g_markets[Market_CTP];
 	trade_account.outside_user_id = pTradingAccount->AccountID;
 	trade_account.pre_balance = pTradingAccount->PreCredit;
 	trade_account.pre_balance = pTradingAccount->PreBalance;
@@ -1121,7 +1121,7 @@ void CTPTradeHandler::ConvertTradeAccountCTP2Common(CThostFtdcTradingAccountFiel
 }
 void CTPTradeHandler::ConvertProductCTP2Common(CThostFtdcProductField *pProduct, ProductType1 &product)
 {
-	product.market = "ctp";
+	product.market = g_markets[Market_CTP];
 	product.outside_user_id = conf_.user_id;
 	product.exchange = pProduct->ExchangeID;
 	product.type = ConvertProductTypeCTP2Common(pProduct->ProductClass);
@@ -1133,7 +1133,7 @@ void CTPTradeHandler::ConvertProductCTP2Common(CThostFtdcProductField *pProduct,
 }
 void CTPTradeHandler::ConvertInstrumentCTP2Common(CThostFtdcInstrumentField *pInstrument, ProductType1 &product)
 {
-	product.market = "ctp";
+	product.market = g_markets[Market_CTP];
 	product.outside_user_id = conf_.user_id;
 	product.exchange = pInstrument->ExchangeID;
 	product.type = ConvertProductTypeCTP2Common(pInstrument->ProductClass);
@@ -1351,14 +1351,11 @@ bool CTPTradeHandler::GetCTPIdFromExtend(const char *ext_ctp_id, int len, char *
 
 char CTPTradeHandler::ConvertOrderTypeCommon2CTP(const char *order_type)
 {
-	static const char ot_limit[] = "limit";
-	static const char ot_market[] = "market";
-
-	if (strncmp(order_type, ot_limit, sizeof(ot_limit) - 1) == 0)
+	if (strncmp(order_type, g_order_types[OrderType_Limit], strlen(g_order_types[OrderType_Limit])) == 0)
 	{
 		return THOST_FTDC_OPT_LimitPrice;
 	}
-	else if (strncmp(order_type, ot_market, sizeof(ot_limit) - 1) == 0)
+	else if (strncmp(order_type, g_order_types[OrderType_Market], strlen(g_order_types[OrderType_Market])) == 0)
 	{
 		return THOST_FTDC_OPT_AnyPrice;
 	}
@@ -1619,10 +1616,10 @@ std::string CTPTradeHandler::ConvertProductTypeCTP2Common(TThostFtdcProductClass
 	switch (ctp_product_type)
 	{
 	case THOST_FTDC_PC_Options:
-		return "option";
+		return g_product_types[ProductType_Option];
 	case THOST_FTDC_PC_Futures:
 	default:
-		return "future";
+		return g_product_types[ProductType_Future];
 	}
 }
 

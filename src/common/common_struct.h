@@ -5,28 +5,10 @@
 #include <string>
 #include <vector>
 
+#include "common/enum.h"
+
 namespace babeltrader
 {
-
-
-//////////////////////////
-// enum
-enum OrderStatusEnum
-{
-	OrderStatus_Unknown = 0,
-	OrderStatus_PartDealed = 1,
-	OrderStatus_AllDealed = 2,
-	OrderStatus_Canceled = 3,
-	OrderStatus_Canceling = 4,
-};
-
-enum OrderSubmitStatusEnum
-{
-	OrderSubmitStatus_Unknown = 0,
-	OrderSubmitStatus_Submitted = 1,
-	OrderSubmitStatus_Accepted = 2,
-	OrderSubmitStatus_Rejected = 3,
-};
 
 
 //////////////////////////

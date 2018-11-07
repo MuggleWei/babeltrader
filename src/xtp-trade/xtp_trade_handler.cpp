@@ -9,9 +9,9 @@ XTPTradeHandler::XTPTradeHandler(XTPTradeConf &conf)
 	, conf_(conf)
 	, ws_service_(nullptr, this)
 	, http_service_(nullptr, this)
-{
-	// TODO:
-}
+	, req_id_(1)
+	, order_ref_(1)
+{}
 
 void XTPTradeHandler::run()
 {
@@ -23,7 +23,16 @@ void XTPTradeHandler::run()
 }
 
 void XTPTradeHandler::InsertOrder(uWS::WebSocket<uWS::SERVER> *ws, Order &order)
-{}
+{
+	if (api_ == nullptr || !api_ready_)
+	{
+		throw std::runtime_error("trade api not ready yet");
+	}
+
+	// convert to xtp struct
+	XTPOrderInsertInfo req = { 0 };
+
+}
 void XTPTradeHandler::CancelOrder(uWS::WebSocket<uWS::SERVER> *ws, Order &order)
 {}
 void XTPTradeHandler::QueryOrder(uWS::WebSocket<uWS::SERVER> *ws, OrderQuery &order_query)
@@ -100,4 +109,32 @@ void XTPTradeHandler::RunService()
 	});
 
 	loop_thread.join();
+}
+
+void XTPTradeHandler::ConvertInsertOrderCommon2XTP(Order &order, XTPOrderInsertInfo &req)
+{
+	req.order_client_id = order_ref_++;
+	strncpy(req.ticker, order.symbol.c_str(), sizeof(req.ticker) - 1);
+	req.market = ConvertExchangeMarketTypeCommon2XTP(order.exchange);
+	req.price = order.price;
+	req.quantity = (int64_t)order.amount;
+	// TODO: 
+}
+
+XTP_MARKET_TYPE XTPTradeHandler::ConvertExchangeMarketTypeCommon2XTP(const std::string &exchange)
+{
+	if (exchange == g_exchanges[Exchange_SSE])
+	{
+		return XTP_MKT_SH_A;
+	}
+	else if (exchange == g_exchanges[Exchange_SZSE])
+	{
+		return XTP_MKT_SZ_A;
+	}
+	return XTP_MKT_UNKNOWN;
+}
+XTP_PRICE_TYPE XTPTradeHandler::ConvertOrderTypeCommon2XTP(Order &order)
+{
+	// TODO:
+	return XTP_PRICE_TYPE_UNKNOWN;
 }

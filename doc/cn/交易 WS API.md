@@ -93,7 +93,7 @@ outside_user_id(string): 上手交易账户id
 outside_id(string): 上手订单唯一标识, 注意, 这里有可能是BabelTrader的拼凑结果
 client_order_id(string): 客户订单标识, 由使用开发者系统的客户填入, 规则由开发者自定义
 market(string): 市场API - 例如: ctp, xtp, ib, bitmex, okex
-exchange(string): 交易所 - 例如：SHFE, SSE, NYMEX, bitmex, okex
+exchange(string): 交易所 - 例如：SHFE, SSE, NYMEX, bitmex, okex (使用公认的交易所缩写)
 type(string): 主题类型 - spot(现货), future(期货), option(期权)
 symbol(string): 符号 - 例如: rb, CL, btc, btc_usdt
 contract(string): 合约类型 - 例如: 1901, this_week
@@ -198,7 +198,7 @@ ts(int64): 成交时间戳
 ```
 market(string): 市场API - 例如: ctp, xtp, ib, bitmex, okex
 outside_user_id(string): 上手交易账户id
-exchange(string): 交易所 - 例如：SHFE, SSE, NYMEX, bitmex, okex
+exchange(string): 交易所 - 例如：SHFE, SSE, NYMEX, bitmex, okex (使用公认的交易所缩写)
 type(string): 主题类型 - spot(现货), future(期货), option(期权)
 symbol(string): 符号 - 例如: rb, CL, btc, btc_usdt
 contract(string): 合约类型 - 例如: 1901, this_week
@@ -264,7 +264,7 @@ close_profit_by_trade(double): 逐笔平仓盈亏
 ```
 market(string): 市场API - 例如: ctp, xtp, ib, bitmex, okex
 outside_user_id(string): 上手交易账户id
-exchange(string): 交易所 - 例如：SHFE, SSE, NYMEX, bitmex, okex
+exchange(string): 交易所 - 例如：SHFE, SSE, NYMEX, bitmex, okex (使用公认的交易所缩写)
 type(string): 主题类型 - spot(现货), future(期货), option(期权)
 symbol(string): 符号 - 例如: rb, CL, btc, btc_usdt
 contract(string): 合约类型 - 例如: 1901, this_week
@@ -370,7 +370,7 @@ trading_day(string): 交易日
 ```
 market(string): 交易市场API
 outside_user_id(string): 上手交易账户id
-exchange(string): 交易所 - 例如：SHFE, SSE, NYMEX, bitmex, okex
+exchange(string): 交易所 - 例如：SHFE, SSE, NYMEX, bitmex, okex (使用公认的交易所缩写)
 type(string): 主题类型 - spot(现货), future(期货), option(期权)
 symbol(string): 符号 - 例如: rb, CL, btc, btc_usdt
 contract(string): 合约类型 - 例如: 1901, this_week
@@ -419,7 +419,7 @@ short_margin_ratio(double): 空头保证金比例 (当contract为空时, 此字�
 user_id(string): 用户标识符, 在下单时填入
 outside_id(string): 上手订单唯一标识, 在confirmorder中得到
 market(string): 市场API - 例如: ctp, xtp, ib, bitmex, okex
-exchange(string): 交易所 - 例如：SHFE, SSE, NYMEX, bitmex, okex
+exchange(string): 交易所 - 例如：SHFE, SSE, NYMEX, bitmex, okex (使用公认的交易所缩写)
 type(string): 主题类型 - spot(现货), future(期货), option(期权)
 symbol(string): 符号 - 例如: rb, CL, btc, btc_usdt
 contract(string): 合约类型 - 例如: 1901, this_week
@@ -453,7 +453,7 @@ qry_id(string): 查询请求号
 user_id(string): 用户标识符, 在下单时填入
 outside_id(string): 上手订单唯一标识, 在confirmorder中得到
 market(string): 市场API - 例如: ctp, xtp, ib, bitmex, okex
-exchange(string): 交易所 - 例如：SHFE, SSE, NYMEX, bitmex, okex
+exchange(string): 交易所 - 例如：SHFE, SSE, NYMEX, bitmex, okex (使用公认的交易所缩写)
 type(string): 主题类型 - spot(现货), future(期货), option(期权)
 symbol(string): 符号 - 例如: rb, CL, btc, btc_usdt
 contract(string): 合约类型 - 例如: 1901, this_week
@@ -489,7 +489,7 @@ qry_id(string): 查询请求号
 user_id(string): 用户标识符, 在下单时填入
 trade_id(string): 上手成交号, 在成交消息中得到
 market(string): 市场API - 例如: ctp, xtp, ib, bitmex, okex
-exchange(string): 交易所 - 例如：SHFE, SSE, NYMEX, bitmex, okex
+exchange(string): 交易所 - 例如：SHFE, SSE, NYMEX, bitmex, okex (使用公认的交易所缩写)
 type(string): 主题类型 - spot(现货), future(期货), option(期权)
 symbol(string): 符号 - 例如: rb, CL, btc, btc_usdt
 contract(string): 合约类型 - 例如: 1901, this_week
@@ -519,7 +519,7 @@ contract_id(string): 合约id - 例如: 1901, 20181901
 ```
 qry_id(string): 查询请求号
 market(string): 市场API - 例如: ctp, xtp, ib, bitmex, okex
-exchange(string): 交易所 - 例如：SHFE, SSE, NYMEX, bitmex, okex
+exchange(string): 交易所 - 例如：SHFE, SSE, NYMEX, bitmex, okex (使用公认的交易所缩写)
 type(string): 主题类型 - spot(现货), future(期货), option(期权)
 symbol(string): 符号 - 例如: rb, CL, btc, btc_usdt
 contract(string): 合约类型 - 例如: 1901, this_week
@@ -549,7 +549,7 @@ contract_id(string): 合约id - 例如: 1901, 20181901
 ```
 qry_id(string): 查询请求号
 market(string): 市场API - 例如: ctp, xtp, ib, bitmex, okex
-exchange(string): 交易所 - 例如：SHFE, SSE, NYMEX, bitmex, okex
+exchange(string): 交易所 - 例如：SHFE, SSE, NYMEX, bitmex, okex (使用公认的交易所缩写)
 type(string): 主题类型 - spot(现货), future(期货), option(期权)
 symbol(string): 符号 - 例如: rb, CL, btc, btc_usdt
 contract(string): 合约类型 - 例如: 1901, this_week
@@ -600,7 +600,7 @@ currency_id(string): 币种代码 (不填会根据对应的市场取默认值)
 ```
 qry_id(string): 查询请求号
 market(string): 市场API
-exchange(string): 交易所 - 例如：SHFE, SSE, NYMEX, bitmex, okex
+exchange(string): 交易所 - 例如：SHFE, SSE, NYMEX, bitmex, okex (使用公认的交易所缩写)
 type(string): 主题类型 - spot(现货), future(期货), option(期权)
 symbol(string): 符号 - 例如: rb, CL, btc, btc_usdt
 contract(string): 合约类型 - 例如: 1901, this_week

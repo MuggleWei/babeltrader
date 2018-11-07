@@ -38,6 +38,15 @@ private:
 	void RunAPI();
 	void RunService();
 
+	////////////////////////////////////////
+	// convert common struct to ctp struct
+	void ConvertInsertOrderCommon2XTP(Order &order, XTPOrderInsertInfo &req);
+
+	////////////////////////////////////////
+	// field convert
+	XTP_MARKET_TYPE ConvertExchangeMarketTypeCommon2XTP(const std::string &exchange);
+	XTP_PRICE_TYPE ConvertOrderTypeCommon2XTP(Order &order);
+
 private:
 	XTP::API::TraderApi *api_;
 	bool api_ready_;
@@ -48,6 +57,9 @@ private:
 	uWS::Hub uws_hub_;
 	WsService ws_service_;
 	HttpService http_service_;
+
+	int req_id_;
+	uint32_t order_ref_;
 };
 
 

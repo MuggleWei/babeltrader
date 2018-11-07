@@ -41,9 +41,9 @@ std::vector<Quote> XTPQuoteHandler::GetSubTopics(std::vector<bool> &vec_b)
 	std::unique_lock<std::mutex> lock(topic_mtx_);
 	for (auto it = sub_topics_.begin(); it != sub_topics_.end(); ++it) {
 		Quote msg;
-		msg.market = "xtp";
+		msg.market = g_markets[Market_XTP];
 		msg.exchange = topic_exchange_[it->first];
-		msg.type = "spot";
+		msg.type = g_product_types[ProductType_Spot];
 		msg.symbol = it->first;
 		msg.contract = "";
 		msg.contract_id = msg.contract;
@@ -403,12 +403,12 @@ void XTPQuoteHandler::OutputMarketData(XTPMD *market_data, int64_t bid1_qty[], i
 
 void XTPQuoteHandler::ConvertMarketData(XTPMD *market_data, Quote &quote, MarketData &md)
 {
-	quote.market = "xtp";
+	quote.market = g_markets[Market_XTP];
 	quote.exchange = ConvertExchangeType2Str(market_data->exchange_id);
 	switch (market_data->data_type)
 	{
-	case XTP_MARKETDATA_OPTION: quote.type = "option"; break;
-	default: quote.type = "spot"; break;
+	case XTP_MARKETDATA_OPTION: quote.type = g_product_types[ProductType_Option]; break;
+	default: quote.type = g_product_types[ProductType_Spot]; break;
 	}
 	quote.symbol = market_data->ticker;
 	quote.contract = "";

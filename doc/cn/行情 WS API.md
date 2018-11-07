@@ -43,7 +43,7 @@ BabelTrade的设计目的是, 统一上手API接口, 并不做订阅过滤分发
 ```
 msg(string): 标识消息类型, 所有行情消息, 此字段都为 quote
 market(string): 市场API - 例如: ctp, xtp, ib, bitmex, okex
-exchange(string): 交易所 - 例如：SHFE, SSE, NYMEX, bitmex, okex
+exchange(string): 交易所 - 例如：SHFE, SSE, NYMEX, bitmex, okex (使用公认的交易所缩写)
 type(string): 主题类型 - spot(现货), future(期货), option(期权)
 symbol(string): 符号 - 例如: rb, CL, btc, btc_usdt
 contract(string): 合约类型 - 例如: 1901, this_week

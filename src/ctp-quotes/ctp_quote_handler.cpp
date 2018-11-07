@@ -37,9 +37,9 @@ std::vector<Quote> CTPQuoteHandler::GetSubTopics(std::vector<bool> &vec_b)
 	std::unique_lock<std::mutex> lock(topic_mtx_);
 	for (auto it = sub_topics_.begin(); it != sub_topics_.end(); ++it) {
 		Quote msg;
-		msg.market = "ctp";
+		msg.market = g_markets[Market_CTP];
 		msg.exchange = "";
-		msg.type = "future";
+		msg.type = g_product_types[ProductType_Future];
 		CTPSplitInstrument(it->first.c_str(), msg.symbol, msg.contract);
 		msg.contract_id = msg.contract;
 		msg.info1 = "marketdata";
@@ -529,9 +529,9 @@ void CTPQuoteHandler::ConvertMarketData(CThostFtdcDepthMarketDataField *pDepthMa
 	// get update time
 	int64_t ts = GetUpdateTimeMs(pDepthMarketData);
 
-	quote.market = "ctp";
+	quote.market = g_markets[Market_CTP];
 	quote.exchange = pDepthMarketData->ExchangeID;
-	quote.type = "future";
+	quote.type = g_product_types[ProductType_Future];
 	quote.symbol = std::move(symbol);
 	quote.contract = std::move(contract);
 	quote.contract_id = quote.contract;
