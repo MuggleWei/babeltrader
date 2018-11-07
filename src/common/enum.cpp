@@ -33,13 +33,41 @@ const char *g_product_types[ProductType_Max] = {
 	"unknown",
 	"future",
 	"option",
-	"spot"
+	"spot",
+	"etf",
+	"ipo"
 };
 
-const char *g_order_types[OrderType_Max] = {
+const char *g_order_type[OrderType_Max] = {
 	"unknown",
 	"limit",
 	"market"
+};
+
+const char *g_order_flag1[OrderFlag1_Max] = {
+	"unknown",
+	"speculation",
+	"arbitrage",
+	"hedge",
+	"marketmaker"
+};
+
+const char *g_order_action[OrderAction_Max] = {
+	"unknown",
+	"open",
+	"close",
+	"closetoday",
+	"closehistory",
+	"forceclose",
+	"buy",
+	"sell"
+};
+
+const char *g_order_dir[OrderDir_Max] = {
+	"unknown",
+	"net",
+	"long",
+	"short"
 };
 
 

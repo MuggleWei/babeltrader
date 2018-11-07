@@ -1,27 +1,24 @@
-import json
 import time
 
 import requests
-import websocket
-
 
 # ctp demo
-# addr = "127.0.0.1:6001"
-# sub_msg = {
-#     "market": "ctp",
-#     "type": "future",
-#     "symbol": "rb",
-#     "contract": "1905"
-# }
-
-# xtp demo
-addr = "127.0.0.1:6002"
+addr = "127.0.0.1:6001"
 sub_msg = {
-    "market": "xtp",
-    "exchange": "SSE",
-    "type": "spot",
-    "symbol": "601857",
+    "market": "ctp",
+    "type": "future",
+    "symbol": "rb",
+    "contract": "1905"
 }
+
+# # xtp demo
+# addr = "127.0.0.1:6002"
+# sub_msg = {
+#     "market": "xtp",
+#     "exchange": "SSE",
+#     "type": "spot",
+#     "symbol": "601857",
+# }
 
 
 def output_subed_topic():

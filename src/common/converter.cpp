@@ -701,4 +701,87 @@ TradeAccountQuery ConvertTradeAccountJson2Common(rapidjson::Value &msg)
 }
 
 
+bool SplitOrderDir(const char *order_dir, int len, const char **action, const char **dir)
+{
+	const char *p = order_dir;
+	int cnt = 0;
+	while (p) {
+		if (*p != '_')
+		{
+			++p;
+			++cnt;
+			if (cnt == len)
+			{
+				break;
+			}
+		}
+		else
+		{
+			break;
+		}
+	}
+
+	int split_pos = p - order_dir;
+	if (split_pos == 0)
+	{
+		*action = nullptr;
+		*dir = nullptr;
+		return false;
+	}
+
+	if (split_pos == len)
+	{
+		if (strncmp(order_dir, g_order_action[OrderAction_Buy], strlen(g_order_action[OrderAction_Buy])) == 0)
+		{
+			*action = g_order_action[OrderAction_Buy];
+			*dir = g_order_dir[OrderDir_Net];
+			return true;
+		}
+		else if (strncmp(order_dir, g_order_action[OrderAction_Sell], strlen(g_order_action[OrderAction_Sell])) == 0)
+		{
+			*action = g_order_action[OrderAction_Sell];
+			*dir = g_order_dir[OrderDir_Net];
+			return true;
+		}
+	}
+	else
+	{
+		if (strncmp(order_dir, g_order_action[OrderAction_Open], strlen(g_order_action[OrderAction_Open])) == 0)
+		{
+			*action = g_order_action[OrderAction_Open];
+		}
+		else if (strncmp(order_dir, g_order_action[OrderAction_CloseToday], strlen(g_order_action[OrderAction_CloseToday])) == 0)
+		{
+			*action = g_order_action[OrderAction_CloseToday];
+		}
+		else if (strncmp(order_dir, g_order_action[OrderAction_CloseHistory], strlen(g_order_action[OrderAction_CloseHistory])) == 0)
+		{
+			*action = g_order_action[OrderAction_CloseHistory];
+		}
+		else if (strncmp(order_dir, g_order_action[OrderAction_Close], strlen(g_order_action[OrderAction_Close])) == 0)
+		{
+			*action = g_order_action[OrderAction_Close];
+		}
+		else
+		{
+			return false;
+		}
+
+		if (strncmp(p+1, g_order_dir[OrderDir_Long], strlen(g_order_dir[OrderDir_Long])) == 0)
+		{
+			*dir = g_order_dir[OrderDir_Long];
+		}
+		else if (strncmp(p + 1, g_order_dir[OrderDir_Short], strlen(g_order_dir[OrderDir_Short])) == 0)
+		{
+			*dir = g_order_dir[OrderDir_Short];
+		}
+		else
+		{
+			return false;
+		}
+
+		return true;
+	}
+}
+
 }

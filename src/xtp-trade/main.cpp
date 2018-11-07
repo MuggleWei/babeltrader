@@ -15,6 +15,8 @@
 #include <sys/types.h>
 #endif
 
+#include "common/converter.h"
+
 int main(int argc, char *argv[])
 {
 	// init glog

@@ -2,15 +2,11 @@ import time
 
 from trader import Trader
 
-addr = "127.0.0.1:8001"
-
-
-# addr = "127.0.0.1:8002"
-
 
 class TraderQueryProduct(Trader):
     def __init__(self):
-        Trader.__init__(self)
+        addr = "127.0.0.1:8001"
+        Trader.__init__(self, addr=addr)
 
 
 if __name__ == '__main__':

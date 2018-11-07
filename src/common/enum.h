@@ -43,6 +43,8 @@ enum ProductTypeEnum
 	ProductType_Future,
 	ProductType_Option,
 	ProductType_Spot,
+	ProductType_ETF,
+	ProductType_IPO,
 	ProductType_Max,
 };
 extern const char *g_product_types[ProductType_Max];
@@ -54,7 +56,43 @@ enum OrderTypeEnum
 	OrderType_Market,	// market price
 	OrderType_Max,
 };
-extern const char *g_order_types[OrderType_Max];
+extern const char *g_order_type[OrderType_Max];
+
+
+enum OrderFlag1Enum
+{
+	OrderFlag1_Unknown = 0,
+	OrderFlag1_Speculation,
+	OrderFlag1_Arbitrage,
+	OrderFlag1_Hedge,
+	OrderFlag1_Marketmaker,
+	OrderFlag1_Max,
+};
+extern const char *g_order_flag1[OrderFlag1_Max];
+
+enum OrderActionEnum
+{
+	OrderAction_Unknown = 0,
+	OrderAction_Open,
+	OrderAction_Close,
+	OrderAction_CloseToday,
+	OrderAction_CloseHistory,
+	OrderAction_ForceClose,
+	OrderAction_Buy,
+	OrderAction_Sell,
+	OrderAction_Max,
+};
+extern const char *g_order_action[OrderAction_Max];
+
+enum OrderDirEnum
+{
+	OrderDir_Unknown = 0,
+	OrderDir_Net,
+	OrderDir_Long,
+	OrderDir_Short,
+	OrderDir_Max,
+};
+extern const char *g_order_dir[OrderDir_Max];
 
 enum OrderStatusEnum
 {

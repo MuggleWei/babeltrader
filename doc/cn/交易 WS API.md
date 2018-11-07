@@ -100,7 +100,7 @@ contract(string): 合约类型 - 例如: 1901, this_week
 contract_id(string): 合约id - 例如: 1901, 20181901
 order_type(string): 订单类型 - limit(限价单), market(市价单)
 order_flag1(string): 订单标识 - speculation(投机), hedge(套保), arbitrage(套利), marketmaker(做市商)
-dir(string): 订单方向 - buy(买), sell(卖), open_long(开多), open_short(开空), close_long(平多), close_short(平空), closetoday_long(平今多), closetoday_short(平今空), closehistory_long(平昨多), closehistory_short(平昨空)
+dir(string): 订单方向 - buy(买), sell(卖), open_long(开多), open_short(开空), close_long(平多), close_short(平空), closetoday_long(平今多), closetoday_short(平今空), closehistory_long(平昨多), closehistory_short(平昨空), forceclose_long(强平多), forceclose_short(强平空)
 price(double): 限价单价格, 当为市价单时, 此字段无效
 amount(double/int): 开仓头寸大小
 total_price(double): 共开多少价格, 此字段在某些币所的现货交易中有用到
@@ -110,8 +110,11 @@ ts(int64): 时间戳
 注意:  
 - user_id, market, type: 其实在上手当中, 并没有用到这些字段, 只是为了系统内的结构字段统一, 在这里写出来
 - outside_id: 这个是上手的订单id, 下单时不填写
-- dir: buy/sell适用于股票, 而期货的方向, 使用 open/close _ long/short
-- price: 当使用市价单时, 此时price是无效字段, 请注意, 某些交易所(SHFE, okex合约)不支持市价单
+- type: 主题类型, 特别注意spot包括了 虚拟货币现货, 股票现货 的意义
+- dir: 由 action 和 dir 构成, action为: buy, sell, open, close, closetoday, closehistory, dir为 long, short;  
+期货交易: 通常使用 action_dir 的格式, 例如 open_long, closetoday_long  
+虚拟货币现货, 股票, etf申赎, 新股申购: 通常单独使用 action, 例如 buy, sell
+- price: 当使用市价单时, 请注意, 某些交易所(SHFE, okex合约)不支持市价单
 
 
 #### 订单状态结构

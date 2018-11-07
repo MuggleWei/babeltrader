@@ -4,13 +4,9 @@ from datetime import datetime
 
 import websocket
 
-addr = "127.0.0.1:8001"
-
-
-# addr = "127.0.0.1:8002"
 
 class Trader:
-    def __init__(self):
+    def __init__(self, addr):
         self.rsp_callbacks = {}
         self.rsp_callbacks["confirmorder"] = self.on_confirmorder
         self.rsp_callbacks["orderstatus"] = self.on_orderstatus

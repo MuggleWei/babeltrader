@@ -124,7 +124,7 @@ private:
 	
 	char ConvertOrderTypeCommon2CTP(const char *order_type);
 	char ConvertOrderFlag1Common2CTP(const char *order_flag1);
-	bool ConvertOrderDirCommon2CTP(const char *order_dir, char& action, char& dir);
+	bool ConvertOrderDirCommon2CTP(const char *order_dir, int len, char& action, char& dir);
 
 	int ConvertOrderStatusCTP2Common(TThostFtdcOrderStatusType OrderStatus);
 	int ConvertOrderSubmitStatusCTP2Common(TThostFtdcOrderSubmitStatusType OrderSubmitStatus);

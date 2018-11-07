@@ -1,21 +1,13 @@
-import json
 import time
-from datetime import datetime
-
-import websocket
-import traceback
 
 from trader import Trader
-
-addr = "127.0.0.1:8001"
-
-
-# addr = "127.0.0.1:8002"
 
 
 class TraderInsertOrder(Trader):
     def __init__(self):
-        Trader.__init__(self)
+        # addr = "127.0.0.1:8001"
+        addr = "127.0.0.1:8002"
+        Trader.__init__(self, addr=addr)
         self.order_map = {}
 
     def on_confirmorder(self, msg):
@@ -60,7 +52,8 @@ class TraderInsertOrder(Trader):
         else:
             print(
                 "order status update: order({0}) - status: {1}, submit status: {2}, amount: {3}, dealed amount: {4}".format(
-                    order['order_id'], order_status, order_submit_status, msg['data']['amount'], msg['data']['dealed_amount']))
+                    order['order_id'], order_status, order_submit_status, msg['data']['amount'],
+                    msg['data']['dealed_amount']))
 
     def on_orderdeal(self, msg):
         outside_id = msg['data']['order']['outside_id']
@@ -76,18 +69,38 @@ if __name__ == '__main__':
     trader = TraderInsertOrder()
 
     ts = time.time()
+
+    # ctp
+    # trader.insert_order(
+    #     user_id="weidaizi",
+    #     market="ctp",
+    #     exchange="SHFE",
+    #     type="future",
+    #     symbol="rb",
+    #     contract="1901",
+    #     contract_id="1901",
+    #     order_type="limit",
+    #     order_flag1="speculation",  # speculation, hedge, arbitrage
+    #     dir="open_short",  # [action: open, close, closetoday, closehistory; dir: long, short] or [buy, sell]
+    #     price=3900,
+    #     amount=1,
+    #     total_price=0,
+    #     ts=ts
+    # )
+
+    # xtp
     trader.insert_order(
         user_id="weidaizi",
-        market="ctp",
-        exchange="SHFE",
-        type="future",
-        symbol="rb",
-        contract="1901",
-        contract_id="1901",
+        market="xtp",
+        exchange="SSE",
+        type="spot",
+        symbol="600519",
+        contract="",
+        contract_id="",
         order_type="limit",
-        order_flag1="speculation",  # speculation, hedge, arbitrage
-        dir="open_short",  # [action: open, close, closetoday, closehistory; dir: long, short] or [buy, sell]
-        price=3900,
+        order_flag1="",  # speculation, hedge, arbitrage
+        dir="buy",  # [action: open, close, closetoday, closehistory; dir: long, short] or [buy, sell]
+        price=500,
         amount=1,
         total_price=0,
         ts=ts

@@ -776,7 +776,7 @@ void CTPTradeHandler::ConvertInsertOrderCommon2CTP(Order &order, CThostFtdcInput
 		throw std::runtime_error("unsupport order type");
 	}
 
-	if (!ConvertOrderDirCommon2CTP(order.dir.c_str(), req.CombOffsetFlag[0], req.Direction)) {
+	if (!ConvertOrderDirCommon2CTP(order.dir.c_str(), order.dir.size(), req.CombOffsetFlag[0], req.Direction)) {
 		throw std::runtime_error("unsupport order dir");
 	}
 
@@ -904,71 +904,14 @@ void CTPTradeHandler::ConvertInsertOrderCTP2Common(CThostFtdcInputOrderField &re
 	order.contract_id = order.contract;
 	if (req.OrderPriceType == THOST_FTDC_OPT_AnyPrice)
 	{
-		order.order_type = g_order_types[OrderType_Market];
+		order.order_type = g_order_type[OrderType_Market];
 	}
 	else
 	{
-		order.order_type = g_order_types[OrderType_Limit];
+		order.order_type = g_order_type[OrderType_Limit];
 	}
 
-	switch (req.CombHedgeFlag[0])
-	{
-	case THOST_FTDC_HF_Speculation:
-	{
-		order.order_flag1 = "speculation";
-	}break;
-	case THOST_FTDC_HF_Arbitrage:
-	{
-		order.order_flag1 = "arbitrage";
-	}break;
-	case THOST_FTDC_HF_Hedge:
-	{
-		order.order_flag1 = "hedge";
-	}break;
-	case THOST_FTDC_HF_MarketMaker:
-	{
-		order.order_flag1 = "marketmaker";
-	}break;
-	}
-
-	if (req.Direction == THOST_FTDC_D_Buy)
-	{
-		if (req.CombOffsetFlag[0] == THOST_FTDC_OF_Open)
-		{
-			order.dir = "open_long";
-		}
-		else if (req.CombOffsetFlag[0] == THOST_FTDC_OF_CloseToday)
-		{
-			order.dir = "closetoday_short";
-		}
-		else if (req.CombOffsetFlag[0] == THOST_FTDC_OF_CloseYesterday)
-		{
-			order.dir = "closehistory_short";
-		}
-		else
-		{
-			order.dir = "close_short";
-		}
-	}
-	else
-	{
-		if (req.CombOffsetFlag[0] == THOST_FTDC_OF_Open)
-		{
-			order.dir = "open_short";
-		}
-		else if (req.CombOffsetFlag[0] == THOST_FTDC_OF_CloseToday)
-		{
-			order.dir = "closetoday_long";
-		}
-		else if (req.CombOffsetFlag[0] == THOST_FTDC_OF_CloseYesterday)
-		{
-			order.dir = "closehistory_long";
-		}
-		else
-		{
-			order.dir = "close_long";
-		}
-	}
+	ConvertOrderDirCTP2Common(req.Direction, req.CombHedgeFlag[0], req.CombOffsetFlag[0], order);
 
 	order.price = req.LimitPrice;
 	order.amount = req.VolumeTotalOriginal;
@@ -988,11 +931,11 @@ void CTPTradeHandler::ConvertRtnOrderCTP2Common(CThostFtdcOrderField *pOrder, Or
 		order.contract_id = order.contract;
 		if (pOrder->OrderPriceType == THOST_FTDC_OPT_AnyPrice)
 		{
-			order.order_type = g_order_types[OrderType_Market];
+			order.order_type = g_order_type[OrderType_Market];
 		}
 		else
 		{
-			order.order_type = g_order_types[OrderType_Limit];
+			order.order_type = g_order_type[OrderType_Limit];
 		}
 
 		ConvertOrderDirCTP2Common(pOrder->Direction, pOrder->CombHedgeFlag[0], pOrder->CombOffsetFlag[0], order);
@@ -1072,11 +1015,11 @@ void CTPTradeHandler::ConvertPositionDetailCTP2Common(CThostFtdcInvestorPosition
 	position_detail.contract_id = position_detail.contract;
 	if (pPositionDetail->Direction == THOST_FTDC_D_Buy)
 	{
-		position_detail.dir = "long";
+		position_detail.dir = g_order_dir[OrderDir_Long];
 	}
 	else
 	{
-		position_detail.dir = "short";
+		position_detail.dir = g_order_dir[OrderDir_Short];
 	}
 	position_detail.order_flag1 = ConvertHedgeFlagCTP2Common(pPositionDetail->HedgeFlag);
 	position_detail.open_date = pPositionDetail->OpenDate;
@@ -1351,11 +1294,11 @@ bool CTPTradeHandler::GetCTPIdFromExtend(const char *ext_ctp_id, int len, char *
 
 char CTPTradeHandler::ConvertOrderTypeCommon2CTP(const char *order_type)
 {
-	if (strncmp(order_type, g_order_types[OrderType_Limit], strlen(g_order_types[OrderType_Limit])) == 0)
+	if (strncmp(order_type, g_order_type[OrderType_Limit], strlen(g_order_type[OrderType_Limit])) == 0)
 	{
 		return THOST_FTDC_OPT_LimitPrice;
 	}
-	else if (strncmp(order_type, g_order_types[OrderType_Market], strlen(g_order_types[OrderType_Market])) == 0)
+	else if (strncmp(order_type, g_order_type[OrderType_Market], strlen(g_order_type[OrderType_Market])) == 0)
 	{
 		return THOST_FTDC_OPT_AnyPrice;
 	}
@@ -1364,65 +1307,48 @@ char CTPTradeHandler::ConvertOrderTypeCommon2CTP(const char *order_type)
 }
 char CTPTradeHandler::ConvertOrderFlag1Common2CTP(const char *order_flag1)
 {
-	static const char of_spec[] = "speculation";
-	static const char of_hedge[] = "hedge";
-	static const char of_arbitrage[] = "arbitrage";
-
-	if (strncmp(order_flag1, of_spec, sizeof(of_spec) - 1) == 0)
+	if (strncmp(order_flag1, g_order_flag1[OrderFlag1_Speculation], strlen(g_order_flag1[OrderFlag1_Speculation])) == 0)
 	{
 		return THOST_FTDC_HF_Speculation;
 	}
-	else if (strncmp(order_flag1, of_hedge, sizeof(of_hedge) - 1) == 0)
+	else if (strncmp(order_flag1, g_order_flag1[OrderFlag1_Hedge], strlen(g_order_flag1[OrderFlag1_Hedge])) == 0)
 	{
 		return THOST_FTDC_HF_Hedge;
 	}
-	else if (strncmp(order_flag1, of_arbitrage, sizeof(of_arbitrage) - 1) == 0)
+	else if (strncmp(order_flag1, g_order_flag1[OrderFlag1_Arbitrage], strlen(g_order_flag1[OrderFlag1_Arbitrage])) == 0)
 	{
 		return THOST_FTDC_HF_Arbitrage;
+	}
+	else if (strncmp(order_flag1, g_order_flag1[OrderFlag1_Marketmaker], strlen(g_order_flag1[OrderFlag1_Marketmaker])) == 0)
+	{
+		return THOST_FTDC_HF_MarketMaker;
 	}
 
 	return (char)0;
 }
-bool CTPTradeHandler::ConvertOrderDirCommon2CTP(const char *order_dir, char& action, char& dir)
+bool CTPTradeHandler::ConvertOrderDirCommon2CTP(const char *order_dir, int len, char& action, char& dir)
 {
-	static const char od_open[] = "open";
-	static const char od_close[] = "close";
-	static const char od_closetoday[] = "closetoday";
-	static const char od_closehistory[] = "closehistory";
-	static const char od_long[] = "long";
-	static const char od_short[] = "short";
+	const char *p_action = nullptr;
+	const char *p_dir = nullptr;
 
-	const char *p = order_dir;
-	while (p) {
-		if (*p != '_')
-		{
-			++p;
-		}
-		else
-		{
-			break;
-		}
-	}
-
-	int len = strlen(order_dir);
-	int split_pos = p - order_dir;
-	if (split_pos == 0 || split_pos == len) {
+	if (!SplitOrderDir(order_dir, len, &p_action, &p_dir))
+	{
 		return false;
 	}
 
-	if (strncmp(order_dir, od_open, split_pos) == 0)
+	if (strncmp(p_action, g_order_action[OrderAction_Open], sizeof(g_order_action[OrderAction_Open]) - 1) == 0)
 	{
 		action = THOST_FTDC_OF_Open;
 	}
-	else if (strncmp(order_dir, od_close, split_pos) == 0)
+	else if (strncmp(p_action, g_order_action[OrderAction_Close], sizeof(g_order_action[OrderAction_Close]) - 1) == 0)
 	{
 		action = THOST_FTDC_OF_Close;
 	}
-	else if (strncmp(order_dir, od_closetoday, split_pos) == 0)
+	else if (strncmp(p_action, g_order_action[OrderAction_CloseToday], sizeof(g_order_action[OrderAction_CloseToday]) - 1) == 0)
 	{
 		action = THOST_FTDC_OF_CloseToday;
 	}
-	else if (strncmp(order_dir, od_closehistory, split_pos) == 0)
+	else if (strncmp(p_action, g_order_action[OrderAction_CloseHistory], sizeof(g_order_action[OrderAction_CloseHistory]) - 1) == 0)
 	{
 		action = THOST_FTDC_OF_CloseYesterday;
 	}
@@ -1431,7 +1357,7 @@ bool CTPTradeHandler::ConvertOrderDirCommon2CTP(const char *order_dir, char& act
 		return false;
 	}
 
-	if (strncmp(p + 1, od_long, sizeof(od_long) - 1) == 0)
+	if (strncmp(p_dir, g_order_dir[OrderDir_Long], sizeof(g_order_dir[OrderDir_Long]) - 1) == 0)
 	{
 		if (action == THOST_FTDC_OF_Open)
 		{
@@ -1442,7 +1368,7 @@ bool CTPTradeHandler::ConvertOrderDirCommon2CTP(const char *order_dir, char& act
 			dir = THOST_FTDC_D_Sell;
 		}
 	}
-	else if (strncmp(p + 1, od_short, sizeof(od_short) - 1) == 0)
+	else if (strncmp(p_dir, g_order_dir[OrderDir_Short], sizeof(g_order_dir[OrderDir_Short]) - 1) == 0)
 	{
 		if (action == THOST_FTDC_OF_Open)
 		{
@@ -1515,60 +1441,70 @@ void CTPTradeHandler::ConvertOrderDirCTP2Common(const char ctp_dir, const char c
 	{
 	case THOST_FTDC_HF_Speculation:
 	{
-		order.order_flag1 = "speculation";
+		order.order_flag1 = g_order_flag1[OrderFlag1_Speculation];
 	}break;
 	case THOST_FTDC_HF_Arbitrage:
 	{
-		order.order_flag1 = "arbitrage";
+		order.order_flag1 = g_order_flag1[OrderFlag1_Arbitrage];
 	}break;
 	case THOST_FTDC_HF_Hedge:
 	{
-		order.order_flag1 = "hedge";
+		order.order_flag1 = g_order_flag1[OrderFlag1_Hedge];
 	}break;
 	case THOST_FTDC_HF_MarketMaker:
 	{
-		order.order_flag1 = "marketmaker";
+		order.order_flag1 = g_order_flag1[OrderFlag1_Marketmaker];
 	}break;
 	}
 
+	char buf[64] = { 0 };
 	if (ctp_dir == THOST_FTDC_D_Buy)
 	{
 		if (ctp_offset_flag == THOST_FTDC_OF_Open)
 		{
-			order.dir = "open_long";
+			snprintf(buf, sizeof(buf) - 1, "%s_%s", g_order_action[OrderAction_Open], g_order_dir[OrderDir_Long]);
 		}
 		else if (ctp_offset_flag == THOST_FTDC_OF_CloseToday)
 		{
-			order.dir = "closetoday_short";
+			snprintf(buf, sizeof(buf) - 1, "%s_%s", g_order_action[OrderAction_CloseToday], g_order_dir[OrderDir_Short]);
 		}
 		else if (ctp_offset_flag == THOST_FTDC_OF_CloseYesterday)
 		{
-			order.dir = "closehistory_short";
+			snprintf(buf, sizeof(buf) - 1, "%s_%s", g_order_action[OrderAction_CloseHistory], g_order_dir[OrderDir_Short]);
+		}
+		else if (ctp_offset_flag == THOST_FTDC_OF_ForceClose || ctp_offset_flag == THOST_FTDC_OF_ForceOff)
+		{
+			snprintf(buf, sizeof(buf) - 1, "%s_%s", g_order_action[OrderAction_ForceClose], g_order_dir[OrderDir_Short]);
 		}
 		else
 		{
-			order.dir = "close_short";
+			snprintf(buf, sizeof(buf) - 1, "%s_%s", g_order_action[OrderAction_Close], g_order_dir[OrderDir_Short]);
 		}
 	}
 	else
 	{
 		if (ctp_offset_flag == THOST_FTDC_OF_Open)
 		{
-			order.dir = "open_short";
+			snprintf(buf, sizeof(buf) - 1, "%s_%s", g_order_action[OrderAction_Open], g_order_dir[OrderDir_Short]);
 		}
 		else if (ctp_offset_flag == THOST_FTDC_OF_CloseToday)
 		{
-			order.dir = "closetoday_long";
+			snprintf(buf, sizeof(buf) - 1, "%s_%s", g_order_action[OrderAction_CloseToday], g_order_dir[OrderDir_Long]);
 		}
 		else if (ctp_offset_flag == THOST_FTDC_OF_CloseYesterday)
 		{
-			order.dir = "closehistory_long";
+			snprintf(buf, sizeof(buf) - 1, "%s_%s", g_order_action[OrderAction_CloseHistory], g_order_dir[OrderDir_Long]);
+		}
+		else if (ctp_offset_flag == THOST_FTDC_OF_ForceClose || ctp_offset_flag == THOST_FTDC_OF_ForceOff)
+		{
+			snprintf(buf, sizeof(buf) - 1, "%s_%s", g_order_action[OrderAction_ForceClose], g_order_dir[OrderDir_Long]);
 		}
 		else
 		{
-			order.dir = "close_long";
+			snprintf(buf, sizeof(buf) - 1, "%s_%s", g_order_action[OrderAction_Close], g_order_dir[OrderDir_Long]);
 		}
 	}
+	order.dir = buf;
 }
 
 std::string CTPTradeHandler::ConvertPositionDirCTP2Common(TThostFtdcPosiDirectionType ctp_position_dir)
@@ -1576,12 +1512,12 @@ std::string CTPTradeHandler::ConvertPositionDirCTP2Common(TThostFtdcPosiDirectio
 	switch (ctp_position_dir)
 	{
 	case THOST_FTDC_PD_Long:
-		return "long";
+		return g_order_dir[OrderDir_Long];
 	case THOST_FTDC_PD_Short:
-		return "short";
+		return g_order_dir[OrderDir_Short];
 	case THOST_FTDC_PD_Net: 
 	default:
-		return "net";
+		return g_order_dir[OrderDir_Net];
 	}
 }
 std::string CTPTradeHandler::ConvertHedgeFlagCTP2Common(TThostFtdcHedgeFlagType ctp_hedge_flag)
@@ -1589,14 +1525,14 @@ std::string CTPTradeHandler::ConvertHedgeFlagCTP2Common(TThostFtdcHedgeFlagType 
 	switch (ctp_hedge_flag)
 	{
 	case THOST_FTDC_HF_Arbitrage:
-		return "arbitrage";
+		return g_order_flag1[OrderFlag1_Arbitrage];
 	case THOST_FTDC_HF_Hedge:
-		return "hedge";
+		return g_order_flag1[OrderFlag1_Hedge];
 	case THOST_FTDC_HF_MarketMaker:
-		return "marketmaker";
+		return g_order_flag1[OrderFlag1_Marketmaker];
 	case THOST_FTDC_HF_Speculation:
 	default:
-		return "speculation";
+		return g_order_flag1[OrderFlag1_Speculation];
 	}
 }
 

@@ -39,6 +39,8 @@ ProductQuery ConvertProductQueryJson2Common(rapidjson::Value &msg);
 TradeAccountQuery ConvertTradeAccountJson2Common(rapidjson::Value &msg);
 
 
+bool SplitOrderDir(const char *order_dir, int len, const char **action, const char **dir);
+
 }
 
 #endif
