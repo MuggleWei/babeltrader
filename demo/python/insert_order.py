@@ -4,9 +4,7 @@ from trader import Trader
 
 
 class TraderInsertOrder(Trader):
-    def __init__(self):
-        # addr = "127.0.0.1:8001"
-        addr = "127.0.0.1:8002"
+    def __init__(self, addr):
         Trader.__init__(self, addr=addr)
         self.order_map = {}
 
@@ -65,30 +63,26 @@ class TraderInsertOrder(Trader):
             print("original order: " + str(order))
 
 
-if __name__ == '__main__':
-    trader = TraderInsertOrder()
+def TestInsertOrder_CTP(trader):
+    trader.insert_order(
+        user_id="weidaizi",
+        market="ctp",
+        exchange="SHFE",
+        type="future",
+        symbol="rb",
+        contract="1901",
+        contract_id="1901",
+        order_type="limit",
+        order_flag1="speculation",  # speculation, hedge, arbitrage
+        dir="open_short",  # [action: open, close, closetoday, closehistory; dir: long, short] or [buy, sell]
+        price=3900,
+        amount=1,
+        total_price=0,
+        ts=ts
+    )
 
-    ts = time.time()
 
-    # ctp
-    # trader.insert_order(
-    #     user_id="weidaizi",
-    #     market="ctp",
-    #     exchange="SHFE",
-    #     type="future",
-    #     symbol="rb",
-    #     contract="1901",
-    #     contract_id="1901",
-    #     order_type="limit",
-    #     order_flag1="speculation",  # speculation, hedge, arbitrage
-    #     dir="open_short",  # [action: open, close, closetoday, closehistory; dir: long, short] or [buy, sell]
-    #     price=3900,
-    #     amount=1,
-    #     total_price=0,
-    #     ts=ts
-    # )
-
-    # xtp
+def TestInsertOrder_XTP(trader):
     trader.insert_order(
         user_id="weidaizi",
         market="xtp",
@@ -105,5 +99,15 @@ if __name__ == '__main__':
         total_price=0,
         ts=ts
     )
+
+
+if __name__ == '__main__':
+    addr = "127.0.0.1:8001"
+    # addr = "127.0.0.1:8002"
+    trader = TraderInsertOrder(addr)
+
+    ts = time.time()
+    TestInsertOrder_CTP(trader)
+    # TestInsertOrder_XTP(trader)
 
     trader.message_loop()

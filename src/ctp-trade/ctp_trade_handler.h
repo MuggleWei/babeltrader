@@ -97,25 +97,25 @@ private:
 	////////////////////////////////////////
 	// order cache
 	void RecordOrder(Order &order, const std::string &order_ref, int front_id, int session_id);
-	bool GetAndCleanRecordOrder(Order &order, const std::string &user_id, const std::string &order_ref, int front_id, int session_id);
+	bool GetAndCleanRecordOrder(Order *p_order, const std::string &user_id, const std::string &order_ref, int front_id, int session_id);
 
 	void CacheQryOrder(int req_id, uWS::WebSocket<uWS::SERVER>* ws, OrderQuery &order_qry);
-	void GetAndClearCacheQryOrder(int req_id, uWS::WebSocket<uWS::SERVER>*& ws, OrderQuery &order_qry);
+	void GetAndClearCacheQryOrder(int req_id, uWS::WebSocket<uWS::SERVER>** ws, OrderQuery *p_order_qry);
 
 	void CacheQryTrade(int req_id, uWS::WebSocket<uWS::SERVER>* ws, TradeQuery &trade_qry);
-	void GetAndClearCacheQryTrade(int req_id, uWS::WebSocket<uWS::SERVER>*& ws, TradeQuery &trade_qry);
+	void GetAndClearCacheQryTrade(int req_id, uWS::WebSocket<uWS::SERVER>** ws, TradeQuery *p_trade_qry);
 
 	void CacheQryPosition(int req_id, uWS::WebSocket<uWS::SERVER>* ws, PositionQuery &position_qry);
-	void GetAndCleanCacheQryPosition(int req_id, uWS::WebSocket<uWS::SERVER>*& ws, PositionQuery &position_qry);
+	void GetAndCleanCacheQryPosition(int req_id, uWS::WebSocket<uWS::SERVER>** ws, PositionQuery *p_position_qry);
 
 	void CacheQryPositionDetail(int req_id, uWS::WebSocket<uWS::SERVER>* ws, PositionQuery &position_qry);
-	void GetAndCleanCacheQryPositionDetail(int req_id, uWS::WebSocket<uWS::SERVER>*& ws, PositionQuery &position_qry);
+	void GetAndCleanCacheQryPositionDetail(int req_id, uWS::WebSocket<uWS::SERVER>** ws, PositionQuery *p_position_detail_qry);
 
 	void CacheQryTradeAccount(int req_id, uWS::WebSocket<uWS::SERVER>* ws, TradeAccountQuery &tradeaccount_qry);
-	void GetAndCleanCacheQryTradeAccount(int req_id, uWS::WebSocket<uWS::SERVER>*& ws, TradeAccountQuery &tradeaccount_qry);
+	void GetAndCleanCacheQryTradeAccount(int req_id, uWS::WebSocket<uWS::SERVER>** ws, TradeAccountQuery *p_tradeaccount_qry);
 
 	void CacheQryProduct(int req_id, uWS::WebSocket<uWS::SERVER>* ws, ProductQuery &product_qry);
-	void GetAndCleanCacheQryProduct(int req_id, uWS::WebSocket<uWS::SERVER>*& ws, ProductQuery &product_qry);
+	void GetAndCleanCacheQryProduct(int req_id, uWS::WebSocket<uWS::SERVER>** ws, ProductQuery *p_product_qry);
 
 	////////////////////////////////////////
 	// field convert

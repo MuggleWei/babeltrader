@@ -4,8 +4,7 @@ from trader import Trader
 
 
 class TraderCancelOrder(Trader):
-    def __init__(self):
-        addr = "127.0.0.1:8001"
+    def __init__(self, addr):
         Trader.__init__(self, addr=addr)
 
     def on_confirmorder(self, msg):
@@ -37,10 +36,7 @@ class TraderCancelOrder(Trader):
         )
 
 
-if __name__ == '__main__':
-    trader = TraderCancelOrder()
-
-    ts = time.time()
+def TestInsertOrder_CTP(trader):
     trader.insert_order(
         user_id="weidaizi",
         market="ctp",
@@ -52,10 +48,18 @@ if __name__ == '__main__':
         order_type="limit",
         order_flag1="speculation",  # speculation, hedge, arbitrage
         dir="open_long",  # [action: open, close, close_today, close_yesterday; dir: long, short] or [buy, sell]
-        price=4000,
+        price=3800,
         amount=1,
         total_price=0,
         ts=ts
     )
+
+
+if __name__ == '__main__':
+    addr = "127.0.0.1:8001"
+    trader = TraderCancelOrder(addr)
+
+    ts = time.time()
+    TestInsertOrder_CTP(trader)
 
     trader.message_loop()

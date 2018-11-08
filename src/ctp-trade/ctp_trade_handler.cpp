@@ -47,7 +47,15 @@ void CTPTradeHandler::InsertOrder(uWS::WebSocket<uWS::SERVER> *ws, Order &order)
 	RecordOrder(order, req.OrderRef, ctp_front_id_, ctp_session_id_);
 	
 	// send req
-	api_->ReqOrderInsert(&req, req_id_++);
+	int ret = api_->ReqOrderInsert(&req, req_id_++);
+	if (ret != 0)
+	{
+		GetAndCleanRecordOrder(nullptr, req.InvestorID, req.OrderRef, ctp_front_id_, ctp_session_id_);
+
+		char buf[512];
+		snprintf(buf, sizeof(buf) - 1, "failed in ReqOrderInsert, return %d", ret);
+		throw std::runtime_error(buf);
+	}
 }
 void CTPTradeHandler::CancelOrder(uWS::WebSocket<uWS::SERVER> *ws, Order &order)
 {
@@ -62,7 +70,13 @@ void CTPTradeHandler::CancelOrder(uWS::WebSocket<uWS::SERVER> *ws, Order &order)
 	// output
 	OutputOrderAction(&req);
 
-	api_->ReqOrderAction(&req, req_id_++);
+	int ret = api_->ReqOrderAction(&req, req_id_++);
+	if (ret != 0)
+	{
+		char buf[512];
+		snprintf(buf, sizeof(buf) - 1, "failed in ReqOrderAction, return %d", ret);
+		throw std::runtime_error(buf);
+	}
 }
 void CTPTradeHandler::QueryOrder(uWS::WebSocket<uWS::SERVER> *ws, OrderQuery &order_query)
 {
@@ -80,7 +94,15 @@ void CTPTradeHandler::QueryOrder(uWS::WebSocket<uWS::SERVER> *ws, OrderQuery &or
 	// cache query order
 	CacheQryOrder(req_id_, ws, order_query);
 
-	api_->ReqQryOrder(&req, req_id_++);
+	int ret = api_->ReqQryOrder(&req, req_id_++);
+	if (ret != 0)
+	{
+		GetAndClearCacheQryOrder(req_id_ - 1, nullptr, nullptr);
+
+		char buf[512];
+		snprintf(buf, sizeof(buf) - 1, "failed in ReqQryOrder, return %d", ret);
+		throw std::runtime_error(buf);
+	}
 }
 void CTPTradeHandler::QueryTrade(uWS::WebSocket<uWS::SERVER> *ws, TradeQuery &trade_query)
 {
@@ -98,7 +120,15 @@ void CTPTradeHandler::QueryTrade(uWS::WebSocket<uWS::SERVER> *ws, TradeQuery &tr
 	// cache query order
 	CacheQryTrade(req_id_, ws, trade_query);
 
-	api_->ReqQryTrade(&req, req_id_++);
+	int ret = api_->ReqQryTrade(&req, req_id_++);
+	if (ret != 0)
+	{
+		GetAndClearCacheQryTrade(req_id_ - 1, nullptr, nullptr);
+
+		char buf[512];
+		snprintf(buf, sizeof(buf) - 1, "failed in ReqQryTrade, return %d", ret);
+		throw std::runtime_error(buf);
+	}
 }
 void CTPTradeHandler::QueryPosition(uWS::WebSocket<uWS::SERVER> *ws, PositionQuery &position_query)
 {
@@ -116,7 +146,15 @@ void CTPTradeHandler::QueryPosition(uWS::WebSocket<uWS::SERVER> *ws, PositionQue
 	// cache query position
 	CacheQryPosition(req_id_, ws, position_query);
 
-	api_->ReqQryInvestorPosition(&req, req_id_++);
+	int ret = api_->ReqQryInvestorPosition(&req, req_id_++);
+	if (ret != 0)
+	{
+		GetAndCleanCacheQryPosition(req_id_ - 1, nullptr, nullptr);
+
+		char buf[512];
+		snprintf(buf, sizeof(buf) - 1, "failed in ReqQryInvestorPosition, return %d", ret);
+		throw std::runtime_error(buf);
+	}
 }
 void CTPTradeHandler::QueryPositionDetail(uWS::WebSocket<uWS::SERVER> *ws, PositionQuery &position_query)
 {
@@ -134,7 +172,15 @@ void CTPTradeHandler::QueryPositionDetail(uWS::WebSocket<uWS::SERVER> *ws, Posit
 	// cache query position detail
 	CacheQryPositionDetail(req_id_, ws, position_query);
 
-	api_->ReqQryInvestorPositionDetail(&req, req_id_++);
+	int ret = api_->ReqQryInvestorPositionDetail(&req, req_id_++);
+	if (ret != 0)
+	{
+		GetAndCleanCacheQryPositionDetail(req_id_ - 1, nullptr, nullptr);
+
+		char buf[512];
+		snprintf(buf, sizeof(buf) - 1, "failed in ReqQryInvestorPositionDetail, return %d", ret);
+		throw std::runtime_error(buf);
+	}
 }
 void CTPTradeHandler::QueryTradeAccount(uWS::WebSocket<uWS::SERVER> *ws, TradeAccountQuery &tradeaccount_query)
 {
@@ -152,7 +198,15 @@ void CTPTradeHandler::QueryTradeAccount(uWS::WebSocket<uWS::SERVER> *ws, TradeAc
 	// cache query trade account
 	CacheQryTradeAccount(req_id_, ws, tradeaccount_query);
 
-	api_->ReqQryTradingAccount(&req, req_id_++);
+	int ret = api_->ReqQryTradingAccount(&req, req_id_++);
+	if (ret != 0)
+	{
+		GetAndCleanCacheQryTradeAccount(req_id_ - 1, nullptr, nullptr);
+
+		char buf[512];
+		snprintf(buf, sizeof(buf) - 1, "failed in ReqQryTradingAccount, return %d", ret);
+		throw std::runtime_error(buf);
+	}
 }
 void CTPTradeHandler::QueryProduct(uWS::WebSocket<uWS::SERVER> *ws, ProductQuery &product_query)
 {
@@ -180,7 +234,15 @@ void CTPTradeHandler::QueryProduct(uWS::WebSocket<uWS::SERVER> *ws, ProductQuery
 
 		CacheQryProduct(req_id_, ws, product_query);
 
-		api_->ReqQryProduct(&req, req_id_++);
+		int ret = api_->ReqQryProduct(&req, req_id_++);
+		if (ret != 0)
+		{
+			GetAndCleanCacheQryProduct(req_id_ - 1, nullptr, nullptr);
+
+			char buf[512];
+			snprintf(buf, sizeof(buf) - 1, "failed in ReqQryProduct, return %d", ret);
+			throw std::runtime_error(buf);
+		}
 	}
 	else
 	{
@@ -192,7 +254,15 @@ void CTPTradeHandler::QueryProduct(uWS::WebSocket<uWS::SERVER> *ws, ProductQuery
 
 		CacheQryProduct(req_id_, ws, product_query);
 
-		api_->ReqQryInstrument(&req, req_id_++);
+		int ret = api_->ReqQryInstrument(&req, req_id_++);
+		if (ret != 0)
+		{
+			GetAndCleanCacheQryProduct(req_id_ - 1, nullptr, nullptr);
+
+			char buf[512];
+			snprintf(buf, sizeof(buf) - 1, "failed in ReqQryInstrument, return %d", ret);
+			throw std::runtime_error(buf);
+		}
 	}
 }
 
@@ -274,7 +344,7 @@ void CTPTradeHandler::OnRspOrderInsert(CThostFtdcInputOrderField *pInputOrder, C
 
 	// notify
 	Order order;
-	GetAndCleanRecordOrder(order, pInputOrder->UserID, pInputOrder->OrderRef, ctp_front_id_, ctp_session_id_);
+	GetAndCleanRecordOrder(&order, pInputOrder->UserID, pInputOrder->OrderRef, ctp_front_id_, ctp_session_id_);
 	ConvertInsertOrderCTP2Common(*pInputOrder, order);
 
 	ws_service_.BroadcastConfirmOrder(uws_hub_, order, pRspInfo->ErrorID, pRspInfo->ErrorMsg);
@@ -297,7 +367,7 @@ void CTPTradeHandler::OnRtnOrder(CThostFtdcOrderField *pOrder)
 
 	Order order;
 	OrderStatusNotify order_status;
-	bool ret = GetAndCleanRecordOrder(order, pOrder->UserID, pOrder->OrderRef, pOrder->FrontID, pOrder->SessionID);
+	bool ret = GetAndCleanRecordOrder(&order, pOrder->UserID, pOrder->OrderRef, pOrder->FrontID, pOrder->SessionID);
 	ConvertRtnOrderCTP2Common(pOrder, order, order_status);
 	if (ret)
 	{
@@ -347,7 +417,7 @@ void CTPTradeHandler::OnRspQryOrder(CThostFtdcOrderField *pOrder, CThostFtdcRspI
 	{
 		uWS::WebSocket<uWS::SERVER>* ws;
 		OrderQuery order_qry;
-		GetAndClearCacheQryOrder(nRequestID, ws, order_qry);
+		GetAndClearCacheQryOrder(nRequestID, &ws, &order_qry);
 		std::vector<CThostFtdcOrderField> &orders = rsp_qry_order_caches_[nRequestID];
 
 		if (ws)
@@ -396,7 +466,7 @@ void CTPTradeHandler::OnRspQryTrade(CThostFtdcTradeField *pTrade, CThostFtdcRspI
 	{
 		uWS::WebSocket<uWS::SERVER>* ws;
 		TradeQuery trade_qry;
-		GetAndClearCacheQryTrade(nRequestID, ws, trade_qry);
+		GetAndClearCacheQryTrade(nRequestID, &ws, &trade_qry);
 		std::vector<CThostFtdcTradeField> &trades = rsp_qry_trade_caches_[nRequestID];
 
 		if (ws)
@@ -445,7 +515,7 @@ void CTPTradeHandler::OnRspQryInvestorPosition(CThostFtdcInvestorPositionField *
 	{
 		uWS::WebSocket<uWS::SERVER>* ws;
 		PositionQuery position_qry;
-		GetAndCleanCacheQryPosition(nRequestID, ws, position_qry);
+		GetAndCleanCacheQryPosition(nRequestID, &ws, &position_qry);
 		std::vector<CThostFtdcInvestorPositionField> &ctp_positions = rsp_qry_position_caches_[nRequestID];
 
 		if (ws)
@@ -491,7 +561,7 @@ void CTPTradeHandler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionD
 	{
 		uWS::WebSocket<uWS::SERVER>* ws;
 		PositionQuery position_detail_qry;
-		GetAndCleanCacheQryPosition(nRequestID, ws, position_detail_qry);
+		GetAndCleanCacheQryPositionDetail(nRequestID, &ws, &position_detail_qry);
 		std::vector<CThostFtdcInvestorPositionDetailField> &ctp_position_details = rsp_qry_position_detail_caches_[nRequestID];
 
 		if (ws)
@@ -537,7 +607,7 @@ void CTPTradeHandler::OnRspQryTradingAccount(CThostFtdcTradingAccountField *pTra
 	{
 		uWS::WebSocket<uWS::SERVER>* ws;
 		TradeAccountQuery trade_account_qry;
-		GetAndCleanCacheQryTradeAccount(nRequestID, ws, trade_account_qry);
+		GetAndCleanCacheQryTradeAccount(nRequestID, &ws, &trade_account_qry);
 		std::vector<CThostFtdcTradingAccountField> &ctp_trade_accounts = rsp_qry_trade_account_caches_[nRequestID];
 
 		if (ws)
@@ -583,7 +653,7 @@ void CTPTradeHandler::OnRspQryProduct(CThostFtdcProductField *pProduct, CThostFt
 	{
 		uWS::WebSocket<uWS::SERVER>* ws;
 		ProductQuery product_qry;
-		GetAndCleanCacheQryProduct(nRequestID, ws, product_qry);
+		GetAndCleanCacheQryProduct(nRequestID, &ws, &product_qry);
 		std::vector<CThostFtdcProductField> &ctp_products = rsp_qry_product_caches_[nRequestID];
 
 		if (ws)
@@ -629,7 +699,7 @@ void CTPTradeHandler::OnRspQryInstrument(CThostFtdcInstrumentField *pInstrument,
 	{
 		uWS::WebSocket<uWS::SERVER>* ws;
 		ProductQuery product_qry;
-		GetAndCleanCacheQryProduct(nRequestID, ws, product_qry);
+		GetAndCleanCacheQryProduct(nRequestID, &ws, &product_qry);
 		std::vector<CThostFtdcInstrumentField> &ctp_products = rsp_qry_instrument_caches_[nRequestID];
 
 		if (ws)
@@ -1097,7 +1167,7 @@ void CTPTradeHandler::RecordOrder(Order &order, const std::string &order_ref, in
 		wait_deal_orders_[std::string(buf)] = order;
 	}
 }
-bool CTPTradeHandler::GetAndCleanRecordOrder(Order &order, const std::string &user_id, const std::string &order_ref, int front_id, int session_id)
+bool CTPTradeHandler::GetAndCleanRecordOrder(Order *p_order, const std::string &user_id, const std::string &order_ref, int front_id, int session_id)
 {
 	char buf[256] = { 0 };
 	snprintf(buf, sizeof(buf), "%s_%s_%d#%d", user_id.c_str(), order_ref.c_str(), front_id, session_id);
@@ -1106,7 +1176,10 @@ bool CTPTradeHandler::GetAndCleanRecordOrder(Order &order, const std::string &us
 		auto it = wait_deal_orders_.find(std::string(buf));
 		if (it != wait_deal_orders_.end())
 		{
-			order = it->second;
+			if (p_order)
+			{
+				*p_order = it->second;
+			}
 			wait_deal_orders_.erase(buf);
 			return true;
 		}
@@ -1123,20 +1196,26 @@ void CTPTradeHandler::CacheQryOrder(int req_id, uWS::WebSocket<uWS::SERVER>* ws,
 	qry_ws_cache_[req_id] = ws;
 	qry_order_cache_[req_id] = order_qry;
 }
-void CTPTradeHandler::GetAndClearCacheQryOrder(int req_id, uWS::WebSocket<uWS::SERVER>*& ws, OrderQuery &order_qry)
+void CTPTradeHandler::GetAndClearCacheQryOrder(int req_id, uWS::WebSocket<uWS::SERVER>** ws, OrderQuery *p_order_qry)
 {
 	std::unique_lock<std::mutex> lock(qry_cache_mtx_);
 	auto it_ws = qry_ws_cache_.find(req_id);
 	if (it_ws != qry_ws_cache_.end())
 	{
-		ws = it_ws->second;
+		if (ws)
+		{
+			*ws = it_ws->second;
+		}
 		qry_ws_cache_.erase(it_ws);
 	}
 
 	auto it_order_qry = qry_order_cache_.find(req_id);
 	if (it_order_qry != qry_order_cache_.end())
 	{
-		order_qry = it_order_qry->second;
+		if (p_order_qry)
+		{
+			*p_order_qry = it_order_qry->second;
+		}
 		qry_order_cache_.erase(it_order_qry);
 	}
 }
@@ -1147,20 +1226,26 @@ void CTPTradeHandler::CacheQryTrade(int req_id, uWS::WebSocket<uWS::SERVER>* ws,
 	qry_ws_cache_[req_id] = ws;
 	qry_trade_cache_[req_id] = trade_qry;
 }
-void CTPTradeHandler::GetAndClearCacheQryTrade(int req_id, uWS::WebSocket<uWS::SERVER>*& ws, TradeQuery &trade_qry)
+void CTPTradeHandler::GetAndClearCacheQryTrade(int req_id, uWS::WebSocket<uWS::SERVER>** ws, TradeQuery *p_trade_qry)
 {
 	std::unique_lock<std::mutex> lock(qry_cache_mtx_);
 	auto it_ws = qry_ws_cache_.find(req_id);
 	if (it_ws != qry_ws_cache_.end())
 	{
-		ws = it_ws->second;
+		if (ws)
+		{
+			*ws = it_ws->second;
+		}
 		qry_ws_cache_.erase(it_ws);
 	}
 
 	auto it_trade_qry = qry_trade_cache_.find(req_id);
 	if (it_trade_qry != qry_trade_cache_.end())
 	{
-		trade_qry = it_trade_qry->second;
+		if (p_trade_qry)
+		{
+			*p_trade_qry = it_trade_qry->second;
+		}
 		qry_trade_cache_.erase(it_trade_qry);
 	}
 }
@@ -1171,20 +1256,26 @@ void CTPTradeHandler::CacheQryPosition(int req_id, uWS::WebSocket<uWS::SERVER>* 
 	qry_ws_cache_[req_id] = ws;
 	qry_position_cache_[req_id] = position_qry;
 }
-void CTPTradeHandler::GetAndCleanCacheQryPosition(int req_id, uWS::WebSocket<uWS::SERVER>*& ws, PositionQuery &position_qry)
+void CTPTradeHandler::GetAndCleanCacheQryPosition(int req_id, uWS::WebSocket<uWS::SERVER>** ws, PositionQuery *p_position_qry)
 {
 	std::unique_lock<std::mutex> lock(qry_cache_mtx_);
 	auto it_ws = qry_ws_cache_.find(req_id);
 	if (it_ws != qry_ws_cache_.end())
 	{
-		ws = it_ws->second;
+		if (ws)
+		{
+			*ws = it_ws->second;
+		}
 		qry_ws_cache_.erase(it_ws);
 	}
 
 	auto it_position_qry = qry_position_cache_.find(req_id);
 	if (it_position_qry != qry_position_cache_.end())
 	{
-		position_qry = it_position_qry->second;
+		if (p_position_qry)
+		{
+			*p_position_qry = it_position_qry->second;
+		}
 		qry_position_cache_.erase(it_position_qry);
 	}
 }
@@ -1195,20 +1286,26 @@ void CTPTradeHandler::CacheQryPositionDetail(int req_id, uWS::WebSocket<uWS::SER
 	qry_ws_cache_[req_id] = ws;
 	qry_position_detail_cache_[req_id] = position_qry;
 }
-void CTPTradeHandler::GetAndCleanCacheQryPositionDetail(int req_id, uWS::WebSocket<uWS::SERVER>*& ws, PositionQuery &position_detail_qry)
+void CTPTradeHandler::GetAndCleanCacheQryPositionDetail(int req_id, uWS::WebSocket<uWS::SERVER>** ws, PositionQuery *p_position_detail_qry)
 {
 	std::unique_lock<std::mutex> lock(qry_cache_mtx_);
 	auto it_ws = qry_ws_cache_.find(req_id);
 	if (it_ws != qry_ws_cache_.end())
 	{
-		ws = it_ws->second;
+		if (ws)
+		{
+			*ws = it_ws->second;
+		}
 		qry_ws_cache_.erase(it_ws);
 	}
 
 	auto it_position_detail_qry = qry_position_detail_cache_.find(req_id);
 	if (it_position_detail_qry != qry_position_detail_cache_.end())
 	{
-		position_detail_qry = it_position_detail_qry->second;
+		if (p_position_detail_qry)
+		{
+			*p_position_detail_qry = it_position_detail_qry->second;
+		}
 		qry_position_detail_cache_.erase(it_position_detail_qry);
 	}
 }
@@ -1219,20 +1316,26 @@ void CTPTradeHandler::CacheQryTradeAccount(int req_id, uWS::WebSocket<uWS::SERVE
 	qry_ws_cache_[req_id] = ws;
 	qry_trade_account_cache_[req_id] = tradeaccount_qry;
 }
-void CTPTradeHandler::GetAndCleanCacheQryTradeAccount(int req_id, uWS::WebSocket<uWS::SERVER>*& ws, TradeAccountQuery &tradeaccount_qry)
+void CTPTradeHandler::GetAndCleanCacheQryTradeAccount(int req_id, uWS::WebSocket<uWS::SERVER>** ws, TradeAccountQuery *p_tradeaccount_qry)
 {
 	std::unique_lock<std::mutex> lock(qry_cache_mtx_);
 	auto it_ws = qry_ws_cache_.find(req_id);
 	if (it_ws != qry_ws_cache_.end())
 	{
-		ws = it_ws->second;
+		if (ws)
+		{
+			*ws = it_ws->second;
+		}
 		qry_ws_cache_.erase(it_ws);
 	}
 
 	auto it_trade_account_qry = qry_trade_account_cache_.find(req_id);
 	if (it_trade_account_qry != qry_trade_account_cache_.end())
 	{
-		tradeaccount_qry = it_trade_account_qry->second;
+		if (p_tradeaccount_qry)
+		{
+			*p_tradeaccount_qry = it_trade_account_qry->second;
+		}
 		qry_trade_account_cache_.erase(it_trade_account_qry);
 	}
 }
@@ -1243,20 +1346,26 @@ void CTPTradeHandler::CacheQryProduct(int req_id, uWS::WebSocket<uWS::SERVER>* w
 	qry_ws_cache_[req_id] = ws;
 	qry_product_cache_[req_id] = product_qry;
 }
-void CTPTradeHandler::GetAndCleanCacheQryProduct(int req_id, uWS::WebSocket<uWS::SERVER>*& ws, ProductQuery &product_qry)
+void CTPTradeHandler::GetAndCleanCacheQryProduct(int req_id, uWS::WebSocket<uWS::SERVER>** ws, ProductQuery *p_product_qry)
 {
 	std::unique_lock<std::mutex> lock(qry_cache_mtx_);
 	auto it_ws = qry_ws_cache_.find(req_id);
 	if (it_ws != qry_ws_cache_.end())
 	{
-		ws = it_ws->second;
+		if (ws)
+		{
+			*ws = it_ws->second;
+		}
 		qry_ws_cache_.erase(it_ws);
 	}
 
 	auto it_product_qry = qry_product_cache_.find(req_id);
 	if (it_product_qry != qry_product_cache_.end())
 	{
-		product_qry = it_product_qry->second;
+		if (p_product_qry)
+		{
+			*p_product_qry = it_product_qry->second;
+		}
 		qry_product_cache_.erase(it_product_qry);
 	}
 }
