@@ -67,8 +67,6 @@ private:
 	void BroadcastMarketData(const Quote &quote, const MarketData &md);
 	void BroadcastKline(const Quote &quote, const Kline &kline);
 
-	int64_t GetUpdateTimeMs(XTPMD *market_data);
-
 	void SubTopics();
 
 	XTP_EXCHANGE_TYPE GetExchangeType(const std::string &exchange);

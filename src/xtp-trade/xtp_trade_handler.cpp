@@ -3,6 +3,7 @@
 #include "glog/logging.h"
 
 #include "common/converter.h"
+#include "common/utils_func.h"
 
 XTPTradeHandler::XTPTradeHandler(XTPTradeConf &conf)
 	: api_(nullptr)
@@ -44,8 +45,7 @@ void XTPTradeHandler::InsertOrder(uWS::WebSocket<uWS::SERVER> *ws, Order &order)
 	auto ret = api_->InsertOrder(&req, xtp_session_id_);
 	if (ret == 0)
 	{
-		Order ret_order;
-		GetAndCleanRecordOrder(ret_order, req.order_client_id, xtp_session_id_);
+		GetAndCleanRecordOrder(nullptr, req.order_client_id, xtp_session_id_);
 		ThrowXTPLastError("failed insert order");
 	}
 }
@@ -64,6 +64,32 @@ void XTPTradeHandler::QueryTradeAccount(uWS::WebSocket<uWS::SERVER> *ws, TradeAc
 void XTPTradeHandler::QueryProduct(uWS::WebSocket<uWS::SERVER> *ws, ProductQuery &query_product)
 {}
 
+void XTPTradeHandler::OnOrderEvent(XTPOrderInfo *order_info, XTPRI *error_info, uint64_t session_id)
+{
+	// output
+	OutputOrderEvent(order_info, error_info, session_id);
+
+	Order order;
+	OrderStatusNotify order_status;
+	bool ret = GetAndCleanRecordOrder(&order, order_info->order_client_id, session_id);
+	ConvertOrderInfoXTP2Common(order_info, order, order_status);
+	if (error_info)
+	{
+		if (ret)
+		{
+			ws_service_.BroadcastConfirmOrder(uws_hub_, order, error_info->error_id, error_info->error_msg);
+		}
+		ws_service_.BroadcastOrderStatus(uws_hub_, order, order_status, error_info->error_id, error_info->error_msg);
+	}
+	else
+	{
+		if (ret)
+		{
+			ws_service_.BroadcastConfirmOrder(uws_hub_, order, 0, "");
+		}
+		ws_service_.BroadcastOrderStatus(uws_hub_, order, order_status, 0, "");
+	}
+}
 
 void XTPTradeHandler::RunAPI()
 {
@@ -97,6 +123,14 @@ void XTPTradeHandler::RunAPI()
 			<< err->error_msg;
 		exit(-1);
 	}
+
+	// generate trading day
+	char buf[128] = { 0 };
+	time_t t = time(NULL);
+	tm *timeinfo = localtime(&t);
+	strftime(buf, sizeof(buf) - 1, "%Y%m%d", timeinfo);
+	trading_day_ = buf;
+
 	api_ready_ = true;
 }
 void XTPTradeHandler::RunService()
@@ -139,6 +173,44 @@ void XTPTradeHandler::ConvertInsertOrderCommon2XTP(Order &order, XTPOrderInsertI
 	{
 		throw std::runtime_error("failed convert order dir");
 	}
+}
+void XTPTradeHandler::ConvertOrderInfoXTP2Common(XTPOrderInfo *order_info, Order &order, OrderStatusNotify &order_status_notify)
+{
+	// order
+	{
+		order.outside_id = ExtendXtpId(conf_.user_id.c_str(), trading_day_.c_str(), order_info->order_xtp_id);
+		order.market = g_markets[Market_XTP];
+		order.outside_user_id = conf_.user_id;
+		order.exchange = ConvertMarketTypeExchangeXTP2Common(order_info->market);
+		order.symbol = order_info->ticker;
+		order.dir = ConvertOrderDirXTP2Common(order_info);
+
+		order.price = order_info->price;
+		order.amount = order_info->quantity;
+		order.total_price = 0;
+
+		order.ts = XTPGetTimestamp(order_info->insert_time);
+	}
+	
+	// status
+	{
+		order_status_notify.order_status = ConvertOrderStatusXTP2Common(order_info->order_status);
+		order_status_notify.order_submit_status = ConvertOrderSubmitStatusXTP2Common(order_info->order_submit_status);
+		order_status_notify.amount = order_info->qty_left + order_info->qty_traded;
+		order_status_notify.dealed_amount = order_info->qty_traded;
+	}
+}
+
+std::string XTPTradeHandler::ExtendXtpId(const char *investor_id, const char *trading_day, uint64_t xtp_id)
+{
+	if (xtp_id == 0)
+	{
+		return "";
+	}
+
+	char buf[256] = { 0 };
+	snprintf(buf, sizeof(buf), "%s_%s_%llu", investor_id, trading_day, (unsigned long long)xtp_id);
+	return std::string(buf);
 }
 
 XTP_MARKET_TYPE XTPTradeHandler::ConvertExchangeMarketTypeCommon2XTP(const std::string &exchange)
@@ -278,6 +350,79 @@ XTP_POSITION_EFFECT_TYPE XTPTradeHandler::ConvertOrderPositionEffectCommon2XTP_S
 	return XTP_POSITION_EFFECT_INIT;
 }
 
+std::string XTPTradeHandler::ConvertMarketTypeExchangeXTP2Common(XTP_MARKET_TYPE market)
+{
+	switch (market)
+	{
+	case XTP_MKT_SZ_A:
+		return g_exchanges[Exchange_SZSE];
+	case XTP_MKT_SH_A:
+		return g_exchanges[Exchange_SSE];
+	}
+	return g_exchanges[Exchange_Unknown];
+}
+std::string XTPTradeHandler::ConvertOrderDirXTP2Common(XTPOrderInfo *order_info)
+{
+	switch (order_info->side)
+	{
+	case XTP_SIDE_BUY:
+	case XTP_SIDE_PURCHASE:
+		return g_order_action[OrderAction_Buy];
+	case XTP_SIDE_SELL:
+	case XTP_SIDE_REDEMPTION:
+		return g_order_action[OrderAction_Sell];
+	}
+	return g_order_action[OrderAction_Unknown];
+}
+OrderStatusEnum XTPTradeHandler::ConvertOrderStatusXTP2Common(XTP_ORDER_STATUS_TYPE order_status)
+{
+	OrderStatusEnum ret = OrderStatus_Unknown;
+	switch (order_status)
+	{
+	case XTP_ORDER_STATUS_ALLTRADED:
+	{
+		ret = OrderStatus_AllDealed;
+	}break;
+	case XTP_ORDER_STATUS_PARTTRADEDQUEUEING:
+	{
+		ret = OrderStatus_PartDealed;
+	}break;
+	case XTP_ORDER_STATUS_PARTTRADEDNOTQUEUEING:
+	{
+		ret = OrderStatus_PartCanceled;
+	}break;
+	case XTP_ORDER_STATUS_CANCELED:
+	{
+		ret = OrderStatus_Canceled;
+	}break;
+	case XTP_ORDER_STATUS_REJECTED:
+	{
+		ret = OrderStatus_Rejected;
+	}break;
+	}
+
+	return ret;
+}
+OrderSubmitStatusEnum XTPTradeHandler::ConvertOrderSubmitStatusXTP2Common(XTP_ORDER_SUBMIT_STATUS_TYPE order_submit_status)
+{
+	OrderSubmitStatusEnum ret = OrderSubmitStatus_Unknown;
+	switch (order_submit_status)
+	{
+	case XTP_ORDER_SUBMIT_STATUS_INSERT_SUBMITTED:
+	case XTP_ORDER_SUBMIT_STATUS_CANCEL_SUBMITTED:
+		ret = OrderSubmitStatus_Submitted;
+		break;
+	case XTP_ORDER_SUBMIT_STATUS_INSERT_ACCEPTED:
+	case XTP_ORDER_SUBMIT_STATUS_CANCEL_ACCEPTED:
+		ret = OrderSubmitStatus_Accepted;
+		break;
+	case XTP_ORDER_SUBMIT_STATUS_INSERT_REJECTED:
+	case XTP_ORDER_SUBMIT_STATUS_CANCEL_REJECTED:
+		ret = OrderSubmitStatus_Rejected;
+		break;
+	}
+	return ret;
+}
 
 void XTPTradeHandler::RecordOrder(Order &order, uint32_t order_ref, uint64_t session_id)
 {
@@ -288,7 +433,7 @@ void XTPTradeHandler::RecordOrder(Order &order, uint32_t order_ref, uint64_t ses
 		wait_deal_orders_[std::string(buf)] = order;
 	}
 }
-bool XTPTradeHandler::GetAndCleanRecordOrder(Order &order, uint32_t order_ref, int session_id)
+bool XTPTradeHandler::GetAndCleanRecordOrder(Order *p_order, uint32_t order_ref, int session_id)
 {
 	char buf[256] = { 0 };
 	snprintf(buf, sizeof(buf), "%s_%d_%d", conf_.user_id.c_str(), order_ref, session_id);
@@ -297,7 +442,10 @@ bool XTPTradeHandler::GetAndCleanRecordOrder(Order &order, uint32_t order_ref, i
 		auto it = wait_deal_orders_.find(std::string(buf));
 		if (it != wait_deal_orders_.end())
 		{
-			order = it->second;
+			if (p_order)
+			{
+				*p_order = it->second;
+			}
 			wait_deal_orders_.erase(buf);
 			return true;
 		}
@@ -360,6 +508,77 @@ void XTPTradeHandler::SerializeXTPOrderInsert(rapidjson::Writer<rapidjson::Strin
 	writer.Key("business_type");
 	writer.Int((int)req.business_type);
 }
+void XTPTradeHandler::SerializeXTPOrderInfo(rapidjson::Writer<rapidjson::StringBuffer> &writer, XTPOrderInfo *order_info)
+{
+	char buf[2] = { 0 };
+
+	writer.Key("order_xtp_id");
+	writer.Uint64(order_info->order_xtp_id);
+
+	writer.Key("order_client_id");
+	writer.Uint(order_info->order_client_id);
+
+	writer.Key("order_cancel_client_id");
+	writer.Uint(order_info->order_cancel_client_id);
+
+	writer.Key("order_cancel_xtp_id");
+	writer.Uint64(order_info->order_cancel_xtp_id);
+
+	writer.Key("ticker");
+	writer.String(order_info->ticker);
+
+	writer.Key("market");
+	writer.Int((int)order_info->market);
+
+	writer.Key("price");
+	writer.Double(order_info->price);
+
+	writer.Key("quantity");
+	writer.Int64(order_info->quantity);
+
+	writer.Key("price_type");
+	writer.Int((int)order_info->price_type);
+
+	writer.Key("side");
+	writer.Int((int)order_info->side);
+
+	writer.Key("position_effect");
+	writer.Int((int)order_info->position_effect);
+
+	writer.Key("business_type");
+	writer.Int((int)order_info->business_type);
+
+	writer.Key("qty_traded");
+	writer.Int64(order_info->qty_traded);
+
+	writer.Key("qty_left");
+	writer.Int64(order_info->qty_left);
+
+	writer.Key("insert_time");
+	writer.Int64(order_info->insert_time);
+
+	writer.Key("update_time");
+	writer.Int64(order_info->update_time);
+
+	writer.Key("cancel_time");
+	writer.Int64(order_info->cancel_time);
+
+	writer.Key("trade_amount");
+	writer.Double(order_info->trade_amount);
+
+	writer.Key("order_local_id");
+	writer.String(order_info->order_local_id);
+
+	writer.Key("order_status");
+	writer.Int((int)order_info->order_status);
+
+	writer.Key("order_submit_status");
+	writer.Int((int)order_info->order_submit_status);
+
+	buf[0] = order_info->order_type;
+	writer.Key("order_type");
+	writer.String(buf);
+}
 
 void XTPTradeHandler::OutputOrderInsert(XTPOrderInsertInfo &req)
 {
@@ -376,5 +595,37 @@ void XTPTradeHandler::OutputOrderInsert(XTPOrderInsertInfo &req)
 	writer.EndObject();
 
 	writer.EndObject();
+	LOG(INFO) << s.GetString();
+}
+void XTPTradeHandler::OutputOrderEvent(XTPOrderInfo *order_info, XTPRI *error_info, uint64_t session_id)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("xtp_orderevent");
+	if (error_info)
+	{
+		writer.Key("error_id");
+		writer.Int(error_info->error_id);
+		writer.Key("error_msg");
+		writer.String(error_info->error_msg);
+	}
+	else
+	{
+		writer.Key("error_id");
+		writer.Int(0);
+	}
+	
+
+	writer.Key("data");
+	writer.StartObject();
+	if (order_info)
+	{
+		SerializeXTPOrderInfo(writer, order_info);
+	}
+	writer.EndObject();	// end data
+	writer.EndObject();	// end object
 	LOG(INFO) << s.GetString();
 }

@@ -33,17 +33,26 @@ public:
 	virtual void QueryTradeAccount(uWS::WebSocket<uWS::SERVER> *ws, TradeAccountQuery &tradeaccount_query) override;
 	virtual void QueryProduct(uWS::WebSocket<uWS::SERVER> *ws, ProductQuery &query_product) override;
 
+	////////////////////////////////////////
+	// spi virtual function
+	virtual void OnOrderEvent(XTPOrderInfo *order_info, XTPRI *error_info, uint64_t session_id) override;
 
 private:
 	void RunAPI();
 	void RunService();
 
 	////////////////////////////////////////
-	// convert common struct to ctp struct
+	// convert common struct to xtp struct
 	void ConvertInsertOrderCommon2XTP(Order &order, XTPOrderInsertInfo &req);
 
 	////////////////////////////////////////
+	// convert xtp struct to common struct
+	void ConvertOrderInfoXTP2Common(XTPOrderInfo *order_info, Order &order, OrderStatusNotify &order_status_notify);
+
+	////////////////////////////////////////
 	// field convert
+	std::string ExtendXtpId(const char *investor_id, const char *trading_day, uint64_t xtp_id);
+
 	XTP_MARKET_TYPE ConvertExchangeMarketTypeCommon2XTP(const std::string &exchange);
 	XTP_PRICE_TYPE ConvertOrderTypeCommon2XTP(const std::string &product_type, const std::string &order_type);
 	XTP_BUSINESS_TYPE ConvertProductTypeCommon2XTP(const std::string &product_type);
@@ -53,22 +62,27 @@ private:
 	XTP_SIDE_TYPE ConvertOrderSideCommon2XTP_IPO(const char *p_dir, const char *p_action);
 	XTP_POSITION_EFFECT_TYPE ConvertOrderPositionEffectCommon2XTP_Spot(const char *p_dir, const char *p_action);
 
-	////////////////////////////////////////
-	// order cache
-	void RecordOrder(Order &order, uint32_t order_ref, uint64_t session_id);
-	bool GetAndCleanRecordOrder(Order &order, uint32_t order_ref, int session_id);
+	std::string ConvertMarketTypeExchangeXTP2Common(XTP_MARKET_TYPE market);
+	std::string ConvertOrderDirXTP2Common(XTPOrderInfo *order_info);
+	OrderStatusEnum ConvertOrderStatusXTP2Common(XTP_ORDER_STATUS_TYPE order_status);
+	OrderSubmitStatusEnum ConvertOrderSubmitStatusXTP2Common(XTP_ORDER_SUBMIT_STATUS_TYPE order_submit_status);
 
 	////////////////////////////////////////
 	// order cache
+	void RecordOrder(Order &order, uint32_t order_ref, uint64_t session_id);
+	bool GetAndCleanRecordOrder(Order *p_order, uint32_t order_ref, int session_id);
+
 	void ThrowXTPLastError(const char *tip_msg);
 
 	////////////////////////////////////////
 	// serialize xtp struct to json
 	void SerializeXTPOrderInsert(rapidjson::Writer<rapidjson::StringBuffer> &writer, XTPOrderInsertInfo &req);
+	void SerializeXTPOrderInfo(rapidjson::Writer<rapidjson::StringBuffer> &writer, XTPOrderInfo *order_info);
 
 	////////////////////////////////////////
 	// output
 	void OutputOrderInsert(XTPOrderInsertInfo &req);
+	void OutputOrderEvent(XTPOrderInfo *order_info, XTPRI *error_info, uint64_t session_id);
 
 private:
 	XTP::API::TraderApi *api_;
@@ -81,6 +95,7 @@ private:
 	WsService ws_service_;
 	HttpService http_service_;
 
+	std::string trading_day_;
 	int req_id_;
 	uint32_t order_ref_;
 

@@ -55,11 +55,32 @@ def TestInsertOrder_CTP(trader):
     )
 
 
+def TestInsertOrder_XTP(trader):
+    trader.insert_order(
+        user_id="weidaizi",
+        market="xtp",
+        exchange="SSE",
+        type="spot",
+        symbol="600519",
+        contract="",
+        contract_id="",
+        order_type="limit",
+        order_flag1="",  # speculation, hedge, arbitrage
+        dir="buy",  # [action: open, close, closetoday, closehistory; dir: long, short] or [buy, sell]
+        price=535,
+        amount=100,
+        total_price=0,
+        ts=ts
+    )
+
+
 if __name__ == '__main__':
-    addr = "127.0.0.1:8001"
+    # addr = "127.0.0.1:8001"
+    addr = "127.0.0.1:8002"
     trader = TraderCancelOrder(addr)
 
     ts = time.time()
-    TestInsertOrder_CTP(trader)
+    # TestInsertOrder_CTP(trader)
+    TestInsertOrder_XTP(trader)
 
     trader.message_loop()

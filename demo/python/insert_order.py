@@ -94,20 +94,20 @@ def TestInsertOrder_XTP(trader):
         order_type="limit",
         order_flag1="",  # speculation, hedge, arbitrage
         dir="buy",  # [action: open, close, closetoday, closehistory; dir: long, short] or [buy, sell]
-        price=500,
-        amount=1,
+        price=580,
+        amount=100,
         total_price=0,
         ts=ts
     )
 
 
 if __name__ == '__main__':
-    addr = "127.0.0.1:8001"
-    # addr = "127.0.0.1:8002"
+    # addr = "127.0.0.1:8001"
+    addr = "127.0.0.1:8002"
     trader = TraderInsertOrder(addr)
 
     ts = time.time()
-    TestInsertOrder_CTP(trader)
-    # TestInsertOrder_XTP(trader)
+    # TestInsertOrder_CTP(trader)
+    TestInsertOrder_XTP(trader)
 
     trader.message_loop()

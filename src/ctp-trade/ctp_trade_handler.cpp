@@ -1502,9 +1502,12 @@ int CTPTradeHandler::ConvertOrderStatusCTP2Common(TThostFtdcOrderStatusType Orde
 	switch (OrderStatus)
 	{
 	case THOST_FTDC_OST_PartTradedQueueing:
-	case THOST_FTDC_OST_PartTradedNotQueueing:
 	{
 		ret = OrderStatus_PartDealed;
+	}break;
+	case THOST_FTDC_OST_PartTradedNotQueueing:
+	{
+		ret = OrderStatus_PartCanceled;
 	}break;
 	case THOST_FTDC_OST_AllTraded:
 	{

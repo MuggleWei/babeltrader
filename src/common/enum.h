@@ -101,6 +101,8 @@ enum OrderStatusEnum
 	OrderStatus_AllDealed = 2,
 	OrderStatus_Canceled = 3,
 	OrderStatus_Canceling = 4,
+	OrderStatus_PartCanceled = 5,
+	OrderStatus_Rejected = 6,
 };
 
 enum OrderSubmitStatusEnum

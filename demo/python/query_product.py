@@ -22,7 +22,7 @@ if __name__ == '__main__':
         symbol="rb",
         contract="",
     )
-    # time.sleep(1)
+    time.sleep(1)
     trader.query_product(
         qry_id="2",
         user_id="weidaizi",

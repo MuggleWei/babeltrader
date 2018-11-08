@@ -5,6 +5,7 @@
 #include "rapidjson/stringbuffer.h"
 
 #include "common/converter.h"
+#include "common/utils_func.h"
 
 const char *exchange_SSE = "SSE";
 const char *exchange_SZSE = "SZSE";
@@ -416,7 +417,7 @@ void XTPQuoteHandler::ConvertMarketData(XTPMD *market_data, Quote &quote, Market
 	quote.info1 = "marketdata";
 	quote.info2 = "";
 
-	md.ts = GetUpdateTimeMs(market_data);
+	md.ts = XTPGetTimestamp(market_data->data_time);
 	md.last = market_data->last_price;
 	for (int i = 0; i < 10; i++) {
 		md.bids.push_back({ market_data->bid[i], market_data->bid_qty[i] });
@@ -470,29 +471,6 @@ void XTPQuoteHandler::BroadcastKline(const Quote &quote, const Kline &kline)
 #endif
 
 	uws_hub_.getDefaultGroup<uWS::SERVER>().broadcast(s.GetString(), s.GetLength(), uWS::OpCode::TEXT);
-}
-
-int64_t XTPQuoteHandler::GetUpdateTimeMs(XTPMD *market_data)
-{
-	struct tm time_info = { 0 };
-
-	int64_t year = market_data->data_time / 10000000000000;
-	int64_t month = (market_data->data_time / 100000000000) % 100;
-	int64_t day = (market_data->data_time / 1000000000) % 100;
-	int64_t hour = (market_data->data_time / 10000000) % 100;
-	int64_t minute = (market_data->data_time / 100000) % 100;
-	int64_t sec = (market_data->data_time / 1000) % 100;
-	int64_t mill = market_data->data_time % 1000;
-
-	time_info.tm_year = year - 1900;
-	time_info.tm_mon = month - 1;
-	time_info.tm_mday = day;
-	time_info.tm_hour = hour;
-	time_info.tm_min = minute;
-	time_info.tm_sec = sec;
-
-	time_t utc_sec = mktime(&time_info);
-	return (int64_t)utc_sec * 1000 + mill;
 }
 
 void XTPQuoteHandler::SubTopics()
