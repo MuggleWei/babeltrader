@@ -831,13 +831,13 @@ void CTPTradeHandler::ConvertInsertOrderCommon2CTP(Order &order, CThostFtdcInput
 
 	// convert
 	req.RequestID = req_id_;
-	snprintf(req.OrderRef, sizeof(req.OrderRef), "%d", order_ref_++);
+	snprintf(req.OrderRef, sizeof(req.OrderRef)-1, "%d", order_ref_++);
 
 	strncpy(req.BrokerID, conf_.broker_id.c_str(), sizeof(req.BrokerID) - 1);
 	strncpy(req.InvestorID, conf_.user_id.c_str(), sizeof(req.InvestorID) - 1);
 	strncpy(req.UserID, conf_.user_id.c_str(), sizeof(req.UserID) - 1);
 	strncpy(req.ExchangeID, order.exchange.c_str(), order.exchange.length());
-	snprintf(req.InstrumentID, sizeof(req.InstrumentID), "%s%s",
+	snprintf(req.InstrumentID, sizeof(req.InstrumentID)-1, "%s%s",
 		order.symbol.c_str(), order.contract.c_str());
 
 	req.OrderPriceType = ConvertOrderTypeCommon2CTP(order.order_type.c_str());
@@ -888,6 +888,7 @@ void CTPTradeHandler::ConvertCancelOrderCommon2CTP(Order &order, CThostFtdcInput
 
 	// convert
 	req.RequestID = req_id_;
+	snprintf(req.OrderRef, sizeof(req.OrderRef)-1, "%d", order_ref_++);
 	req.OrderActionRef = order_action_ref_++;
 
 	strncpy(req.BrokerID, conf_.broker_id.c_str(), sizeof(req.BrokerID) - 1);

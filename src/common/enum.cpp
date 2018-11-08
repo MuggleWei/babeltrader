@@ -6,6 +6,7 @@ namespace babeltrader
 const char *g_markets[Market_Max] = {
 	"",
 	"ctp",
+	"ib",
 	"xtp",
 	"okex",
 	"bitmex"

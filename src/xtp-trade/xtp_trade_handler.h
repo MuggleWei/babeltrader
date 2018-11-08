@@ -36,6 +36,7 @@ public:
 	////////////////////////////////////////
 	// spi virtual function
 	virtual void OnOrderEvent(XTPOrderInfo *order_info, XTPRI *error_info, uint64_t session_id) override;
+	virtual void OnTradeEvent(XTPTradeReport *trade_info, uint64_t session_id) override;
 
 private:
 	void RunAPI();
@@ -48,10 +49,11 @@ private:
 	////////////////////////////////////////
 	// convert xtp struct to common struct
 	void ConvertOrderInfoXTP2Common(XTPOrderInfo *order_info, Order &order, OrderStatusNotify &order_status_notify);
+	void ConvertTradeReportXTP2Common(XTPTradeReport *trade_info, Order &order, OrderDealNotify &order_deal);
 
 	////////////////////////////////////////
 	// field convert
-	std::string ExtendXtpId(const char *investor_id, const char *trading_day, uint64_t xtp_id);
+	std::string ExtendXTPId(const char *investor_id, const char *trading_day, uint64_t xtp_id);
 
 	XTP_MARKET_TYPE ConvertExchangeMarketTypeCommon2XTP(const std::string &exchange);
 	XTP_PRICE_TYPE ConvertOrderTypeCommon2XTP(const std::string &product_type, const std::string &order_type);
@@ -64,6 +66,7 @@ private:
 
 	std::string ConvertMarketTypeExchangeXTP2Common(XTP_MARKET_TYPE market);
 	std::string ConvertOrderDirXTP2Common(XTPOrderInfo *order_info);
+	std::string ConvertTradeDirXTP2Common(XTPTradeReport *trade_info);
 	OrderStatusEnum ConvertOrderStatusXTP2Common(XTP_ORDER_STATUS_TYPE order_status);
 	OrderSubmitStatusEnum ConvertOrderSubmitStatusXTP2Common(XTP_ORDER_SUBMIT_STATUS_TYPE order_submit_status);
 
@@ -78,11 +81,13 @@ private:
 	// serialize xtp struct to json
 	void SerializeXTPOrderInsert(rapidjson::Writer<rapidjson::StringBuffer> &writer, XTPOrderInsertInfo &req);
 	void SerializeXTPOrderInfo(rapidjson::Writer<rapidjson::StringBuffer> &writer, XTPOrderInfo *order_info);
+	void SerializeXTPTradeReport(rapidjson::Writer<rapidjson::StringBuffer> &writer, XTPTradeReport *trade_info);
 
 	////////////////////////////////////////
 	// output
 	void OutputOrderInsert(XTPOrderInsertInfo &req);
 	void OutputOrderEvent(XTPOrderInfo *order_info, XTPRI *error_info, uint64_t session_id);
+	void OutputTradeEvent(XTPTradeReport *trade_info, uint64_t session_id);
 
 private:
 	XTP::API::TraderApi *api_;
