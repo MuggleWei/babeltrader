@@ -54,6 +54,7 @@ private:
 	////////////////////////////////////////
 	// field convert
 	std::string ExtendXTPId(const char *investor_id, const char *trading_day, uint64_t xtp_id);
+	uint64_t GetXTPIdFromExtend(const char *ext_ctp_id, int len);
 
 	XTP_MARKET_TYPE ConvertExchangeMarketTypeCommon2XTP(const std::string &exchange);
 	XTP_PRICE_TYPE ConvertOrderTypeCommon2XTP(const std::string &product_type, const std::string &order_type);
@@ -88,6 +89,7 @@ private:
 	void OutputOrderInsert(XTPOrderInsertInfo &req);
 	void OutputOrderEvent(XTPOrderInfo *order_info, XTPRI *error_info, uint64_t session_id);
 	void OutputTradeEvent(XTPTradeReport *trade_info, uint64_t session_id);
+	void OutputOrderCancel(uint64_t order_xtp_id, uint64_t session_id);
 
 private:
 	XTP::API::TraderApi *api_;

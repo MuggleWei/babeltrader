@@ -1,5 +1,7 @@
 #include "xtp_trade_handler.h"
 
+#include <string>
+
 #include "glog/logging.h"
 
 #include "common/converter.h"
@@ -50,7 +52,22 @@ void XTPTradeHandler::InsertOrder(uWS::WebSocket<uWS::SERVER> *ws, Order &order)
 	}
 }
 void XTPTradeHandler::CancelOrder(uWS::WebSocket<uWS::SERVER> *ws, Order &order)
-{}
+{
+	if (api_ == nullptr || !api_ready_)
+	{
+		throw std::runtime_error("trade api not ready yet");
+	}
+
+	uint64_t order_xtp_id = GetXTPIdFromExtend(order.outside_id.c_str(), order.outside_id.size());
+
+	OutputOrderCancel(order_xtp_id, xtp_session_id_);
+
+	auto ret = api_->CancelOrder(order_xtp_id, xtp_session_id_);
+	if (ret == 0)
+	{
+		ThrowXTPLastError("failed cancel order");
+	}
+}
 void XTPTradeHandler::QueryOrder(uWS::WebSocket<uWS::SERVER> *ws, OrderQuery &order_query)
 {}
 void XTPTradeHandler::QueryTrade(uWS::WebSocket<uWS::SERVER> *ws, TradeQuery &trade_query)
@@ -247,6 +264,35 @@ std::string XTPTradeHandler::ExtendXTPId(const char *investor_id, const char *tr
 	char buf[256] = { 0 };
 	snprintf(buf, sizeof(buf), "%s_%s_%llu", investor_id, trading_day, (unsigned long long)xtp_id);
 	return std::string(buf);
+}
+uint64_t XTPTradeHandler::GetXTPIdFromExtend(const char *ext_ctp_id, int len)
+{
+	const char *p = ext_ctp_id + len - 1;
+	int xtp_id_len = 0;
+	for (xtp_id_len = 0; xtp_id_len <len; xtp_id_len++)
+	{
+		if (*(p - xtp_id_len) == '_')
+		{
+			break;
+		}
+	}
+
+	if (xtp_id_len == 0 || xtp_id_len >= len)
+	{
+		return 0;
+	}
+
+	uint64_t ret = 0;
+	try
+	{
+		ret = std::stoull(p - xtp_id_len + 1);
+	}
+	catch (std::exception &e)
+	{
+		throw std::runtime_error("invalid xtp order id");
+	}
+	
+	return ret;
 }
 
 XTP_MARKET_TYPE XTPTradeHandler::ConvertExchangeMarketTypeCommon2XTP(const std::string &exchange)
@@ -741,7 +787,7 @@ void XTPTradeHandler::OutputTradeEvent(XTPTradeReport *trade_info, uint64_t sess
 
 	writer.StartObject();
 	writer.Key("msg");
-	writer.String("xtp_orderevent");
+	writer.String("xtp_tradeevent");
 
 	writer.Key("data");
 	writer.StartObject();
@@ -749,6 +795,25 @@ void XTPTradeHandler::OutputTradeEvent(XTPTradeReport *trade_info, uint64_t sess
 	{
 		SerializeXTPTradeReport(writer, trade_info);
 	}
+	writer.EndObject();	// end data
+	writer.EndObject();	// end object
+	LOG(INFO) << s.GetString();
+}
+void XTPTradeHandler::OutputOrderCancel(uint64_t order_xtp_id, uint64_t session_id)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("xtp_ordercancel");
+
+	writer.Key("data");
+	writer.StartObject();
+	writer.Key("order_xtp_id");
+	writer.Uint64(order_xtp_id);
+	writer.Key("session_id");
+	writer.Uint64(session_id);
 	writer.EndObject();	// end data
 	writer.EndObject();	// end object
 	LOG(INFO) << s.GetString();

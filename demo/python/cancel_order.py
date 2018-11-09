@@ -68,7 +68,7 @@ def TestInsertOrder_XTP(trader):
         order_flag1="",  # speculation, hedge, arbitrage
         dir="buy",  # [action: open, close, closetoday, closehistory; dir: long, short] or [buy, sell]
         price=535,
-        amount=100,
+        amount=600,
         total_price=0,
         ts=ts
     )
