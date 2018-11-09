@@ -40,6 +40,7 @@ public:
 	virtual void OnOrderEvent(XTPOrderInfo *order_info, XTPRI *error_info, uint64_t session_id) override;
 	virtual void OnTradeEvent(XTPTradeReport *trade_info, uint64_t session_id) override;
 	virtual void OnQueryOrder(XTPQueryOrderRsp *order_info, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id) override;
+	virtual void OnQueryTrade(XTPQueryTradeRsp *trade_info, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id) override;
 
 private:
 	void RunAPI();
@@ -49,6 +50,7 @@ private:
 	// convert common struct to xtp struct
 	void ConvertInsertOrderCommon2XTP(Order &order, XTPOrderInsertInfo &req);
 	void ConvertQueryOrderCommon2XTP(OrderQuery &order_qry, XTPQueryOrderReq &req);
+	void ConvertQueryTradeCommon2XTP(TradeQuery &trade_qry, XTPQueryTraderReq &req);
 
 	////////////////////////////////////////
 	// convert xtp struct to common struct
@@ -88,6 +90,7 @@ private:
 	void SerializeXTPOrderInfo(rapidjson::Writer<rapidjson::StringBuffer> &writer, XTPOrderInfo *order_info);
 	void SerializeXTPTradeReport(rapidjson::Writer<rapidjson::StringBuffer> &writer, XTPTradeReport *trade_info);
 	void SerializeXTPQueryOrder(rapidjson::Writer<rapidjson::StringBuffer> &writer, XTPQueryOrderReq *qry);
+	void SerializeXTPQueryTrade(rapidjson::Writer<rapidjson::StringBuffer> &writer, XTPQueryTraderReq *qry);
 
 	////////////////////////////////////////
 	// output
@@ -95,9 +98,12 @@ private:
 	void OutputOrderEvent(XTPOrderInfo *order_info, XTPRI *error_info, uint64_t session_id);
 	void OutputTradeEvent(XTPTradeReport *trade_info, uint64_t session_id);
 	void OutputOrderCancel(uint64_t order_xtp_id, uint64_t session_id);
-	void OutputOrderQuery(XTPQueryOrderReq *req);
 	void OutputOrderQuery(uint64_t order_xtp_id);
+	void OutputOrderQuery(XTPQueryOrderReq *req);
 	void OutputRspOrderQuery(XTPQueryOrderRsp *order_info, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id);
+	void OutputTradeQuery(uint64_t trade_xtp_id);
+	void OutputTradeQuery(XTPQueryTraderReq *req);
+	void OutputRspTradeQuery(XTPQueryTradeRsp *trade_info, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id);
 
 private:
 	XTP::API::TraderApi *api_;
@@ -123,6 +129,7 @@ private:
 
 	// query results
 	std::map<int, std::vector<XTPQueryOrderRsp>> rsp_qry_order_caches_;
+	std::map<int, std::vector<XTPQueryTradeRsp>> rsp_qry_trade_caches_;
 };
 
 

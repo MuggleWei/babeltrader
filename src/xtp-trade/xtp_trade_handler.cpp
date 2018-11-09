@@ -116,7 +116,48 @@ void XTPTradeHandler::QueryOrder(uWS::WebSocket<uWS::SERVER> *ws, OrderQuery &or
 	}
 }
 void XTPTradeHandler::QueryTrade(uWS::WebSocket<uWS::SERVER> *ws, TradeQuery &trade_query)
-{}
+{
+	if (api_ == nullptr || !api_ready_)
+	{
+		throw std::runtime_error("trade api not ready yet");
+	}
+
+	int ret = 0;
+	if (trade_query.trade_id.size() > 0)
+	{
+		uint64_t trade_xtp_id = GetXTPIdFromExtend(trade_query.trade_id.c_str(), trade_query.trade_id.size());
+		if (trade_xtp_id == 0)
+		{
+			throw std::runtime_error("invalid xtp trade id");
+		}
+
+		OutputTradeQuery(trade_xtp_id);
+
+		qry_cache_.CacheQryTrade(req_id_, ws, trade_query);
+
+		ret = api_->QueryTradesByXTPID(trade_xtp_id, xtp_session_id_, req_id_++);
+	}
+	else
+	{
+		XTPQueryTraderReq req = { 0 };
+		ConvertQueryTradeCommon2XTP(trade_query, req);
+
+		OutputTradeQuery(&req);
+
+		qry_cache_.CacheQryTrade(req_id_, ws, trade_query);
+
+		ret = api_->QueryTrades(&req, xtp_session_id_, req_id_++);
+	}
+
+	if (ret != 0)
+	{
+		qry_cache_.GetAndClearCacheQryTrade(req_id_ - 1, nullptr, nullptr);
+
+		char buf[512];
+		snprintf(buf, sizeof(buf) - 1, "failed in ReqQryTrade, return %d", ret);
+		throw std::runtime_error(buf);
+	}
+}
 void XTPTradeHandler::QueryPosition(uWS::WebSocket<uWS::SERVER> *ws, PositionQuery &position_query)
 {}
 void XTPTradeHandler::QueryPositionDetail(uWS::WebSocket<uWS::SERVER> *ws, PositionQuery &position_query)
@@ -207,6 +248,54 @@ void XTPTradeHandler::OnQueryOrder(XTPQueryOrderRsp *order_info, XTPRI *error_in
 		}
 
 		rsp_qry_order_caches_.erase(request_id);
+	}
+}
+void XTPTradeHandler::OnQueryTrade(XTPQueryTradeRsp *trade_info, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id)
+{
+	OutputRspTradeQuery(trade_info, error_info, request_id, is_last, session_id);
+
+	auto it = rsp_qry_trade_caches_.find(request_id);
+	if (it == rsp_qry_trade_caches_.end())
+	{
+		std::vector<XTPQueryTradeRsp> vec;
+		rsp_qry_trade_caches_[request_id] = std::move(vec);
+		it = rsp_qry_trade_caches_.find(request_id);
+	}
+	if (trade_info)
+	{
+		XTPQueryTradeRsp copy_trade;
+		memcpy(&copy_trade, trade_info, sizeof(copy_trade));
+		it->second.push_back(copy_trade);
+	}
+
+	if (is_last)
+	{
+		uWS::WebSocket<uWS::SERVER>* ws;
+		TradeQuery trade_qry;
+		qry_cache_.GetAndClearCacheQryTrade(request_id, &ws, &trade_qry);
+		std::vector<XTPQueryTradeRsp> &trades = rsp_qry_trade_caches_[request_id];
+
+		if (ws)
+		{
+			std::vector<Order> common_orders;
+			std::vector<OrderDealNotify> common_deals;
+			for (XTPQueryTradeRsp &ctp_trade : trades)
+			{
+				Order order;
+				OrderDealNotify order_deal;
+				ConvertTradeReportXTP2Common(&ctp_trade, order, order_deal);
+				common_orders.push_back(std::move(order));
+				common_deals.push_back(std::move(order_deal));
+			}
+
+			int error_id = 0;
+			if (error_info) {
+				error_id = error_info->error_id;
+			}
+			ws_service_.RspTradeQry(ws, trade_qry, common_orders, common_deals, error_id);
+		}
+
+		rsp_qry_trade_caches_.erase(request_id);
 	}
 }
 
@@ -302,6 +391,16 @@ void XTPTradeHandler::ConvertQueryOrderCommon2XTP(OrderQuery &order_qry, XTPQuer
 	req.begin_time = 0;
 	req.end_time = 0;
 }
+void XTPTradeHandler::ConvertQueryTradeCommon2XTP(TradeQuery &trade_qry, XTPQueryTraderReq &req)
+{
+	if (trade_qry.symbol.size() > 0)
+	{
+		strncpy(req.ticker, trade_qry.symbol.c_str(), sizeof(req.ticker) - 1);
+	}
+	req.begin_time = 0;
+	req.end_time = 0;
+}
+
 void XTPTradeHandler::ConvertOrderInfoXTP2Common(XTPOrderInfo *order_info, Order &order, OrderStatusNotify &order_status_notify)
 {
 	// order
@@ -839,6 +938,15 @@ void XTPTradeHandler::SerializeXTPQueryOrder(rapidjson::Writer<rapidjson::String
 	writer.Key("end_time");
 	writer.Int64(qry->end_time);
 }
+void XTPTradeHandler::SerializeXTPQueryTrade(rapidjson::Writer<rapidjson::StringBuffer> &writer, XTPQueryTraderReq *qry)
+{
+	writer.Key("ticker");
+	writer.String(qry->ticker);
+	writer.Key("begin_time");
+	writer.Int64(qry->begin_time);
+	writer.Key("end_time");
+	writer.Int64(qry->end_time);
+}
 
 void XTPTradeHandler::OutputOrderInsert(XTPOrderInsertInfo &req)
 {
@@ -927,6 +1035,23 @@ void XTPTradeHandler::OutputOrderCancel(uint64_t order_xtp_id, uint64_t session_
 	writer.EndObject();	// end object
 	LOG(INFO) << s.GetString();
 }
+void XTPTradeHandler::OutputOrderQuery(uint64_t order_xtp_id)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("xtp_orderquery");
+
+	writer.Key("data");
+	writer.StartObject();
+	writer.Key("order_xtp_id");
+	writer.Uint64(order_xtp_id);
+	writer.EndObject();	// end data
+	writer.EndObject();	// end object
+	LOG(INFO) << s.GetString();
+}
 void XTPTradeHandler::OutputOrderQuery(XTPQueryOrderReq *req)
 {
 	rapidjson::StringBuffer s;
@@ -942,23 +1067,6 @@ void XTPTradeHandler::OutputOrderQuery(XTPQueryOrderReq *req)
 	{
 		SerializeXTPQueryOrder(writer, req);
 	}
-	writer.EndObject();	// end data
-	writer.EndObject();	// end object
-	LOG(INFO) << s.GetString();
-}
-void XTPTradeHandler::OutputOrderQuery(uint64_t order_xtp_id)
-{
-	rapidjson::StringBuffer s;
-	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
-
-	writer.StartObject();
-	writer.Key("msg");
-	writer.String("xtp_orderquery");
-
-	writer.Key("data");
-	writer.StartObject();
-	writer.Key("order_xtp_id");
-	writer.Uint64(order_xtp_id);
 	writer.EndObject();	// end data
 	writer.EndObject();	// end object
 	LOG(INFO) << s.GetString();
@@ -993,6 +1101,78 @@ void XTPTradeHandler::OutputRspOrderQuery(XTPQueryOrderRsp *order_info, XTPRI *e
 	if (order_info)
 	{
 		SerializeXTPOrderInfo(writer, order_info);
+	}
+	writer.EndObject();
+
+	writer.EndObject();
+	LOG(INFO) << s.GetString();
+}
+void XTPTradeHandler::OutputTradeQuery(uint64_t trade_xtp_id)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("xtp_tradequery");
+
+	writer.Key("data");
+	writer.StartObject();
+	writer.Key("trade_xtp_id");
+	writer.Uint64(trade_xtp_id);
+	writer.EndObject();	// end data
+	writer.EndObject();	// end object
+	LOG(INFO) << s.GetString();
+}
+void XTPTradeHandler::OutputTradeQuery(XTPQueryTraderReq *req)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("xtp_tradequery");
+
+	writer.Key("data");
+	writer.StartObject();
+	if (req)
+	{
+		SerializeXTPQueryTrade(writer, req);
+	}
+	writer.EndObject();	// end data
+	writer.EndObject();	// end object
+	LOG(INFO) << s.GetString();
+}
+void XTPTradeHandler::OutputRspTradeQuery(XTPQueryTradeRsp *trade_info, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("xtp_rspqrytrade");
+	writer.Key("req_id");
+	writer.Int(request_id);
+	writer.Key("is_last");
+	writer.Bool(is_last);
+	if (error_info)
+	{
+		writer.Key("error_id");
+		writer.Int(error_info->error_id);
+		writer.Key("error_msg");
+		writer.String(error_info->error_msg);
+	}
+	else
+	{
+		writer.Key("error_id");
+		writer.Int(0);
+	}
+
+	writer.Key("data");
+	writer.StartObject();
+	if (trade_info)
+	{
+		SerializeXTPTradeReport(writer, trade_info);
 	}
 	writer.EndObject();
 

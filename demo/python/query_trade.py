@@ -1,11 +1,8 @@
-import time
-
 from trader import Trader
 
 
 class TraderQueryTrade(Trader):
-    def __init__(self):
-        addr = "127.0.0.1:8001"
+    def __init__(self, addr):
         Trader.__init__(self, addr=addr)
 
         self.qry_id = "2"
@@ -26,10 +23,7 @@ class TraderQueryTrade(Trader):
             print("order: " + str(data['order']))
 
 
-if __name__ == '__main__':
-    trader = TraderQueryTrade()
-
-    ts = time.time()
+def TestQueryTrade_CTP(trader):
     trader.query_trade(
         qry_id=trader.qry_id,
         user_id="weidaizi",
@@ -41,5 +35,32 @@ if __name__ == '__main__':
         contract="1901",
         contract_id="1901"
     )
+
+
+def TestQueryTrade_XTP(trader):
+    trader.query_trade(
+        qry_id=trader.qry_id,
+        user_id="weidaizi",
+        trade_id="15033731_20181109_36567580332263381",
+        market="xtp",
+        exchange="",
+        type="",
+        symbol="600519",
+        contract="",
+        contract_id=""
+    )
+
+
+if __name__ == '__main__':
+    # ctp test
+    addr = "127.0.0.1:8001"
+    fn = TestQueryTrade_CTP
+
+    # xtp test
+    # addr = "127.0.0.1:8002"
+    # fn = TestQueryTrade_XTP
+
+    trader = TraderQueryTrade(addr)
+    fn(trader)
 
     trader.message_loop()
