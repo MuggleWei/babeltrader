@@ -102,12 +102,12 @@ def TestInsertOrder_XTP(trader):
 
 
 if __name__ == '__main__':
-    # addr = "127.0.0.1:8001"
-    addr = "127.0.0.1:8002"
+    addr = "127.0.0.1:8001"
+    # addr = "127.0.0.1:8002"
     trader = TraderInsertOrder(addr)
 
     ts = time.time()
-    # TestInsertOrder_CTP(trader)
-    TestInsertOrder_XTP(trader)
+    TestInsertOrder_CTP(trader)
+    # TestInsertOrder_XTP(trader)
 
     trader.message_loop()

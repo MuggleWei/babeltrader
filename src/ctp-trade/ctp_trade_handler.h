@@ -10,6 +10,8 @@
 #include "common/common_struct.h"
 #include "common/ws_service.h"
 #include "common/http_service.h"
+#include "common/query_cache.h"
+
 #include "conf.h"
 
 using namespace babeltrader;
@@ -98,24 +100,6 @@ private:
 	// order cache
 	void RecordOrder(Order &order, const std::string &order_ref, int front_id, int session_id);
 	bool GetAndCleanRecordOrder(Order *p_order, const std::string &user_id, const std::string &order_ref, int front_id, int session_id);
-
-	void CacheQryOrder(int req_id, uWS::WebSocket<uWS::SERVER>* ws, OrderQuery &order_qry);
-	void GetAndClearCacheQryOrder(int req_id, uWS::WebSocket<uWS::SERVER>** ws, OrderQuery *p_order_qry);
-
-	void CacheQryTrade(int req_id, uWS::WebSocket<uWS::SERVER>* ws, TradeQuery &trade_qry);
-	void GetAndClearCacheQryTrade(int req_id, uWS::WebSocket<uWS::SERVER>** ws, TradeQuery *p_trade_qry);
-
-	void CacheQryPosition(int req_id, uWS::WebSocket<uWS::SERVER>* ws, PositionQuery &position_qry);
-	void GetAndCleanCacheQryPosition(int req_id, uWS::WebSocket<uWS::SERVER>** ws, PositionQuery *p_position_qry);
-
-	void CacheQryPositionDetail(int req_id, uWS::WebSocket<uWS::SERVER>* ws, PositionQuery &position_qry);
-	void GetAndCleanCacheQryPositionDetail(int req_id, uWS::WebSocket<uWS::SERVER>** ws, PositionQuery *p_position_detail_qry);
-
-	void CacheQryTradeAccount(int req_id, uWS::WebSocket<uWS::SERVER>* ws, TradeAccountQuery &tradeaccount_qry);
-	void GetAndCleanCacheQryTradeAccount(int req_id, uWS::WebSocket<uWS::SERVER>** ws, TradeAccountQuery *p_tradeaccount_qry);
-
-	void CacheQryProduct(int req_id, uWS::WebSocket<uWS::SERVER>* ws, ProductQuery &product_qry);
-	void GetAndCleanCacheQryProduct(int req_id, uWS::WebSocket<uWS::SERVER>** ws, ProductQuery *p_product_qry);
 
 	////////////////////////////////////////
 	// field convert
@@ -210,26 +194,15 @@ private:
 	std::map<std::string, Order> wait_deal_orders_;
 	std::mutex wati_deal_order_mtx_;
 
+	// query cache
+	QueryCache qry_cache_;
+
 	// query results
-	std::mutex qry_cache_mtx_;
-	std::map<int, uWS::WebSocket<uWS::SERVER>*> qry_ws_cache_;
-
-	std::map<int, OrderQuery> qry_order_cache_;
 	std::map<int, std::vector<CThostFtdcOrderField>> rsp_qry_order_caches_;
-
-	std::map<int, TradeQuery> qry_trade_cache_;
 	std::map<int, std::vector<CThostFtdcTradeField>> rsp_qry_trade_caches_;
-
-	std::map<int, PositionQuery> qry_position_cache_;
 	std::map<int, std::vector<CThostFtdcInvestorPositionField>> rsp_qry_position_caches_;
-
-	std::map<int, PositionQuery> qry_position_detail_cache_;
 	std::map<int, std::vector<CThostFtdcInvestorPositionDetailField>> rsp_qry_position_detail_caches_;
-
-	std::map<int, TradeAccountQuery> qry_trade_account_cache_;
 	std::map<int, std::vector<CThostFtdcTradingAccountField>> rsp_qry_trade_account_caches_;
-
-	std::map<int, ProductQuery> qry_product_cache_;
 	std::map<int, std::vector<CThostFtdcProductField>> rsp_qry_product_caches_;
 	std::map<int, std::vector<CThostFtdcInstrumentField>> rsp_qry_instrument_caches_;
 };
