@@ -94,6 +94,16 @@ enum OrderDirEnum
 };
 extern const char *g_order_dir[OrderDir_Max];
 
+enum AccountTypeEnum
+{
+	AccountType_Unknown = 0,
+	AccountType_Normal,
+	AccountType_Credit,
+	AccountType_Derivatives,
+	AccountType_Max,
+};
+extern const char *g_account_type[AccountType_Max];
+
 enum OrderStatusEnum
 {
 	OrderStatus_Unknown = 0,

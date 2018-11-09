@@ -5,8 +5,6 @@ class TraderQueryTrade(Trader):
     def __init__(self, addr):
         Trader.__init__(self, addr=addr)
 
-        self.qry_id = "2"
-
     def on_qrytrade(self, msg):
         if msg['error_id'] != 0:
             print("query error: " + msg['error_id'])
@@ -25,7 +23,7 @@ class TraderQueryTrade(Trader):
 
 def TestQueryTrade_CTP(trader):
     trader.query_trade(
-        qry_id=trader.qry_id,
+        qry_id="1",
         user_id="weidaizi",
         trade_id="",
         market="ctp",
@@ -39,7 +37,7 @@ def TestQueryTrade_CTP(trader):
 
 def TestQueryTrade_XTP(trader):
     trader.query_trade(
-        qry_id=trader.qry_id,
+        qry_id="1",
         user_id="weidaizi",
         trade_id="",
         market="xtp",

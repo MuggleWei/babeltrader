@@ -184,7 +184,26 @@ void XTPTradeHandler::QueryPositionDetail(uWS::WebSocket<uWS::SERVER> *ws, Posit
 	throw std::runtime_error("'QueryPositionDetail' not supported in xtp");
 }
 void XTPTradeHandler::QueryTradeAccount(uWS::WebSocket<uWS::SERVER> *ws, TradeAccountQuery &tradeaccount_query)
-{}
+{
+	if (api_ == nullptr || !api_ready_)
+	{
+		throw std::runtime_error("trade api not ready yet");
+	}
+
+	OutputAssetQuery(xtp_session_id_);
+
+	qry_cache_.CacheQryTradeAccount(req_id_, ws, tradeaccount_query);
+
+	int ret = api_->QueryAsset(xtp_session_id_, req_id_++);
+	if (ret != 0)
+	{
+		qry_cache_.GetAndCleanCacheQryTradeAccount(req_id_ - 1, nullptr, nullptr);
+
+		char buf[512];
+		snprintf(buf, sizeof(buf) - 1, "failed in ReqQryTradingAccount, return %d", ret);
+		throw std::runtime_error(buf);
+	}
+}
 void XTPTradeHandler::QueryProduct(uWS::WebSocket<uWS::SERVER> *ws, ProductQuery &query_product)
 {}
 
@@ -364,6 +383,51 @@ void XTPTradeHandler::OnQueryPosition(XTPQueryStkPositionRsp *position, XTPRI *e
 		rsp_qry_position_caches_.erase(request_id);
 	}
 }
+void XTPTradeHandler::OnQueryAsset(XTPQueryAssetRsp *asset, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id)
+{
+	OutputRspAssetQuery(asset, error_info, request_id, is_last, session_id);
+
+	auto it = rsp_qry_trade_account_caches_.find(request_id);
+	if (it == rsp_qry_trade_account_caches_.end())
+	{
+		std::vector<XTPQueryAssetRsp> vec;
+		rsp_qry_trade_account_caches_[request_id] = std::move(vec);
+		it = rsp_qry_trade_account_caches_.find(request_id);
+	}
+	if (asset)
+	{
+		XTPQueryAssetRsp copy_trade_account;
+		memcpy(&copy_trade_account, asset, sizeof(copy_trade_account));
+		it->second.push_back(copy_trade_account);
+	}
+
+	if (is_last)
+	{
+		uWS::WebSocket<uWS::SERVER>* ws;
+		TradeAccountQuery trade_account_qry;
+		qry_cache_.GetAndCleanCacheQryTradeAccount(request_id, &ws, &trade_account_qry);
+		std::vector<XTPQueryAssetRsp> &ctp_trade_accounts = rsp_qry_trade_account_caches_[request_id];
+
+		if (ws)
+		{
+			std::vector<TradeAccountType2> trade_accounts;
+			for (XTPQueryAssetRsp &xtp_trade_account : ctp_trade_accounts)
+			{
+				TradeAccountType2 trade_account;
+				ConvertTradeAccountXTP2Common(&xtp_trade_account, trade_account);
+				trade_accounts.push_back(std::move(trade_account));
+			}
+
+			int error_id = 0;
+			if (error_info) {
+				error_id = error_info->error_id;
+			}
+			ws_service_.RspTradeAccountQryType2(ws, trade_account_qry, trade_accounts, error_id);
+		}
+
+		rsp_qry_trade_account_caches_.erase(request_id);
+	}
+}
 
 void XTPTradeHandler::RunAPI()
 {
@@ -537,6 +601,32 @@ void XTPTradeHandler::ConvertPositionXTP2Common(XTPQueryStkPositionRsp *pPositio
 	position_summary.executable_underlying = pPosition->executable_underlying;
 	position_summary.locked_position = pPosition->locked_position;
 	position_summary.usable_locked_position = pPosition->usable_locked_position;
+}
+void XTPTradeHandler::ConvertTradeAccountXTP2Common(XTPQueryAssetRsp *asset, TradeAccountType2 &trade_account)
+{
+	trade_account.market = g_markets[Market_XTP];
+	trade_account.outside_user_id = conf_.user_id;
+	trade_account.account_type = ConvertAccountTypeXTP2Common(asset->account_type);
+	trade_account.total_asset = asset->total_asset;
+	trade_account.available_cash = asset->buying_power;
+	trade_account.securities_asset = asset->security_asset;
+	trade_account.fund_buy_amount = asset->fund_buy_amount;
+	trade_account.fund_buy_fee = asset->fund_buy_fee;
+	trade_account.fund_sell_amount = asset->fund_sell_amount;
+	trade_account.fund_sell_fee = asset->fund_sell_fee;
+	trade_account.withholding_amount = asset->withholding_amount;
+	trade_account.frozen_margin = asset->frozen_margin;
+	trade_account.frozen_exec_cash = asset->frozen_exec_cash;
+	trade_account.frozen_exec_fee = asset->frozen_exec_fee;
+	trade_account.pay_later = asset->pay_later;
+	trade_account.preadva_pay = asset->preadva_pay;
+	trade_account.orig_banlance = asset->orig_banlance;
+	trade_account.banlance = asset->banlance;
+	trade_account.deposit_withdraw = asset->deposit_withdraw;
+	trade_account.trade_netting = asset->trade_netting;
+	trade_account.captial_asset = asset->captial_asset;
+	trade_account.force_freeze_amount = asset->force_freeze_amount;
+	trade_account.preferred_amount = asset->preferred_amount;
 }
 
 std::string XTPTradeHandler::ExtendXTPId(const char *investor_id, const char *trading_day, uint64_t xtp_id)
@@ -813,6 +903,19 @@ OrderSubmitStatusEnum XTPTradeHandler::ConvertOrderSubmitStatusXTP2Common(XTP_OR
 		break;
 	}
 	return ret;
+}
+std::string XTPTradeHandler::ConvertAccountTypeXTP2Common(XTP_ACCOUNT_TYPE account_type)
+{
+	switch (account_type)
+	{
+	case XTP_ACCOUNT_NORMAL:
+		return g_account_type[AccountType_Normal];
+	case XTP_ACCOUNT_CREDIT:
+		return g_account_type[AccountType_Credit];
+	case XTP_ACCOUNT_DERIVE:
+		return g_account_type[AccountType_Derivatives];
+	}
+	return g_account_type[AccountType_Unknown];
 }
 
 void XTPTradeHandler::RecordOrder(Order &order, uint32_t order_ref, uint64_t session_id)
@@ -1091,6 +1194,49 @@ void XTPTradeHandler::SerializeXTPPosition(rapidjson::Writer<rapidjson::StringBu
 	writer.Key("usable_locked_position");
 	writer.Int64(rsp->usable_locked_position);
 }
+void XTPTradeHandler::SerializeXTPAsset(rapidjson::Writer<rapidjson::StringBuffer> &writer, XTPQueryAssetRsp *rsp)
+{
+	writer.Key("total_asset");
+	writer.Double(rsp->total_asset);
+	writer.Key("buying_power");
+	writer.Double(rsp->buying_power);
+	writer.Key("security_asset");
+	writer.Double(rsp->security_asset);
+	writer.Key("fund_buy_amount");
+	writer.Double(rsp->fund_buy_amount);
+	writer.Key("fund_buy_fee");
+	writer.Double(rsp->fund_buy_fee);
+	writer.Key("fund_sell_amount");
+	writer.Double(rsp->fund_sell_amount);
+	writer.Key("fund_sell_fee");
+	writer.Double(rsp->fund_sell_fee);
+	writer.Key("withholding_amount");
+	writer.Double(rsp->withholding_amount);
+	writer.Key("account_type");
+	writer.Int((int)rsp->account_type);
+	writer.Key("frozen_margin");
+	writer.Double(rsp->frozen_margin);
+	writer.Key("frozen_exec_cash");
+	writer.Double(rsp->frozen_exec_cash);
+	writer.Key("pay_later");
+	writer.Double(rsp->pay_later);
+	writer.Key("preadva_pay");
+	writer.Double(rsp->preadva_pay);
+	writer.Key("orig_banlance");
+	writer.Double(rsp->orig_banlance);
+	writer.Key("banlance");
+	writer.Double(rsp->banlance);
+	writer.Key("deposit_withdraw");
+	writer.Double(rsp->deposit_withdraw);
+	writer.Key("trade_netting");
+	writer.Double(rsp->trade_netting);
+	writer.Key("captial_asset");
+	writer.Double(rsp->captial_asset);
+	writer.Key("force_freeze_amount");
+	writer.Double(rsp->force_freeze_amount);
+	writer.Key("preferred_amount");
+	writer.Double(rsp->preferred_amount);
+}
 
 void XTPTradeHandler::OutputOrderInsert(XTPOrderInsertInfo &req)
 {
@@ -1268,6 +1414,23 @@ void XTPTradeHandler::OutputPositionQuery(const std::string &symbol)
 	writer.EndObject();	// end object
 	LOG(INFO) << s.GetString();
 }
+void XTPTradeHandler::OutputAssetQuery(uint64_t session_id)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("xtp_assetquery");
+
+	writer.Key("data");
+	writer.StartObject();
+	writer.Key("session_id");
+	writer.Uint64(session_id);
+	writer.EndObject();	// end data
+	writer.EndObject();	// end object
+	LOG(INFO) << s.GetString();
+}
 
 void XTPTradeHandler::OutputRspOrderQuery(XTPQueryOrderRsp *order_info, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id)
 {
@@ -1371,6 +1534,42 @@ void XTPTradeHandler::OutputRspPositionQuery(XTPQueryStkPositionRsp *position, X
 	if (position)
 	{
 		SerializeXTPPosition(writer, position);
+	}
+	writer.EndObject();
+
+	writer.EndObject();
+	LOG(INFO) << s.GetString();
+}
+void XTPTradeHandler::OutputRspAssetQuery(XTPQueryAssetRsp *asset, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("xtp_rspqryasset");
+	writer.Key("req_id");
+	writer.Int(request_id);
+	writer.Key("is_last");
+	writer.Bool(is_last);
+	if (error_info)
+	{
+		writer.Key("error_id");
+		writer.Int(error_info->error_id);
+		writer.Key("error_msg");
+		writer.String(error_info->error_msg);
+	}
+	else
+	{
+		writer.Key("error_id");
+		writer.Int(0);
+	}
+
+	writer.Key("data");
+	writer.StartObject();
+	if (asset)
+	{
+		SerializeXTPAsset(writer, asset);
 	}
 	writer.EndObject();
 

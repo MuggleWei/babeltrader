@@ -479,6 +479,55 @@ void SerializePositionSummaryType2(rapidjson::Writer<rapidjson::StringBuffer> &w
 	writer.Key("usable_locked_position");
 	writer.Int64(position_summary.usable_locked_position);
 }
+void SerializeTradeAccountType2(rapidjson::Writer<rapidjson::StringBuffer> &writer, const TradeAccountType2 &trade_account)
+{
+	writer.Key("market");
+	writer.String(trade_account.market.c_str());
+	writer.Key("outside_user_id");
+	writer.String(trade_account.outside_user_id.c_str());
+	writer.Key("account_type");
+	writer.String(trade_account.account_type.c_str());
+	writer.Key("total_asset");
+	writer.Double(trade_account.total_asset);
+	writer.Key("available_cash");
+	writer.Double(trade_account.available_cash);
+	writer.Key("securities_asset");
+	writer.Double(trade_account.securities_asset);
+	writer.Key("fund_buy_amount");
+	writer.Double(trade_account.fund_buy_amount);
+	writer.Key("fund_buy_fee");
+	writer.Double(trade_account.fund_buy_fee);
+	writer.Key("fund_sell_amount");
+	writer.Double(trade_account.fund_sell_amount);
+	writer.Key("fund_sell_fee");
+	writer.Double(trade_account.fund_sell_fee);
+	writer.Key("withholding_amount");
+	writer.Double(trade_account.withholding_amount);
+	writer.Key("frozen_margin");
+	writer.Double(trade_account.frozen_margin);
+	writer.Key("frozen_exec_cash");
+	writer.Double(trade_account.frozen_exec_cash);
+	writer.Key("frozen_exec_fee");
+	writer.Double(trade_account.frozen_exec_fee);
+	writer.Key("pay_later");
+	writer.Double(trade_account.pay_later);
+	writer.Key("preadva_pay");
+	writer.Double(trade_account.preadva_pay);
+	writer.Key("orig_banlance");
+	writer.Double(trade_account.orig_banlance);
+	writer.Key("banlance");
+	writer.Double(trade_account.banlance);
+	writer.Key("deposit_withdraw");
+	writer.Double(trade_account.deposit_withdraw);
+	writer.Key("trade_netting");
+	writer.Double(trade_account.trade_netting);
+	writer.Key("captial_asset");
+	writer.Double(trade_account.captial_asset);
+	writer.Key("force_freeze_amount");
+	writer.Double(trade_account.force_freeze_amount);
+	writer.Key("preferred_amount");
+	writer.Double(trade_account.preferred_amount);
+}
 
 Order ConvertOrderJson2Common(rapidjson::Value &msg)
 {

@@ -5,12 +5,10 @@ class TraderQueryPosition(Trader):
     def __init__(self, addr):
         Trader.__init__(self, addr=addr)
 
-        self.qry_id = "3"
-
 
 def TestQueryPosition_CTP(trader):
     trader.query_position(
-        qry_id=trader.qry_id,
+        qry_id="1",
         user_id="weidaizi",
         market="ctp",
         exchange="SHFE",
@@ -23,7 +21,7 @@ def TestQueryPosition_CTP(trader):
 
 def TestQueryPosition_XTP(trader):
     trader.query_position(
-        qry_id=trader.qry_id,
+        qry_id="1",
         user_id="weidaizi",
         market="ctp",
         exchange="",

@@ -252,6 +252,19 @@ struct PositionSummaryType2
 	int64_t executable_underlying;
 	int64_t locked_position;
 	int64_t usable_locked_position;
+
+	PositionSummaryType2()
+		: amount(0)
+		, avaliable_amount(0)
+		, avg_price(0)
+		, unrealized_profit(0)
+		, purchase_redeemable_qty(0)
+		, executable_option(0)
+		, lockable_position(0)
+		, executable_underlying(0)
+		, locked_position(0)
+		, usable_locked_position(0)
+	{}
 };
 
 struct PositionDetailType1
@@ -345,6 +358,33 @@ struct TradeAccountType1
 		, balance(0)
 		, available(0)
 	{}
+};
+
+struct TradeAccountType2
+{
+	std::string market;
+	std::string outside_user_id;
+	std::string account_type;
+	double total_asset;
+	double available_cash;
+	double securities_asset;
+	double fund_buy_amount;
+	double fund_buy_fee;
+	double fund_sell_amount;
+	double fund_sell_fee;
+	double withholding_amount;
+	double frozen_margin;
+	double frozen_exec_cash;
+	double frozen_exec_fee;
+	double pay_later;
+	double preadva_pay;
+	double orig_banlance;
+	double banlance;
+	double deposit_withdraw;
+	double trade_netting;
+	double captial_asset;
+	double force_freeze_amount;
+	double preferred_amount;
 };
 
 struct ProductType1

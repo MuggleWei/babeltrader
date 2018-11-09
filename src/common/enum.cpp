@@ -71,5 +71,11 @@ const char *g_order_dir[OrderDir_Max] = {
 	"short"
 };
 
+const char *g_account_type[AccountType_Max] = {
+	"",
+	"normal",
+	"credit",
+	"derivatives"
+};
 
 }

@@ -453,6 +453,45 @@ void WsService::RspPositionQryType2(uWS::WebSocket<uWS::SERVER>* ws, PositionQue
 
 	SendMsgToClient(ws, s.GetString());
 }
+void WsService::RspTradeAccountQryType2(uWS::WebSocket<uWS::SERVER>* ws, TradeAccountQuery &tradeaccount_qry, std::vector<TradeAccountType2> &trade_accounts, int error_id)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("rsp_qrytradeaccount");
+	writer.Key("error_id");
+	writer.Int(error_id);
+
+	writer.Key("data");
+	writer.StartObject();
+
+	SerializeTradeAccountQuery(writer, tradeaccount_qry);
+
+	writer.Key("trade_account_type");
+	writer.String("type2");
+
+	writer.Key("data");
+	writer.StartArray();
+
+	for (auto i = 0; i < trade_accounts.size(); i++)
+	{
+		writer.StartObject();
+		SerializeTradeAccountType2(writer, trade_accounts[i]);
+		writer.EndObject();
+	}
+
+	writer.EndArray();  // positions
+
+	writer.EndObject();  // data end
+
+	writer.EndObject();  // object end
+
+	LOG(INFO) << s.GetString();
+
+	SendMsgToClient(ws, s.GetString());
+}
 
 void WsService::MessageLoop()
 {

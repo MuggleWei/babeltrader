@@ -5,12 +5,10 @@ class TraderQueryPositionDetail(Trader):
     def __init__(self, addr):
         Trader.__init__(self, addr=addr)
 
-        self.qry_id = "3"
-
 
 def TestQueryPositionDetail_CTP(trader):
     trader.query_positiondetail(
-        qry_id=trader.qry_id,
+        qry_id="1",
         user_id="weidaizi",
         market="ctp",
         exchange="SHFE",
@@ -23,7 +21,7 @@ def TestQueryPositionDetail_CTP(trader):
 
 def TestQueryPositionDetail_XTP(trader):
     trader.query_positiondetail(
-        qry_id=trader.qry_id,
+        qry_id="1",
         user_id="weidaizi",
         market="xtp",
         exchange="",
@@ -36,12 +34,12 @@ def TestQueryPositionDetail_XTP(trader):
 
 if __name__ == '__main__':
     # ctp
-    # addr = "127.0.0.1:8001"
-    # fn = TestQueryPositionDetail_CTP
+    addr = "127.0.0.1:8001"
+    fn = TestQueryPositionDetail_CTP
 
     # xtp
-    addr = "127.0.0.1:8002"
-    fn = TestQueryPositionDetail_XTP
+    # addr = "127.0.0.1:8002"
+    # fn = TestQueryPositionDetail_XTP
 
     trader = TraderQueryPositionDetail(addr)
     fn(trader)
