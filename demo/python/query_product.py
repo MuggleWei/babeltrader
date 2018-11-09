@@ -4,15 +4,15 @@ from trader import Trader
 
 
 class TraderQueryProduct(Trader):
-    def __init__(self):
-        addr = "127.0.0.1:8001"
+    def __init__(self, addr):
         Trader.__init__(self, addr=addr)
 
 
 if __name__ == '__main__':
-    trader = TraderQueryProduct()
+    addr = "127.0.0.1:8001"
 
-    ts = time.time()
+    trader = TraderQueryProduct(addr)
+
     trader.query_product(
         qry_id="1",
         user_id="weidaizi",

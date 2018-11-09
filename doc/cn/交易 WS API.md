@@ -11,8 +11,12 @@
         - [持仓结构类型1 (CTP)](#持仓结构类型1)
         - [持仓结构类型2 (XTP)](#持仓结构类型2)
     - [持仓明细结构](#持仓明细结构)
+        - [持仓明细结构类型1 (CTP)](#持仓明细结构类型1)
     - [交易账户结构](#交易账户结构)
+        - [交易账户结构类型1 (CTP)](#交易账户结构类型1)
+        - [交易账户结构类型2 (XTP)](#交易账户结构类型2)
     - [产品信息结构](#产品信息结构)
+        - [产品信息结构类型1 (CTP)](#产品信息结构类型1)
 - [请求指令](#请求指令)  
     - [下单](#下单)
     - [撤单](#撤单)
@@ -276,6 +280,7 @@ usable_locked_position(int): 可用已锁定标的
 #### 持仓明细结构
 注意: 持仓结构根据上手的不同, 将会返回不同的类型, 要根据返回的position_detail_type来判断data内是什么结构体
 
+###### 持仓明细结构类型1
 类型: type1
 上手: CTP
 示例:
@@ -341,6 +346,7 @@ position_profit_by_trade(double): 持仓盈亏(逐笔)
 #### 交易账户结构
 注意: 资金账户结构根据上手的不同, 将会返回不同的类型, 要根据返回的trade_account_type来判断data内是什么结构体
 
+###### 交易账户结构类型1
 类型: type1
 上手: CTP
 示例:
@@ -393,9 +399,69 @@ currency_id(string): 币种代码
 trading_day(string): 交易日
 ```
 
+###### 交易账户结构类型2
+类型: type2
+上手: XTP
+示例:
+```
+{
+    "market":"xtp",
+    "outside_user_id":"15033731",
+    "account_type":"normal",
+    "total_asset":999941826.0,
+    "available_cash":999941826.0,
+    "securities_asset":0.0,
+    "fund_buy_amount":58000.0,
+    "fund_buy_fee":174.0,
+    "fund_sell_amount":0.0,
+    "fund_sell_fee":0.0,
+    "withholding_amount":0.0,
+    "frozen_margin":0.0,
+    "frozen_exec_cash":0.0,
+    "frozen_exec_fee":0.0,
+    "pay_later":0.0,
+    "preadva_pay":0.0,
+    "orig_banlance":0.0,
+    "banlance":0.0,
+    "deposit_withdraw":0.0,
+    "trade_netting":0.0,
+    "captial_asset":0.0,
+    "force_freeze_amount":0.0,
+    "preferred_amount":0.0
+}
+```
+
+字段说明:
+```
+market(string): 交易市场API
+outside_user_id(string): 上手交易账户id
+account_type(string): 账户类型 - normal(普通账户), credit(信用账户), derivatives(衍生品账户)
+total_asset(double): 总资产 (资金 + 证券资产 + 预扣资金)
+available_cash(double): 可用资金
+securities_asset(double): 证券资产
+fund_buy_amount(double): 累计买入成交证券占用资金
+fund_buy_fee(double): 累计买入成交交易费用
+fund_sell_amount(double): 累计卖出成交证券所得资金
+fund_sell_fee(double): 累计卖出成交交易费用
+withholding_amount(double): P系统预扣的资金
+frozen_margin(double): 冻结的保证金
+frozen_exec_cash(double): 行权冻结资金
+frozen_exec_fee(double): 行权费用
+pay_later(double): 垫付资金
+preadva_pay(double): 预垫付资金
+orig_banlance(double): 昨日余额
+banlance(double): 当前余额
+deposit_withdraw(double): 当天出入金
+trade_netting(double): 当日交易资金轧差
+captial_asset(double): 资金资产
+force_freeze_amount(double): 强锁资金
+preferred_amount(double): 可取资金
+```
+
 #### 产品信息结构
 注意: 资金账户结构根据上手的不同, 将会返回不同的类型, 要根据返回的product_type来判断data内是什么结构体
 
+###### 产品信息结构类型1
 类型: type1
 上手: CTP
 示例:

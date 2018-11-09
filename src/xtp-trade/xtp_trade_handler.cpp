@@ -205,7 +205,9 @@ void XTPTradeHandler::QueryTradeAccount(uWS::WebSocket<uWS::SERVER> *ws, TradeAc
 	}
 }
 void XTPTradeHandler::QueryProduct(uWS::WebSocket<uWS::SERVER> *ws, ProductQuery &query_product)
-{}
+{
+	throw std::runtime_error("'QueryProduct' not supported in xtp");
+}
 
 void XTPTradeHandler::OnOrderEvent(XTPOrderInfo *order_info, XTPRI *error_info, uint64_t session_id)
 {
