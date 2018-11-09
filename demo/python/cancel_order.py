@@ -37,6 +37,7 @@ class TraderCancelOrder(Trader):
 
 
 def TestInsertOrder_CTP(trader):
+    ts = time.time()
     trader.insert_order(
         user_id="weidaizi",
         market="ctp",
@@ -56,6 +57,7 @@ def TestInsertOrder_CTP(trader):
 
 
 def TestInsertOrder_XTP(trader):
+    ts = time.time()
     trader.insert_order(
         user_id="weidaizi",
         market="xtp",
@@ -75,12 +77,15 @@ def TestInsertOrder_XTP(trader):
 
 
 if __name__ == '__main__':
-    # addr = "127.0.0.1:8001"
-    addr = "127.0.0.1:8002"
-    trader = TraderCancelOrder(addr)
+    # ctp test
+    addr = "127.0.0.1:8001"
+    fn = TestInsertOrder_CTP
 
-    ts = time.time()
-    # TestInsertOrder_CTP(trader)
-    TestInsertOrder_XTP(trader)
+    # xtp test
+    # addr = "127.0.0.1:8002"
+    # fn = TestInsertOrder_XTP
+
+    trader = TraderCancelOrder(addr)
+    fn(trader)
 
     trader.message_loop()

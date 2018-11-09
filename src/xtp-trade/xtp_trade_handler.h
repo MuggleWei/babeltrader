@@ -10,6 +10,8 @@
 #include "common/common_struct.h"
 #include "common/ws_service.h"
 #include "common/http_service.h"
+#include "common/query_cache.h"
+
 #include "conf.h"
 
 using namespace babeltrader;
@@ -37,6 +39,7 @@ public:
 	// spi virtual function
 	virtual void OnOrderEvent(XTPOrderInfo *order_info, XTPRI *error_info, uint64_t session_id) override;
 	virtual void OnTradeEvent(XTPTradeReport *trade_info, uint64_t session_id) override;
+	virtual void OnQueryOrder(XTPQueryOrderRsp *order_info, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id) override;
 
 private:
 	void RunAPI();
@@ -45,6 +48,7 @@ private:
 	////////////////////////////////////////
 	// convert common struct to xtp struct
 	void ConvertInsertOrderCommon2XTP(Order &order, XTPOrderInsertInfo &req);
+	void ConvertQueryOrderCommon2XTP(OrderQuery &order_qry, XTPQueryOrderReq &req);
 
 	////////////////////////////////////////
 	// convert xtp struct to common struct
@@ -83,6 +87,7 @@ private:
 	void SerializeXTPOrderInsert(rapidjson::Writer<rapidjson::StringBuffer> &writer, XTPOrderInsertInfo &req);
 	void SerializeXTPOrderInfo(rapidjson::Writer<rapidjson::StringBuffer> &writer, XTPOrderInfo *order_info);
 	void SerializeXTPTradeReport(rapidjson::Writer<rapidjson::StringBuffer> &writer, XTPTradeReport *trade_info);
+	void SerializeXTPQueryOrder(rapidjson::Writer<rapidjson::StringBuffer> &writer, XTPQueryOrderReq *qry);
 
 	////////////////////////////////////////
 	// output
@@ -90,6 +95,8 @@ private:
 	void OutputOrderEvent(XTPOrderInfo *order_info, XTPRI *error_info, uint64_t session_id);
 	void OutputTradeEvent(XTPTradeReport *trade_info, uint64_t session_id);
 	void OutputOrderCancel(uint64_t order_xtp_id, uint64_t session_id);
+	void OutputOrderQuery(XTPQueryOrderReq *req);
+	void OutputRspOrderQuery(XTPQueryOrderRsp *order_info, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id);
 
 private:
 	XTP::API::TraderApi *api_;
@@ -109,6 +116,12 @@ private:
 	// order recorder
 	std::map<std::string, Order> wait_deal_orders_;
 	std::mutex wati_deal_order_mtx_;
+
+	// query cache
+	QueryCache qry_cache_;
+
+	// query results
+	std::map<int, std::vector<XTPQueryOrderRsp>> rsp_qry_order_caches_;
 };
 
 
