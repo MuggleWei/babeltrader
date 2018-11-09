@@ -96,6 +96,7 @@ private:
 	void OutputTradeEvent(XTPTradeReport *trade_info, uint64_t session_id);
 	void OutputOrderCancel(uint64_t order_xtp_id, uint64_t session_id);
 	void OutputOrderQuery(XTPQueryOrderReq *req);
+	void OutputOrderQuery(uint64_t order_xtp_id);
 	void OutputRspOrderQuery(XTPQueryOrderRsp *order_info, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id);
 
 private:

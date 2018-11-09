@@ -28,8 +28,8 @@ def TestQueryOrder_CTP(trader):
         user_id="weidaizi",
         outside_id="",
         market="ctp",
-        exchange="SHFE",
-        type="future",
+        exchange="",
+        type="",
         symbol="rb",
         contract="1901",
         contract_id="1901"
@@ -42,8 +42,8 @@ def TestQueryOrder_XTP(trader):
         user_id="weidaizi",
         outside_id="",
         market="xtp",
-        exchange="SSE",
-        type="spot",
+        exchange="",
+        type="",
         symbol="600519",
         contract="",
         contract_id=""

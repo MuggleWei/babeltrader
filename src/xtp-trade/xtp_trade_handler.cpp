@@ -59,6 +59,10 @@ void XTPTradeHandler::CancelOrder(uWS::WebSocket<uWS::SERVER> *ws, Order &order)
 	}
 
 	uint64_t order_xtp_id = GetXTPIdFromExtend(order.outside_id.c_str(), order.outside_id.size());
+	if (order_xtp_id == 0)
+	{
+		throw std::runtime_error("invalid xtp order id");
+	}
 
 	OutputOrderCancel(order_xtp_id, xtp_session_id_);
 
@@ -75,15 +79,33 @@ void XTPTradeHandler::QueryOrder(uWS::WebSocket<uWS::SERVER> *ws, OrderQuery &or
 		throw std::runtime_error("trade api not ready yet");
 	}
 
-	XTPQueryOrderReq req = { 0 };
-	ConvertQueryOrderCommon2XTP(order_query, req);
+	int ret = 0;
+	if (order_query.outside_id.size() > 0)
+	{
+		uint64_t order_xtp_id = GetXTPIdFromExtend(order_query.outside_id.c_str(), order_query.outside_id.size());
+		if (order_xtp_id == 0)
+		{
+			throw std::runtime_error("invalid xtp order id");
+		}
 
-	OutputOrderQuery(&req);
+		OutputOrderQuery(order_xtp_id);
 
-	// cache query order
-	qry_cache_.CacheQryOrder(req_id_, ws, order_query);
+		qry_cache_.CacheQryOrder(req_id_, ws, order_query);
 
-	int ret = api_->QueryOrders(&req, xtp_session_id_, req_id_++);
+		ret = api_->QueryOrderByXTPID(order_xtp_id, xtp_session_id_, req_id_++);
+	}
+	else
+	{
+		XTPQueryOrderReq req = { 0 };
+		ConvertQueryOrderCommon2XTP(order_query, req);
+
+		OutputOrderQuery(&req);
+
+		qry_cache_.CacheQryOrder(req_id_, ws, order_query);
+
+		ret = api_->QueryOrders(&req, xtp_session_id_, req_id_++);
+	}
+	
 	if (ret != 0)
 	{
 		qry_cache_.GetAndClearCacheQryOrder(req_id_ - 1, nullptr, nullptr);
@@ -368,9 +390,7 @@ uint64_t XTPTradeHandler::GetXTPIdFromExtend(const char *ext_ctp_id, int len)
 		ret = std::stoull(p - xtp_id_len + 1);
 	}
 	catch (std::exception &e)
-	{
-		throw std::runtime_error("invalid xtp order id");
-	}
+	{}
 	
 	return ret;
 }
@@ -922,6 +942,23 @@ void XTPTradeHandler::OutputOrderQuery(XTPQueryOrderReq *req)
 	{
 		SerializeXTPQueryOrder(writer, req);
 	}
+	writer.EndObject();	// end data
+	writer.EndObject();	// end object
+	LOG(INFO) << s.GetString();
+}
+void XTPTradeHandler::OutputOrderQuery(uint64_t order_xtp_id)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("xtp_orderquery");
+
+	writer.Key("data");
+	writer.StartObject();
+	writer.Key("order_xtp_id");
+	writer.Uint64(order_xtp_id);
 	writer.EndObject();	// end data
 	writer.EndObject();	// end object
 	LOG(INFO) << s.GetString();
