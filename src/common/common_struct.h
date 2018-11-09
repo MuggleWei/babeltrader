@@ -234,6 +234,26 @@ struct PositionSummaryType1
 	{}
 };
 
+struct PositionSummaryType2
+{
+	std::string market;
+	std::string outside_user_id;
+	std::string exchange;
+	std::string type;
+	std::string symbol;
+	std::string dir;
+	double amount;
+	double avaliable_amount;
+	double avg_price;
+	double unrealized_profit;
+	double purchase_redeemable_qty;
+	int64_t executable_option;
+	int64_t lockable_position;
+	int64_t executable_underlying;
+	int64_t locked_position;
+	int64_t usable_locked_position;
+};
+
 struct PositionDetailType1
 {
 	std::string market;
@@ -277,6 +297,11 @@ struct PositionDetailType1
 		, position_profit_by_date(0)
 		, position_profit_by_trade(0)
 	{}
+};
+
+struct PositionDetailType2
+{
+	char reverse[8];
 };
 
 struct TradeAccountType1

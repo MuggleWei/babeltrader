@@ -52,12 +52,12 @@ def TestQueryOrder_XTP(trader):
 
 if __name__ == '__main__':
     # ctp test
-    # addr = "127.0.0.1:8001"
-    # fn = TestQueryOrder_CTP
+    addr = "127.0.0.1:8001"
+    fn = TestQueryOrder_CTP
 
     # xtp test
-    addr = "127.0.0.1:8002"
-    fn = TestQueryOrder_XTP
+    # addr = "127.0.0.1:8002"
+    # fn = TestQueryOrder_XTP
 
     trader = TraderQueryOrder(addr)
     fn(trader)

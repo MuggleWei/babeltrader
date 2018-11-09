@@ -111,7 +111,7 @@ void XTPTradeHandler::QueryOrder(uWS::WebSocket<uWS::SERVER> *ws, OrderQuery &or
 		qry_cache_.GetAndClearCacheQryOrder(req_id_ - 1, nullptr, nullptr);
 
 		char buf[512];
-		snprintf(buf, sizeof(buf) - 1, "failed in ReqQryOrder, return %d", ret);
+		snprintf(buf, sizeof(buf) - 1, "failed in QueryOrder, return %d", ret);
 		throw std::runtime_error(buf);
 	}
 }
@@ -154,14 +154,35 @@ void XTPTradeHandler::QueryTrade(uWS::WebSocket<uWS::SERVER> *ws, TradeQuery &tr
 		qry_cache_.GetAndClearCacheQryTrade(req_id_ - 1, nullptr, nullptr);
 
 		char buf[512];
-		snprintf(buf, sizeof(buf) - 1, "failed in ReqQryTrade, return %d", ret);
+		snprintf(buf, sizeof(buf) - 1, "failed in QueryTrade, return %d", ret);
 		throw std::runtime_error(buf);
 	}
 }
 void XTPTradeHandler::QueryPosition(uWS::WebSocket<uWS::SERVER> *ws, PositionQuery &position_query)
-{}
+{
+	if (api_ == nullptr || !api_ready_)
+	{
+		throw std::runtime_error("trade api not ready yet");
+	}
+
+	OutputPositionQuery(position_query.symbol.c_str());
+
+	qry_cache_.CacheQryPosition(req_id_, ws, position_query);
+
+	int ret = api_->QueryPosition(position_query.symbol.c_str(), xtp_session_id_, req_id_++);
+	if (ret != 0)
+	{
+		qry_cache_.GetAndCleanCacheQryPosition(req_id_ - 1, nullptr, nullptr);
+
+		char buf[512];
+		snprintf(buf, sizeof(buf) - 1, "failed in QueryPosition, return %d", ret);
+		throw std::runtime_error(buf);
+	}
+}
 void XTPTradeHandler::QueryPositionDetail(uWS::WebSocket<uWS::SERVER> *ws, PositionQuery &position_query)
-{}
+{
+	throw std::runtime_error("'QueryPositionDetail' not supported in xtp");
+}
 void XTPTradeHandler::QueryTradeAccount(uWS::WebSocket<uWS::SERVER> *ws, TradeAccountQuery &tradeaccount_query)
 {}
 void XTPTradeHandler::QueryProduct(uWS::WebSocket<uWS::SERVER> *ws, ProductQuery &query_product)
@@ -296,6 +317,51 @@ void XTPTradeHandler::OnQueryTrade(XTPQueryTradeRsp *trade_info, XTPRI *error_in
 		}
 
 		rsp_qry_trade_caches_.erase(request_id);
+	}
+}
+void XTPTradeHandler::OnQueryPosition(XTPQueryStkPositionRsp *position, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id)
+{
+	OutputRspPositionQuery(position, error_info, request_id, is_last, session_id);
+
+	auto it = rsp_qry_position_caches_.find(request_id);
+	if (it == rsp_qry_position_caches_.end())
+	{
+		std::vector<XTPQueryStkPositionRsp> vec;
+		rsp_qry_position_caches_[request_id] = std::move(vec);
+		it = rsp_qry_position_caches_.find(request_id);
+	}
+	if (position)
+	{
+		XTPQueryStkPositionRsp copy_position;
+		memcpy(&copy_position, position, sizeof(copy_position));
+		it->second.push_back(copy_position);
+	}
+
+	if (is_last)
+	{
+		uWS::WebSocket<uWS::SERVER>* ws;
+		PositionQuery position_qry;
+		qry_cache_.GetAndCleanCacheQryPosition(request_id, &ws, &position_qry);
+		std::vector<XTPQueryStkPositionRsp> &xtp_positions = rsp_qry_position_caches_[request_id];
+
+		if (ws)
+		{
+			std::vector<PositionSummaryType2> positions;
+			for (XTPQueryStkPositionRsp &xtp_position : xtp_positions)
+			{
+				PositionSummaryType2 common_position;
+				ConvertPositionXTP2Common(&xtp_position, common_position);
+				positions.push_back(std::move(common_position));
+			}
+
+			int error_id = 0;
+			if (error_info) {
+				error_id = error_info->error_id;
+			}
+			ws_service_.RspPositionQryType2(ws, position_qry, positions, error_id);
+		}
+
+		rsp_qry_position_caches_.erase(request_id);
 	}
 }
 
@@ -453,6 +519,24 @@ void XTPTradeHandler::ConvertTradeReportXTP2Common(XTPTradeReport *trade_info, O
 		order_deal.trade_id = ExtendXTPId(conf_.user_id.c_str(), trading_day_.c_str(), trade_info->report_index);
 		order_deal.ts = XTPGetTimestamp(trade_info->trade_time);
 	}
+}
+void XTPTradeHandler::ConvertPositionXTP2Common(XTPQueryStkPositionRsp *pPosition, PositionSummaryType2 &position_summary)
+{
+	position_summary.market = g_markets[Market_XTP];
+	position_summary.outside_user_id = conf_.user_id;
+	position_summary.exchange = "";
+	position_summary.type = "";
+	position_summary.dir = ConvertPositionDirXTP2Common(pPosition->position_direction);
+	position_summary.amount = pPosition->total_qty;
+	position_summary.avaliable_amount = pPosition->sellable_qty;
+	position_summary.avg_price = pPosition->avg_price;
+	position_summary.unrealized_profit = pPosition->unrealized_pnl;
+	position_summary.purchase_redeemable_qty = pPosition->purchase_redeemable_qty;
+	position_summary.executable_option = pPosition->executable_option;
+	position_summary.lockable_position = pPosition->lockable_position;
+	position_summary.executable_underlying = pPosition->executable_underlying;
+	position_summary.locked_position = pPosition->locked_position;
+	position_summary.usable_locked_position = pPosition->usable_locked_position;
 }
 
 std::string XTPTradeHandler::ExtendXTPId(const char *investor_id, const char *trading_day, uint64_t xtp_id)
@@ -667,6 +751,19 @@ std::string XTPTradeHandler::ConvertTradeDirXTP2Common(XTPTradeReport *trade_inf
 		return g_order_action[OrderAction_Sell];
 	}
 	return g_order_action[OrderAction_Unknown];
+}
+std::string XTPTradeHandler::ConvertPositionDirXTP2Common(XTP_POSITION_DIRECTION_TYPE dir)
+{
+	switch (dir)
+	{
+	case XTP_POSITION_DIRECTION_NET:
+		return g_order_dir[OrderDir_Net];
+	case XTP_POSITION_DIRECTION_LONG:
+		return g_order_dir[OrderDir_Long];
+	case XTP_POSITION_DIRECTION_SHORT:
+		return g_order_dir[OrderDir_Short];
+	}
+	return g_order_dir[OrderDir_Unknown];
 }
 OrderStatusEnum XTPTradeHandler::ConvertOrderStatusXTP2Common(XTP_ORDER_STATUS_TYPE order_status)
 {
@@ -947,6 +1044,53 @@ void XTPTradeHandler::SerializeXTPQueryTrade(rapidjson::Writer<rapidjson::String
 	writer.Key("end_time");
 	writer.Int64(qry->end_time);
 }
+void XTPTradeHandler::SerializeXTPPosition(rapidjson::Writer<rapidjson::StringBuffer> &writer, XTPQueryStkPositionRsp *rsp)
+{
+	writer.Key("ticker");
+	writer.String(rsp->ticker);
+
+	writer.Key("ticker_name");
+	writer.String(rsp->ticker_name);
+
+	writer.Key("market");
+	writer.Int((int)rsp->market);
+
+	writer.Key("total_qty");
+	writer.Int64(rsp->total_qty);
+
+	writer.Key("sellable_qty");
+	writer.Int64(rsp->sellable_qty);
+
+	writer.Key("avg_price");
+	writer.Double(rsp->avg_price);
+
+	writer.Key("unrealized_pnl");
+	writer.Double(rsp->unrealized_pnl);
+
+	writer.Key("yesterday_position");
+	writer.Int64(rsp->yesterday_position);
+
+	writer.Key("purchase_redeemable_qty");
+	writer.Int64(rsp->purchase_redeemable_qty);
+
+	writer.Key("position_direction");
+	writer.Int((int)rsp->position_direction);
+
+	writer.Key("executable_option");
+	writer.Int64(rsp->executable_option);
+
+	writer.Key("lockable_position");
+	writer.Int64(rsp->lockable_position);
+
+	writer.Key("executable_underlying");
+	writer.Int64(rsp->executable_underlying);
+
+	writer.Key("locked_position");
+	writer.Int64(rsp->locked_position);
+
+	writer.Key("usable_locked_position");
+	writer.Int64(rsp->usable_locked_position);
+}
 
 void XTPTradeHandler::OutputOrderInsert(XTPOrderInsertInfo &req)
 {
@@ -1071,42 +1215,6 @@ void XTPTradeHandler::OutputOrderQuery(XTPQueryOrderReq *req)
 	writer.EndObject();	// end object
 	LOG(INFO) << s.GetString();
 }
-void XTPTradeHandler::OutputRspOrderQuery(XTPQueryOrderRsp *order_info, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id)
-{
-	rapidjson::StringBuffer s;
-	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
-
-	writer.StartObject();
-	writer.Key("msg");
-	writer.String("xtp_rspqryorder");
-	writer.Key("req_id");
-	writer.Int(request_id);
-	writer.Key("is_last");
-	writer.Bool(is_last);
-	if (error_info)
-	{
-		writer.Key("error_id");
-		writer.Int(error_info->error_id);
-		writer.Key("error_msg");
-		writer.String(error_info->error_msg);
-	}
-	else
-	{
-		writer.Key("error_id");
-		writer.Int(0);
-	}
-
-	writer.Key("data");
-	writer.StartObject();
-	if (order_info)
-	{
-		SerializeXTPOrderInfo(writer, order_info);
-	}
-	writer.EndObject();
-
-	writer.EndObject();
-	LOG(INFO) << s.GetString();
-}
 void XTPTradeHandler::OutputTradeQuery(uint64_t trade_xtp_id)
 {
 	rapidjson::StringBuffer s;
@@ -1143,6 +1251,60 @@ void XTPTradeHandler::OutputTradeQuery(XTPQueryTraderReq *req)
 	writer.EndObject();	// end object
 	LOG(INFO) << s.GetString();
 }
+void XTPTradeHandler::OutputPositionQuery(const std::string &symbol)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("xtp_positionquery");
+
+	writer.Key("data");
+	writer.StartObject();
+	writer.Key("ticker");
+	writer.String(symbol.c_str());
+	writer.EndObject();	// end data
+	writer.EndObject();	// end object
+	LOG(INFO) << s.GetString();
+}
+
+void XTPTradeHandler::OutputRspOrderQuery(XTPQueryOrderRsp *order_info, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("xtp_rspqryorder");
+	writer.Key("req_id");
+	writer.Int(request_id);
+	writer.Key("is_last");
+	writer.Bool(is_last);
+	if (error_info)
+	{
+		writer.Key("error_id");
+		writer.Int(error_info->error_id);
+		writer.Key("error_msg");
+		writer.String(error_info->error_msg);
+	}
+	else
+	{
+		writer.Key("error_id");
+		writer.Int(0);
+	}
+
+	writer.Key("data");
+	writer.StartObject();
+	if (order_info)
+	{
+		SerializeXTPOrderInfo(writer, order_info);
+	}
+	writer.EndObject();
+
+	writer.EndObject();
+	LOG(INFO) << s.GetString();
+}
 void XTPTradeHandler::OutputRspTradeQuery(XTPQueryTradeRsp *trade_info, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id)
 {
 	rapidjson::StringBuffer s;
@@ -1173,6 +1335,42 @@ void XTPTradeHandler::OutputRspTradeQuery(XTPQueryTradeRsp *trade_info, XTPRI *e
 	if (trade_info)
 	{
 		SerializeXTPTradeReport(writer, trade_info);
+	}
+	writer.EndObject();
+
+	writer.EndObject();
+	LOG(INFO) << s.GetString();
+}
+void XTPTradeHandler::OutputRspPositionQuery(XTPQueryStkPositionRsp *position, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("xtp_rspqryposition");
+	writer.Key("req_id");
+	writer.Int(request_id);
+	writer.Key("is_last");
+	writer.Bool(is_last);
+	if (error_info)
+	{
+		writer.Key("error_id");
+		writer.Int(error_info->error_id);
+		writer.Key("error_msg");
+		writer.String(error_info->error_msg);
+	}
+	else
+	{
+		writer.Key("error_id");
+		writer.Int(0);
+	}
+
+	writer.Key("data");
+	writer.StartObject();
+	if (position)
+	{
+		SerializeXTPPosition(writer, position);
 	}
 	writer.EndObject();
 

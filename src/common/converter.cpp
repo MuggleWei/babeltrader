@@ -444,6 +444,42 @@ void SerializeProductType1(rapidjson::Writer<rapidjson::StringBuffer> &writer, c
 	writer.Double(product_type.short_margin_ratio);
 }
 
+void SerializePositionSummaryType2(rapidjson::Writer<rapidjson::StringBuffer> &writer, const PositionSummaryType2 &position_summary)
+{
+	writer.Key("market");
+	writer.String(position_summary.market.c_str());
+	writer.Key("outside_user_id");
+	writer.String(position_summary.outside_user_id.c_str());
+	writer.Key("exchange");
+	writer.String(position_summary.exchange.c_str());
+	writer.Key("type");
+	writer.String(position_summary.type.c_str());
+	writer.Key("symbol");
+	writer.String(position_summary.symbol.c_str());
+	writer.Key("dir");
+	writer.String(position_summary.dir.c_str());
+	writer.Key("amount");
+	writer.Double(position_summary.amount);
+	writer.Key("avaliable_amount");
+	writer.Double(position_summary.avaliable_amount);
+	writer.Key("avg_price");
+	writer.Double(position_summary.avg_price);
+	writer.Key("unrealized_profit");
+	writer.Double(position_summary.unrealized_profit);
+	writer.Key("purchase_redeemable_qty");
+	writer.Double(position_summary.purchase_redeemable_qty);
+	writer.Key("executable_option");
+	writer.Int64(position_summary.executable_option);
+	writer.Key("lockable_position");
+	writer.Int64(position_summary.lockable_position);
+	writer.Key("executable_underlying");
+	writer.Int64(position_summary.executable_underlying);
+	writer.Key("locked_position");
+	writer.Int64(position_summary.locked_position);
+	writer.Key("usable_locked_position");
+	writer.Int64(position_summary.usable_locked_position);
+}
+
 Order ConvertOrderJson2Common(rapidjson::Value &msg)
 {
 	Order order;

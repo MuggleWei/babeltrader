@@ -41,6 +41,7 @@ public:
 	virtual void OnTradeEvent(XTPTradeReport *trade_info, uint64_t session_id) override;
 	virtual void OnQueryOrder(XTPQueryOrderRsp *order_info, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id) override;
 	virtual void OnQueryTrade(XTPQueryTradeRsp *trade_info, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id) override;
+	virtual void OnQueryPosition(XTPQueryStkPositionRsp *position, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id) override;
 
 private:
 	void RunAPI();
@@ -56,6 +57,8 @@ private:
 	// convert xtp struct to common struct
 	void ConvertOrderInfoXTP2Common(XTPOrderInfo *order_info, Order &order, OrderStatusNotify &order_status_notify);
 	void ConvertTradeReportXTP2Common(XTPTradeReport *trade_info, Order &order, OrderDealNotify &order_deal);
+	void ConvertPositionXTP2Common(XTPQueryStkPositionRsp *pPosition, PositionSummaryType2 &position_summary);
+	
 
 	////////////////////////////////////////
 	// field convert
@@ -74,6 +77,7 @@ private:
 	std::string ConvertMarketTypeExchangeXTP2Common(XTP_MARKET_TYPE market);
 	std::string ConvertOrderDirXTP2Common(XTPOrderInfo *order_info);
 	std::string ConvertTradeDirXTP2Common(XTPTradeReport *trade_info);
+	std::string ConvertPositionDirXTP2Common(XTP_POSITION_DIRECTION_TYPE dir);
 	OrderStatusEnum ConvertOrderStatusXTP2Common(XTP_ORDER_STATUS_TYPE order_status);
 	OrderSubmitStatusEnum ConvertOrderSubmitStatusXTP2Common(XTP_ORDER_SUBMIT_STATUS_TYPE order_submit_status);
 
@@ -91,6 +95,7 @@ private:
 	void SerializeXTPTradeReport(rapidjson::Writer<rapidjson::StringBuffer> &writer, XTPTradeReport *trade_info);
 	void SerializeXTPQueryOrder(rapidjson::Writer<rapidjson::StringBuffer> &writer, XTPQueryOrderReq *qry);
 	void SerializeXTPQueryTrade(rapidjson::Writer<rapidjson::StringBuffer> &writer, XTPQueryTraderReq *qry);
+	void SerializeXTPPosition(rapidjson::Writer<rapidjson::StringBuffer> &writer, XTPQueryStkPositionRsp *rsp);
 
 	////////////////////////////////////////
 	// output
@@ -100,10 +105,13 @@ private:
 	void OutputOrderCancel(uint64_t order_xtp_id, uint64_t session_id);
 	void OutputOrderQuery(uint64_t order_xtp_id);
 	void OutputOrderQuery(XTPQueryOrderReq *req);
-	void OutputRspOrderQuery(XTPQueryOrderRsp *order_info, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id);
 	void OutputTradeQuery(uint64_t trade_xtp_id);
 	void OutputTradeQuery(XTPQueryTraderReq *req);
+	void OutputPositionQuery(const std::string &symbol);
+
+	void OutputRspOrderQuery(XTPQueryOrderRsp *order_info, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id);
 	void OutputRspTradeQuery(XTPQueryTradeRsp *trade_info, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id);
+	void OutputRspPositionQuery(XTPQueryStkPositionRsp *position, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id);
 
 private:
 	XTP::API::TraderApi *api_;
@@ -130,6 +138,7 @@ private:
 	// query results
 	std::map<int, std::vector<XTPQueryOrderRsp>> rsp_qry_order_caches_;
 	std::map<int, std::vector<XTPQueryTradeRsp>> rsp_qry_trade_caches_;
+	std::map<int, std::vector<XTPQueryStkPositionRsp>> rsp_qry_position_caches_;
 };
 
 

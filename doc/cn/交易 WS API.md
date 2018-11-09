@@ -8,6 +8,8 @@
     - [订单状态结构](#订单状态结构)
     - [订单成交结构](#订单成交结构)
     - [持仓结构](#持仓结构)
+        - [持仓结构类型1 (CTP)](#持仓结构类型1)
+        - [持仓结构类型2 (XTP)](#持仓结构类型2)
     - [持仓明细结构](#持仓明细结构)
     - [交易账户结构](#交易账户结构)
     - [产品信息结构](#产品信息结构)
@@ -160,8 +162,9 @@ ts(int64): 成交时间戳
 ```
 
 #### 持仓结构
-注意: 持仓结构根据上手的不同, 将会返回不同的类型, 要根据返回的position_summary_type来判断data内是什么结构体
+注意: 持仓结构根据上手的不同, 将会返回不同的类型, 要根据返回消息中的 position_summary_type 来判断data内是什么结构体
 
+###### 持仓结构类型1
 类型: type1
 上手: CTP
 示例:
@@ -225,6 +228,49 @@ position_cost(double): 持仓成本
 position_profit(double): 持仓盈亏
 close_profit_by_date(double): 盯市平仓盈亏
 close_profit_by_trade(double): 逐笔平仓盈亏
+```
+
+###### 持仓结构类型2
+类型: type2
+上手: XTP
+示例:
+```
+{
+    "market":"xtp",
+    "outside_user_id":"15033731",
+    "exchange":"",
+    "type":"",
+    "symbol":"",
+    "dir":"net",
+    "amount":100.0,
+    "avaliable_amount":0.0,
+    "avg_price":580.0,
+    "unrealized_profit":0.0,
+    "purchase_redeemable_qty":100.0,
+    "executable_option":0,
+    "lockable_position":0,
+    "executable_underlying":0,
+    "locked_position":0,
+    "usable_locked_position":0
+}
+```
+字段说明:
+```
+market(string): 市场API - 例如: ctp, xtp, ib, bitmex, okex
+outside_user_id(string): 上手交易账户id
+exchange(string): 交易所 - 例如：SHFE, SSE, NYMEX, bitmex, okex (使用公认的交易所缩写)
+type(string): 主题类型 - spot(现货), future(期货), option(期权)
+symbol(string): 符号 - 例如: rb, CL, btc, btc_usdt
+dir(string): 持仓方向 - long(多头), short(空头)
+amount(double/int): 当前仓位
+avaliable_amount(double/int): 可平仓位
+avg_price(double): 开仓均价
+unrealized_profit(double): 未实现盈亏
+executable_option(int): 可行权合约
+lockable_position(int): 可锁定标的
+executable_underlying(int): 可行权标的
+locked_position(int): 已锁定标的
+usable_locked_position(int): 可用已锁定标的
 ```
 
 #### 持仓明细结构

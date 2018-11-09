@@ -41,7 +41,7 @@ def TestQueryTrade_XTP(trader):
     trader.query_trade(
         qry_id=trader.qry_id,
         user_id="weidaizi",
-        trade_id="15033731_20181109_36567580332263381",
+        trade_id="",
         market="xtp",
         exchange="",
         type="",

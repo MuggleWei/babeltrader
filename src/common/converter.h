@@ -31,6 +31,8 @@ void SerializePositionDetailType1(rapidjson::Writer<rapidjson::StringBuffer> &wr
 void SerializeTradeAccountType1(rapidjson::Writer<rapidjson::StringBuffer> &writer, const TradeAccountType1 &trade_account);
 void SerializeProductType1(rapidjson::Writer<rapidjson::StringBuffer> &writer, const ProductType1 &product_type);
 
+void SerializePositionSummaryType2(rapidjson::Writer<rapidjson::StringBuffer> &writer, const PositionSummaryType2 &position_summary);
+
 Order ConvertOrderJson2Common(rapidjson::Value &msg);
 OrderQuery ConvertOrderQueryJson2Common(rapidjson::Value &msg);
 TradeQuery ConvertTradeQueryJson2Common(rapidjson::Value &msg);

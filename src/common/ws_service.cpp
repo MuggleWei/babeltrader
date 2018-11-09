@@ -414,6 +414,46 @@ void WsService::RspProductQryType1(uWS::WebSocket<uWS::SERVER>* ws, ProductQuery
 	SendMsgToClient(ws, s.GetString());
 }
 
+void WsService::RspPositionQryType2(uWS::WebSocket<uWS::SERVER>* ws, PositionQuery &position_qry, std::vector<PositionSummaryType2> &positions, int error_id)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("rsp_qryposition");
+	writer.Key("error_id");
+	writer.Int(error_id);
+
+	writer.Key("data");
+	writer.StartObject();
+
+	SerializePositionQuery(writer, position_qry);
+
+	writer.Key("position_summary_type");
+	writer.String("type2");
+
+	writer.Key("data");
+	writer.StartArray();
+
+	for (auto i = 0; i < positions.size(); i++)
+	{
+		writer.StartObject();
+		SerializePositionSummaryType2(writer, positions[i]);
+		writer.EndObject();
+	}
+
+	writer.EndArray();  // positions
+
+	writer.EndObject();  // data end
+
+	writer.EndObject();  // object end
+
+	LOG(INFO) << s.GetString();
+
+	SendMsgToClient(ws, s.GetString());
+}
+
 void WsService::MessageLoop()
 {
 	std::queue<WsTunnelMsg> queue;

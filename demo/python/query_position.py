@@ -1,20 +1,14 @@
-import time
-
 from trader import Trader
 
 
 class TraderQueryPosition(Trader):
-    def __init__(self):
-        addr = "127.0.0.1:8001"
+    def __init__(self, addr):
         Trader.__init__(self, addr=addr)
 
         self.qry_id = "3"
 
 
-if __name__ == '__main__':
-    trader = TraderQueryPosition()
-
-    ts = time.time()
+def TestQueryPosition_CTP(trader):
     trader.query_position(
         qry_id=trader.qry_id,
         user_id="weidaizi",
@@ -25,5 +19,31 @@ if __name__ == '__main__':
         contract="1901",
         contract_id="1901"
     )
+
+
+def TestQueryPosition_XTP(trader):
+    trader.query_position(
+        qry_id=trader.qry_id,
+        user_id="weidaizi",
+        market="ctp",
+        exchange="",
+        type="",
+        symbol="600519",
+        contract="",
+        contract_id=""
+    )
+
+
+if __name__ == '__main__':
+    # ctp
+    addr = "127.0.0.1:8001"
+    fn = TestQueryPosition_CTP
+
+    # xtp
+    # addr = "127.0.0.1:8002"
+    # fn = TestQueryPosition_XTP
+
+    trader = TraderQueryPosition(addr)
+    fn(trader)
 
     trader.message_loop()
