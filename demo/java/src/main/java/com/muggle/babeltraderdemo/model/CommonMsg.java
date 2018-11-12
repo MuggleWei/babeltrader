@@ -1,8 +1,8 @@
 package com.muggle.babeltraderdemo.model;
 
-public class InsertOrder {
+public class CommonMsg {
     String msg;
-    Order data;
+    QueryMsg data;
 
     public String getMsg() {
         return msg;
@@ -12,11 +12,11 @@ public class InsertOrder {
         this.msg = msg;
     }
 
-    public Order getData() {
+    public QueryMsg getData() {
         return data;
     }
 
-    public void setData(Order data) {
+    public void setData(QueryMsg data) {
         this.data = data;
     }
 }

@@ -1,6 +1,9 @@
 package com.muggle.babeltraderdemo.model;
 
-public class Order {
+import com.fasterxml.jackson.annotation.JsonInclude;
+
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class QueryMsg {
     String user_id;
     String order_id;
     String outside_id;
@@ -18,6 +21,8 @@ public class Order {
     Integer amount;
     Double total_price;
     Long ts;
+    String qry_id;
+    String trade_id;
 
     public String getUser_id() {
         return user_id;
@@ -153,5 +158,21 @@ public class Order {
 
     public void setTs(Long ts) {
         this.ts = ts;
+    }
+
+    public String getQry_id() {
+        return qry_id;
+    }
+
+    public void setQry_id(String qry_id) {
+        this.qry_id = qry_id;
+    }
+
+    public String getTrade_id() {
+        return trade_id;
+    }
+
+    public void setTrade_id(String trade_id) {
+        this.trade_id = trade_id;
     }
 }

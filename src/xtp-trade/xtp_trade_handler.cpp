@@ -255,7 +255,7 @@ void XTPTradeHandler::OnQueryOrder(XTPQueryOrderRsp *order_info, XTPRI *error_in
 		rsp_qry_order_caches_[request_id] = std::move(vec);
 		it = rsp_qry_order_caches_.find(request_id);
 	}
-	if (order_info)
+	if (order_info && order_info->order_cancel_xtp_id == 0)
 	{
 		XTPQueryOrderRsp copy_order;
 		memcpy(&copy_order, order_info, sizeof(copy_order));
@@ -592,6 +592,7 @@ void XTPTradeHandler::ConvertPositionXTP2Common(XTPQueryStkPositionRsp *pPositio
 	position_summary.outside_user_id = conf_.user_id;
 	position_summary.exchange = "";
 	position_summary.type = "";
+	position_summary.symbol = pPosition->ticker;
 	position_summary.dir = ConvertPositionDirXTP2Common(pPosition->position_direction);
 	position_summary.amount = pPosition->total_qty;
 	position_summary.avaliable_amount = pPosition->sellable_qty;
