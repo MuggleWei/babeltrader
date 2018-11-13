@@ -65,6 +65,36 @@ struct OrderBook
 	std::vector<PriceVol> asks;
 };
 
+struct OrderBookLevel2Entrust
+{
+	int64_t channel_no;
+	int64_t seq;
+	double price;
+	double vol;
+	std::string dir;
+	std::string order_type;
+};
+
+struct OrderBookLevel2Trade
+{
+	int64_t channel_no;
+	int64_t seq;
+	double price;
+	double vol;
+	int64_t bid_no;
+	int64_t ask_no;
+	std::string trade_flag;
+};
+
+struct OrderBookLevel2
+{
+	int64_t ts;
+	int64_t seq;
+	OrderBookL2Action action;
+	OrderBookLevel2Entrust entrust;
+	OrderBookLevel2Trade trade;
+};
+
 struct Kline
 {
 	int64_t ts;

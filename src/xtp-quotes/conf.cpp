@@ -124,6 +124,24 @@ bool LoadConfig(const std::string &file_path, XTPQuoteConf &conf)
 			conf.sub_all = 0;
 		}
 
+		if (doc.HasMember("sub_Level2") && doc["sub_Level2"].IsInt())
+		{
+			conf.sub_l2 = doc["sub_Level2"].GetInt();
+		}
+		else
+		{
+			conf.sub_l2 = 0;
+		}
+
+		if (doc.HasMember("sub_orderbook") && doc["sub_orderbook"].IsInt())
+		{
+			conf.sub_orderbook = doc["sub_orderbook"].GetInt();
+		}
+		else
+		{
+			conf.sub_orderbook = 0;
+		}
+
 		if (doc.HasMember("default_sub_topics") && doc["default_sub_topics"].IsArray())
 		{
 			auto topics = doc["default_sub_topics"].GetArray();

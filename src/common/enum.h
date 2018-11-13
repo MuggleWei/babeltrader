@@ -54,6 +54,7 @@ enum OrderTypeEnum
 	OrderType_Unknown = 0,
 	OrderType_Limit,	// limit price
 	OrderType_Market,	// market price
+	OrderType_Best,		// best price
 	OrderType_Max,
 };
 extern const char *g_order_type[OrderType_Max];
@@ -80,6 +81,8 @@ enum OrderActionEnum
 	OrderAction_ForceClose,
 	OrderAction_Buy,
 	OrderAction_Sell,
+	OrderAction_Borrow,
+	OrderAction_Lend,
 	OrderAction_Max,
 };
 extern const char *g_order_action[OrderAction_Max];
@@ -122,6 +125,26 @@ enum OrderSubmitStatusEnum
 	OrderSubmitStatus_Accepted = 2,
 	OrderSubmitStatus_Rejected = 3,
 };
+
+enum OrderBookL2Action
+{
+	OrderBookL2Action_Unknown = 0,
+	OrderBookL2Action_Entrust,
+	OrderBookL2Action_Trade,
+	OrderBookL2Action_Max
+};
+extern const char *g_orderbookl2_action[OrderBookL2Action_Max];
+
+enum OrderBookL2TradeFlag
+{
+	OrderBookL2TradeFlag_Unknown = 0,
+	OrderBookL2TradeFlag_Buy,
+	OrderBookL2TradeFlag_Sell,
+	OrderBookL2TradeFlag_Cancel,
+	OrderBookL2TradeFlag_Deal,
+	OrderBookL2TradeFlag_Max,
+};
+extern const char *g_orderbookl2_trade_flag[OrderBookL2TradeFlag_Max];
 
 }
 

@@ -42,7 +42,8 @@ const char *g_product_types[ProductType_Max] = {
 const char *g_order_type[OrderType_Max] = {
 	"",
 	"limit",
-	"market"
+	"market",
+	"best"
 };
 
 const char *g_order_flag1[OrderFlag1_Max] = {
@@ -61,7 +62,9 @@ const char *g_order_action[OrderAction_Max] = {
 	"closehistory",
 	"forceclose",
 	"buy",
-	"sell"
+	"sell",
+	"borrow",
+	"lend"
 };
 
 const char *g_order_dir[OrderDir_Max] = {
@@ -76,6 +79,20 @@ const char *g_account_type[AccountType_Max] = {
 	"normal",
 	"credit",
 	"derivatives"
+};
+
+const char *g_orderbookl2_action[OrderBookL2Action_Max] = {
+	"",
+	"entrust",
+	"trade"
+};
+
+const char *g_orderbookl2_trade_flag[OrderBookL2TradeFlag_Max] = {
+	"",
+	"buy",
+	"sell",
+	"cancel",
+	"deal"
 };
 
 }

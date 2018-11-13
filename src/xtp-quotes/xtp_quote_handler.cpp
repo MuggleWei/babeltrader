@@ -27,6 +27,10 @@ void XTPQuoteHandler::run()
 		topic_exchange_[topic.symbol] = GetExchangeType(topic.exchange);
 	}
 
+	// quote message dispatch loop
+	std::thread th(&XTPQuoteHandler::QuoteMessageLoop, this);
+	th.detach();
+
 	// init xtp api
 	RunAPI();
 
@@ -88,7 +92,14 @@ void XTPQuoteHandler::SubTopic(const Quote &msg)
 	strncpy(buf[0], msg.symbol.c_str(), 64 - 1);
 
 	api_->SubscribeMarketData(topics, 1, GetExchangeType(msg.exchange));
-	api_->SubscribeOrderBook(topics, 1, GetExchangeType(msg.exchange));
+	if (conf_.sub_orderbook)
+	{
+		api_->SubscribeOrderBook(topics, 1, GetExchangeType(msg.exchange));
+	}
+	if (conf_.sub_l2)
+	{
+		api_->SubscribeTickByTick(topics, 1, GetExchangeType(msg.exchange));
+	}
 }
 void XTPQuoteHandler::UnsubTopic(const Quote &msg)
 {
@@ -112,7 +123,14 @@ void XTPQuoteHandler::UnsubTopic(const Quote &msg)
 	strncpy(buf[0], msg.symbol.c_str(), 64 - 1);
 
 	api_->UnSubscribeMarketData(topics, 1, exhange_type);
-	api_->UnSubscribeOrderBook(topics, 1, exhange_type);
+	if (conf_.sub_orderbook)
+	{
+		api_->UnSubscribeOrderBook(topics, 1, exhange_type);
+	}
+	if (conf_.sub_l2)
+	{
+		api_->UnSubscribeTickByTick(topics, 1, GetExchangeType(msg.exchange));
+	}
 }
 
 
@@ -174,15 +192,20 @@ void XTPQuoteHandler::OnUnSubMarketData(XTPST *ticker, XTPRI *error_info, bool i
 }
 void XTPQuoteHandler::OnSubOrderBook(XTPST *ticker, XTPRI *error_info, bool is_last)
 {
-	// output
 	OutputRspSubOrderBook(ticker, error_info, is_last);
 }
 void XTPQuoteHandler::OnUnSubOrderBook(XTPST *ticker, XTPRI *error_info, bool is_last)
 {
 	OutputRspUnsubOrderBook(ticker, error_info, is_last);
 }
-void XTPQuoteHandler::OnSubTickByTick(XTPST *ticker, XTPRI *error_info, bool is_last) {}
-void XTPQuoteHandler::OnUnSubTickByTick(XTPST *ticker, XTPRI *error_info, bool is_last) {}
+void XTPQuoteHandler::OnSubTickByTick(XTPST *ticker, XTPRI *error_info, bool is_last)
+{
+	OutputRspSubTickByTick(ticker, error_info, is_last);
+}
+void XTPQuoteHandler::OnUnSubTickByTick(XTPST *ticker, XTPRI *error_info, bool is_last)
+{
+	OutputRspUnsubTickByTick(ticker, error_info, is_last);
+}
 
 void XTPQuoteHandler::OnSubscribeAllMarketData(XTP_EXCHANGE_TYPE exchange_id, XTPRI *error_info) {}
 void XTPQuoteHandler::OnUnSubscribeAllMarketData(XTP_EXCHANGE_TYPE exchange_id, XTPRI *error_info) {}
@@ -194,42 +217,45 @@ void XTPQuoteHandler::OnUnSubscribeAllTickByTick(XTP_EXCHANGE_TYPE exchange_id, 
 void XTPQuoteHandler::OnDepthMarketData(XTPMD *market_data, int64_t bid1_qty[], int32_t bid1_count, int32_t max_bid1_count, int64_t ask1_qty[], int32_t ask1_count, int32_t max_ask1_count)
 {
 #ifndef NDEBUG
-	OutputMarketData(market_data, bid1_qty, bid1_count, max_bid1_count, ask1_qty, ask1_count, max_ask1_count);
+	// OutputMarketData(market_data, bid1_qty, bid1_count, max_bid1_count, ask1_qty, ask1_count, max_ask1_count);
 #endif
 
-	// convert to common struct
-	Quote quote;
-	MarketData md;
+	static_assert(XTPQuoteBlockSize > sizeof(XTPMD), "quote block size not enough");
 
-	ConvertMarketData(market_data, quote, md);
+	XTPQuoteBlock msg = { 0 };
+	msg.quote_type = XTPQuoteType_MarketData;
+	memcpy(msg.buf, market_data, sizeof(*market_data));
 
-	BroadcastMarketData(quote, md);
-
-	// try update kline
-	int64_t sec = (int64_t)time(nullptr);
-	Kline kline;
-	if (kline_builder_.updateMarketData(sec, market_data->ticker, md, kline)) {
-		quote.info1 = "kline";
-		quote.info2 = "1m";
-		BroadcastKline(quote, kline);
-	}
-
+	quote_tunnel_.Write(std::move(msg));
 }
 void XTPQuoteHandler::OnOrderBook(XTPOB *order_book)
 {
 #ifndef NDEBUG
-	OutputOrderBook(order_book);
+	// OutputOrderBook(order_book);
 #endif
 
-	// convert to common struct
-	Quote quote;
-	OrderBook common_order_book;
+	static_assert(XTPQuoteBlockSize > sizeof(XTPOB), "quote block size not enough");
 
-	ConvertOrderBook(order_book, quote, common_order_book);
+	XTPQuoteBlock msg = { 0 };
+	msg.quote_type = XTPQuoteType_OrderBook;
+	memcpy(msg.buf, order_book, sizeof(*order_book));
 
-	BroadcastOrderBook(quote, common_order_book);
+	quote_tunnel_.Write(std::move(msg));
 }
-void XTPQuoteHandler::OnTickByTick(XTPTBT *tbt_data) {}
+void XTPQuoteHandler::OnTickByTick(XTPTBT *tbt_data)
+{
+#ifndef NDEBUG
+	// OutputTickByTick(tbt_data);
+#endif
+
+	static_assert(XTPQuoteBlockSize > sizeof(XTPTBT), "quote block size not enough");
+
+	XTPQuoteBlock msg = { 0 };
+	msg.quote_type = XTPQuoteType_TickByTick;
+	memcpy(msg.buf, tbt_data, sizeof(*tbt_data));
+
+	quote_tunnel_.Write(std::move(msg));
+}
 
 
 void XTPQuoteHandler::RunAPI()
@@ -300,6 +326,68 @@ void XTPQuoteHandler::Reconn()
 	} while (ret != 0);
 
 	SubTopics();
+}
+
+void XTPQuoteHandler::QuoteMessageLoop()
+{
+	std::queue<XTPQuoteBlock> queue;
+	while (true) {
+		quote_tunnel_.Read(queue, true);
+		while (queue.size()) {
+			LOG(INFO) << queue.size();
+			XTPQuoteBlock &msg = queue.front();
+			BroadcastQuote(msg);
+			queue.pop();
+		}
+	}
+}
+void XTPQuoteHandler::BroadcastQuote(XTPQuoteBlock &block)
+{
+	switch (block.quote_type)
+	{
+	case XTPQuoteType_MarketData:
+	{
+		XTPMD *market_data = (XTPMD*)&block.buf;
+
+		Quote quote;
+		MarketData md;
+
+		ConvertMarketData(market_data, quote, md);
+
+		BroadcastMarketData(quote, md);
+
+		// try update kline
+		int64_t sec = (int64_t)time(nullptr);
+		Kline kline;
+		if (kline_builder_.updateMarketData(sec, market_data->ticker, md, kline)) {
+			quote.info1 = "kline";
+			quote.info2 = "1m";
+			BroadcastKline(quote, kline);
+		}
+	}break;
+	case XTPQuoteType_OrderBook:
+	{
+		XTPOB *order_book = (XTPOB*)block.buf;
+
+		Quote quote;
+		OrderBook common_order_book;
+
+		ConvertOrderBook(order_book, quote, common_order_book);
+
+		BroadcastOrderBook(quote, common_order_book);
+	}break;
+	case XTPQuoteType_TickByTick:
+	{
+		XTPTBT *tbt_data = (XTPTBT*)block.buf;
+
+		Quote quote;
+		OrderBookLevel2 level2;
+
+		ConvertTickByTick(tbt_data, quote, level2);
+
+		BroadcastLevel2(quote, level2);
+	}break;
+	}
 }
 
 void XTPQuoteHandler::OutputFrontDisconnected()
@@ -409,6 +497,55 @@ void XTPQuoteHandler::OutputRspUnsubOrderBook(XTPST *ticker, XTPRI *error_info, 
 	writer.EndObject();
 	LOG(INFO) << s.GetString();
 }
+void XTPQuoteHandler::OutputRspSubTickByTick(XTPST *ticker, XTPRI *error_info, bool is_last)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("rspsubtickbytick");
+	writer.Key("error_id");
+	writer.Int(error_info->error_id);
+	writer.Key("error_msg");
+	writer.String(error_info->error_msg);
+
+	writer.Key("data");
+	writer.StartObject();
+	writer.Key("exhange");
+	writer.String(ConvertExchangeType2Str(ticker->exchange_id));
+	writer.Key("symbol");
+	writer.String(ticker->ticker);
+	writer.EndObject();
+
+	writer.EndObject();
+	LOG(INFO) << s.GetString();
+}
+void XTPQuoteHandler::OutputRspUnsubTickByTick(XTPST *ticker, XTPRI *error_info, bool is_last)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("rspunsubtickbytick");
+	writer.Key("error_id");
+	writer.Int(error_info->error_id);
+	writer.Key("error_msg");
+	writer.String(error_info->error_msg);
+
+	writer.Key("data");
+	writer.StartObject();
+	writer.Key("exhange");
+	writer.String(ConvertExchangeType2Str(ticker->exchange_id));
+	writer.Key("symbol");
+	writer.String(ticker->ticker);
+	writer.EndObject();
+
+	writer.EndObject();
+	LOG(INFO) << s.GetString();
+}
+
 void XTPQuoteHandler::OutputMarketData(XTPMD *market_data, int64_t bid1_qty[], int32_t bid1_count, int32_t max_bid1_count, int64_t ask1_qty[], int32_t ask1_count, int32_t max_ask1_count)
 {
 	rapidjson::StringBuffer s;
@@ -576,6 +713,80 @@ void XTPQuoteHandler::OutputOrderBook(XTPOB *order_book)
 	LOG(INFO) << s.GetString();
 
 }
+void XTPQuoteHandler::OutputTickByTick(XTPTBT *tbt_data)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("tickbytick");
+	writer.Key("data");
+	writer.StartObject();
+
+	if (tbt_data)
+	{
+		writer.Key("exchange_id");
+		writer.Int((int)tbt_data->exchange_id);
+		writer.Key("ticker");
+		writer.String(tbt_data->ticker);
+		writer.Key("seq");
+		writer.Int64(tbt_data->seq);
+		writer.Key("data_time");
+		writer.Int64(tbt_data->data_time);
+		writer.Key("type");
+		writer.Int((int)tbt_data->type);
+		switch (tbt_data->type)
+		{
+		case XTP_TBT_ENTRUST:
+		{
+			char buf[2] = { 0 };
+			writer.Key("channel_no");
+			writer.Int(tbt_data->entrust.channel_no);
+			writer.Key("seq");
+			writer.Int64(tbt_data->entrust.seq);
+			writer.Key("price");
+			writer.Double(tbt_data->entrust.price);
+			writer.Key("qty");
+			writer.Int64(tbt_data->entrust.qty);
+
+			buf[0] = tbt_data->entrust.side;
+			writer.Key("side");
+			writer.String(buf);
+			buf[0] = tbt_data->entrust.ord_type;
+			writer.Key("ord_type");
+			writer.String(buf);
+		}break;
+		case XTP_TBT_TRADE:
+		{
+			char buf[2] = { 0 };
+			writer.Key("channel_no");
+			writer.Int(tbt_data->trade.channel_no);
+			writer.Key("seq");
+			writer.Int64(tbt_data->trade.seq);
+			writer.Key("price");
+			writer.Double(tbt_data->trade.price);
+			writer.Key("qty");
+			writer.Int64(tbt_data->trade.qty);
+			writer.Key("money");
+			writer.Double(tbt_data->trade.money);
+			writer.Key("bid_no");
+			writer.Int64(tbt_data->trade.bid_no);
+			writer.Key("ask_no");
+			writer.Int64(tbt_data->trade.ask_no);
+			buf[0] = tbt_data->trade.trade_flag;
+			writer.Key("trade_flag");
+			writer.String(buf);
+		}break;
+		}
+	}
+
+	writer.EndObject(); // data
+
+	writer.EndObject(); // object
+
+	LOG(INFO) << s.GetString();
+}
 
 void XTPQuoteHandler::ConvertMarketData(XTPMD *market_data, Quote &quote, MarketData &md)
 {
@@ -633,6 +844,39 @@ void XTPQuoteHandler::ConvertOrderBook(XTPOB *xtp_order_book, Quote &quote, Orde
 		order_book.asks.push_back({ xtp_order_book->ask[i], xtp_order_book->ask_qty[i] });
 	}
 }
+void XTPQuoteHandler::ConvertTickByTick(XTPTBT *tbt_data, Quote &quote, OrderBookLevel2 &level2)
+{
+	quote.market = g_markets[Market_XTP];
+	quote.exchange = ConvertExchangeType2Str(tbt_data->exchange_id);
+	quote.symbol = tbt_data->ticker;
+	quote.contract = "";
+	quote.contract_id = "";
+	quote.info1 = "level2";
+	quote.info2 = "";
+
+	level2.ts = XTPGetTimestamp(tbt_data->data_time);
+	if (tbt_data->type == XTP_TBT_ENTRUST)
+	{
+		level2.action = OrderBookL2Action_Entrust;
+		level2.entrust.channel_no = tbt_data->entrust.channel_no;
+		level2.entrust.seq = tbt_data->entrust.seq;
+		level2.entrust.price = tbt_data->entrust.price;
+		level2.entrust.vol = tbt_data->entrust.qty;
+		level2.entrust.dir = ConvertOrderAction(tbt_data->entrust.side);
+		level2.entrust.order_type = ConvertOrderType(tbt_data->entrust.ord_type);
+	}
+	else
+	{
+		level2.action = OrderBookL2Action_Trade;
+		level2.trade.channel_no = tbt_data->trade.channel_no;
+		level2.trade.seq = tbt_data->trade.seq;
+		level2.trade.price = tbt_data->trade.price;
+		level2.trade.vol = tbt_data->trade.qty;
+		level2.trade.bid_no = tbt_data->trade.bid_no;
+		level2.trade.ask_no = tbt_data->trade.ask_no;
+		level2.trade.trade_flag = ConvertTradeFlag(tbt_data->trade.trade_flag);
+	}
+}
 
 void XTPQuoteHandler::BroadcastMarketData(const Quote &quote, const MarketData &md)
 {
@@ -644,9 +888,16 @@ void XTPQuoteHandler::BroadcastMarketData(const Quote &quote, const MarketData &
 	SerializeMarketData(writer, md);
 	SerializeQuoteEnd(writer, quote);
 
-#ifndef NDEBUG
-	LOG(INFO) << s.GetString();
-#endif
+	uws_hub_.getDefaultGroup<uWS::SERVER>().broadcast(s.GetString(), s.GetLength(), uWS::OpCode::TEXT);
+}
+void XTPQuoteHandler::BroadcastKline(const Quote &quote, const Kline &kline)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	SerializeQuoteBegin(writer, quote);
+	SerializeKline(writer, kline);
+	SerializeQuoteEnd(writer, quote);
 
 	uws_hub_.getDefaultGroup<uWS::SERVER>().broadcast(s.GetString(), s.GetLength(), uWS::OpCode::TEXT);
 }
@@ -660,24 +911,16 @@ void XTPQuoteHandler::BroadcastOrderBook(const Quote &quote, const OrderBook &or
 	SerializeOrderBook(writer, order_book);
 	SerializeQuoteEnd(writer, quote);
 
-#ifndef NDEBUG
-	LOG(INFO) << s.GetString();
-#endif
-
 	uws_hub_.getDefaultGroup<uWS::SERVER>().broadcast(s.GetString(), s.GetLength(), uWS::OpCode::TEXT);
 }
-void XTPQuoteHandler::BroadcastKline(const Quote &quote, const Kline &kline)
+void XTPQuoteHandler::BroadcastLevel2(const Quote &quote, const OrderBookLevel2 &level2)
 {
 	rapidjson::StringBuffer s;
 	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
 
 	SerializeQuoteBegin(writer, quote);
-	SerializeKline(writer, kline);
+	SerializeLevel2(writer, level2);
 	SerializeQuoteEnd(writer, quote);
-
-#ifndef NDEBUG
-	LOG(INFO) << s.GetString();
-#endif
 
 	uws_hub_.getDefaultGroup<uWS::SERVER>().broadcast(s.GetString(), s.GetLength(), uWS::OpCode::TEXT);
 }
@@ -687,7 +930,14 @@ void XTPQuoteHandler::SubTopics()
 	if (conf_.sub_all)
 	{
 		api_->SubscribeAllMarketData();
-		api_->SubscribeAllOrderBook();
+		if (conf_.sub_orderbook)
+		{
+			api_->SubscribeAllOrderBook();
+		}
+		if (conf_.sub_l2)
+		{
+			api_->SubscribeAllTickByTick();
+		}
 	}
 	else
 	{
@@ -702,7 +952,14 @@ void XTPQuoteHandler::SubTopics()
 			if (it->second == false) {
 				strncpy(buf[0], it->first.c_str(), sizeof(buf[0]) - 1);
 				api_->SubscribeMarketData(topics, 1, topic_exchange_[it->first]);
-				api_->SubscribeOrderBook(topics, 1, topic_exchange_[it->first]);
+				if (conf_.sub_orderbook)
+				{
+					api_->SubscribeOrderBook(topics, 1, topic_exchange_[it->first]);
+				}
+				if (conf_.sub_l2)
+				{
+					api_->SubscribeTickByTick(topics, 1, topic_exchange_[it->first]);
+				}
 			}
 		}
 	}
@@ -729,4 +986,37 @@ const char* XTPQuoteHandler::ConvertExchangeType2Str(XTP_EXCHANGE_TYPE exchange_
 	case XTP_EXCHANGE_SZ: return exchange_SZSE;
 	default: return exchange_UNKNOWN;
 	}
+}
+
+const char* XTPQuoteHandler::ConvertOrderAction(char side)
+{
+	switch (side)
+	{
+	case '1': return g_order_action[OrderAction_Buy];
+	case '2': return g_order_action[OrderAction_Sell];
+	case 'G': return g_order_action[OrderAction_Borrow];
+	case 'F': return g_order_action[OrderAction_Lend];
+	}
+	return g_order_action[OrderAction_Unknown];
+}
+const char* XTPQuoteHandler::ConvertOrderType(char order_type)
+{
+	switch (order_type)
+	{
+	case '1': return g_order_type[OrderType_Market];
+	case '2': return g_order_type[OrderType_Limit];
+	case 'U': return g_order_type[OrderType_Best];
+	}
+	return g_order_type[OrderType_Unknown];
+}
+const char* XTPQuoteHandler::ConvertTradeFlag(char trade_flag)
+{
+	switch (trade_flag)
+	{
+	case 'B': return g_orderbookl2_trade_flag[OrderBookL2TradeFlag_Buy];
+	case 'S': return g_orderbookl2_trade_flag[OrderBookL2TradeFlag_Sell];
+	case '4': return g_orderbookl2_trade_flag[OrderBookL2TradeFlag_Cancel];
+	case 'F': return g_orderbookl2_trade_flag[OrderBookL2TradeFlag_Deal];
+	}
+	return g_orderbookl2_action[OrderBookL2TradeFlag_Unknown];
 }

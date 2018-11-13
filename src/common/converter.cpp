@@ -142,6 +142,51 @@ void SerializeKline(rapidjson::Writer<rapidjson::StringBuffer> &writer, const Kl
 	writer.Key("vol");
 	writer.Double(kline.vol);
 }
+void SerializeLevel2(rapidjson::Writer<rapidjson::StringBuffer> &writer, const OrderBookLevel2 &level2)
+{
+	writer.Key("ts");
+	writer.Int64(level2.ts);
+	writer.Key("action");
+	writer.String(g_orderbookl2_action[level2.action]);
+	writer.Key("data");
+	writer.StartObject();
+	switch (level2.action)
+	{
+	case OrderBookL2Action_Entrust:
+	{
+		writer.Key("channel_no");
+		writer.Int64(level2.entrust.channel_no);
+		writer.Key("seq");
+		writer.Int64(level2.entrust.seq);
+		writer.Key("price");
+		writer.Double(level2.entrust.price);
+		writer.Key("vol");
+		writer.Double(level2.entrust.vol);
+		writer.Key("dir");
+		writer.String(level2.entrust.dir.c_str());
+		writer.Key("order_type");
+		writer.String(level2.entrust.order_type.c_str());
+	}break;
+	case OrderBookL2Action_Trade:
+	{
+		writer.Key("channel_no");
+		writer.Int64(level2.trade.channel_no);
+		writer.Key("seq");
+		writer.Int64(level2.trade.seq);
+		writer.Key("price");
+		writer.Double(level2.trade.price);
+		writer.Key("vol");
+		writer.Double(level2.trade.vol);
+		writer.Key("bid_no");
+		writer.Int64(level2.trade.bid_no);
+		writer.Key("ask_no");
+		writer.Int64(level2.trade.ask_no);
+		writer.Key("trade_flag");
+		writer.String(level2.trade.trade_flag.c_str());
+	}break;
+	}
+	writer.EndObject();
+}
 
 void SerializeOrder(rapidjson::Writer<rapidjson::StringBuffer> &writer, const Order &order)
 {
