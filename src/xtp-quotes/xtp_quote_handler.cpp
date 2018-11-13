@@ -62,6 +62,11 @@ std::vector<Quote> XTPQuoteHandler::GetSubTopics(std::vector<bool> &vec_b)
 }
 void XTPQuoteHandler::SubTopic(const Quote &msg)
 {
+	if (conf_.sub_all)
+	{
+		return;
+	}
+
 	{
 		std::unique_lock<std::mutex> lock(topic_mtx_);
 		if (sub_topics_.find(msg.symbol) != sub_topics_.end() && sub_topics_[msg.symbol] == true) {
@@ -81,6 +86,11 @@ void XTPQuoteHandler::SubTopic(const Quote &msg)
 }
 void XTPQuoteHandler::UnsubTopic(const Quote &msg)
 {
+	if (conf_.sub_all)
+	{
+		return;
+	}
+
 	XTP_EXCHANGE_TYPE exhange_type = XTP_EXCHANGE_UNKNOWN;
 	{
 		std::unique_lock<std::mutex> lock(topic_mtx_);
@@ -261,6 +271,8 @@ void XTPQuoteHandler::Reconn()
 			conf_.user_id.c_str(), conf_.password.c_str(),
 			(XTP_PROTOCOL_TYPE)conf_.quote_protocol);
 	} while (ret != 0);
+
+	SubTopics();
 }
 
 void XTPQuoteHandler::OutputFrontDisconnected()
@@ -492,17 +504,24 @@ void XTPQuoteHandler::BroadcastKline(const Quote &quote, const Kline &kline)
 
 void XTPQuoteHandler::SubTopics()
 {
-	char buf[2][64];
-	char* topics[2];
-	for (int i = 0; i < 2; i++) {
-		topics[i] = buf[i];
+	if (conf_.sub_all)
+	{
+		api_->SubscribeAllMarketData();
 	}
+	else
+	{
+		char buf[2][64];
+		char* topics[2];
+		for (int i = 0; i < 2; i++) {
+			topics[i] = buf[i];
+		}
 
-	std::unique_lock<std::mutex> lock(topic_mtx_);
-	for (auto it = sub_topics_.begin(); it != sub_topics_.end(); ++it) {
-		if (it->second == false) {
-			strncpy(buf[0], it->first.c_str(), sizeof(buf[0]) - 1);
-			api_->SubscribeMarketData(topics, 1, topic_exchange_[it->first]);
+		std::unique_lock<std::mutex> lock(topic_mtx_);
+		for (auto it = sub_topics_.begin(); it != sub_topics_.end(); ++it) {
+			if (it->second == false) {
+				strncpy(buf[0], it->first.c_str(), sizeof(buf[0]) - 1);
+				api_->SubscribeMarketData(topics, 1, topic_exchange_[it->first]);
+			}
 		}
 	}
 }
