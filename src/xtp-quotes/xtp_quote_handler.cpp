@@ -334,7 +334,7 @@ void XTPQuoteHandler::QuoteMessageLoop()
 	while (true) {
 		quote_tunnel_.Read(queue, true);
 		while (queue.size()) {
-			LOG(INFO) << queue.size();
+			// LOG(INFO) << queue.size();
 			XTPQuoteBlock &msg = queue.front();
 			BroadcastQuote(msg);
 			queue.pop();
