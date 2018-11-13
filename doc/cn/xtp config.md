@@ -15,5 +15,6 @@ trade_listen_ip: BabelTrader-XTP-Trade 服务监听的IP地址
 trade_listen_port: BabelTrader-XTP-Trade 服务监听的端口号
 quote_listen_ip: BabelTrader-XTP-Quote 服务监听的IP地址
 quote_listen_port: BabelTrader-XTP-Quote 服务监听的端口号
+sub_all: 是否订阅全市场行情, 0 - 否, 1 - 是(若为是, 则default_sub_topics字段无效, xtp的外围测试环境不支持全市场订阅)
 default_sub_topics: 默认订阅的行情
 ```

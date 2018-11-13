@@ -20,6 +20,7 @@ struct XTPQuoteConf
 	std::string key;
 	std::string quote_ip;
 	int quote_port;
+	int sub_all;
 	std::vector<Quote> default_sub_topics;
 };
 

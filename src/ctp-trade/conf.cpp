@@ -38,14 +38,69 @@ bool LoadConfig(const std::string &file_path, CTPTradeConf &conf)
 			throw(std::runtime_error("failed parse json from config file"));
 		}
 
-		conf.broker_id = doc["broker_id"].GetString();
-		conf.user_id = doc["user_id"].GetString();
-		conf.password = doc["password"].GetString();
-		conf.addr = doc["trade_addr"].GetString();
-		conf.trade_ip = doc["trade_listen_ip"].GetString();
-		conf.trade_port = doc["trade_listen_port"].GetInt();
-		conf.product_info = doc["product_info"].GetString();
-		conf.auth_code = doc["auth_code"].GetString();
+		if (doc.HasMember("broker_id") && doc["broker_id"].IsString())
+		{
+			conf.broker_id = doc["broker_id"].GetString();
+		}
+		else
+		{
+			throw(std::runtime_error("can't find 'broker_id' in config file"));
+		}
+
+		if (doc.HasMember("user_id") && doc["user_id"].IsString())
+		{
+			conf.user_id = doc["user_id"].GetString();
+		}
+		else
+		{
+			throw(std::runtime_error("can't find 'user_id' in config file"));
+		}
+
+		if (doc.HasMember("password") && doc["password"].IsString())
+		{
+			conf.password = doc["password"].GetString();
+		}
+		else
+		{
+			throw(std::runtime_error("can't find 'password' in config file"));
+		}
+
+		if (doc.HasMember("trade_addr") && doc["trade_addr"].IsString())
+		{
+			conf.addr = doc["trade_addr"].GetString();
+		}
+		else
+		{
+			throw(std::runtime_error("can't find 'trade_addr' in config file"));
+		}
+
+		if (doc.HasMember("trade_listen_ip") && doc["trade_listen_ip"].IsString())
+		{
+			conf.trade_ip = doc["trade_listen_ip"].GetString();
+		}
+		else
+		{
+			throw(std::runtime_error("can't find 'trade_listen_ip' in config file"));
+		}
+
+		if (doc.HasMember("trade_listen_port") && doc["trade_listen_port"].IsInt())
+		{
+			conf.trade_port = doc["trade_listen_port"].GetInt();
+		}
+		else
+		{
+			throw(std::runtime_error("can't find 'trade_listen_port' in config file"));
+		}
+
+		if (doc.HasMember("product_info") && doc["product_info"].IsInt())
+		{
+			conf.product_info = doc["product_info"].GetString();
+		}
+
+		if (doc.HasMember("auth_code") && doc["auth_code"].IsInt())
+		{
+			conf.auth_code = doc["auth_code"].GetString();
+		}
 	}
 	catch (std::exception e) {
 		LOG(ERROR) << e.what();

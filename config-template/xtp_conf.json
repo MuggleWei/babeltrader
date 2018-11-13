@@ -11,6 +11,7 @@
 	"trade_listen_port": 8002,
 	"quote_listen_ip": "127.0.0.1",
 	"quote_listen_port": 6002,
+	"sub_all": 0,
 	"default_sub_topics": [
 		["SSE", "600519"], 
 		["SZSE", "000002"]

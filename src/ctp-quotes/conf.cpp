@@ -37,15 +37,66 @@ bool LoadConfig(const std::string &file_path, CTPQuoteConf &conf)
 			throw(std::runtime_error("failed parse json from config file"));
 		}
 
-		conf.broker_id = doc["broker_id"].GetString();
-		conf.user_id = doc["user_id"].GetString();
-		conf.password = doc["password"].GetString();
-		conf.addr = doc["quote_addr"].GetString();
-		conf.quote_ip = doc["quote_listen_ip"].GetString();
-		conf.quote_port = doc["quote_listen_port"].GetInt();
-		auto topics = doc["default_sub_topics"].GetArray();
-		for (auto i = 0; i < topics.Size(); i++) {
-			conf.default_sub_topics.push_back(topics[i].GetString());
+		if (doc.HasMember("broker_id") && doc["broker_id"].IsString())
+		{
+			conf.broker_id = doc["broker_id"].GetString();
+		}
+		else
+		{
+			throw(std::runtime_error("can't find 'broker_id' in config file"));
+		}
+
+		if (doc.HasMember("user_id") && doc["user_id"].IsString())
+		{
+			conf.user_id = doc["user_id"].GetString();
+		}
+		else
+		{
+			throw(std::runtime_error("can't find 'user_id' in config file"));
+		}
+
+		if (doc.HasMember("password") && doc["password"].IsString())
+		{
+			conf.password = doc["password"].GetString();
+		}
+		else
+		{
+			throw(std::runtime_error("can't find 'password' in config file"));
+		}
+
+		if (doc.HasMember("quote_addr") && doc["quote_addr"].IsString())
+		{
+			conf.addr = doc["quote_addr"].GetString();
+		}
+		else
+		{
+			throw(std::runtime_error("can't find 'quote_addr' in config file"));
+		}
+
+		if (doc.HasMember("quote_listen_ip") && doc["quote_listen_ip"].IsString())
+		{
+			conf.quote_ip = doc["quote_listen_ip"].GetString();
+		}
+		else
+		{
+			throw(std::runtime_error("can't find 'quote_listen_ip' in config file"));
+		}
+
+		if (doc.HasMember("quote_listen_port") && doc["quote_listen_port"].IsInt())
+		{
+			conf.quote_port = doc["quote_listen_port"].GetInt();
+		}
+		else
+		{
+			throw(std::runtime_error("can't find 'quote_listen_port' in config file"));
+		}
+
+		if (doc.HasMember("default_sub_topics") && doc["default_sub_topics"].IsArray())
+		{
+			auto topics = doc["default_sub_topics"].GetArray();
+			for (auto i = 0; i < topics.Size(); i++) {
+				conf.default_sub_topics.push_back(topics[i].GetString());
+			}
 		}
 	} catch (std::exception e) {
 		LOG(ERROR) << e.what();
