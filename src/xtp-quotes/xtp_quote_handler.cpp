@@ -330,11 +330,16 @@ void XTPQuoteHandler::Reconn()
 
 void XTPQuoteHandler::QuoteMessageLoop()
 {
+	static int msg_peak = 0;
 	std::queue<XTPQuoteBlock> queue;
 	while (true) {
 		quote_tunnel_.Read(queue, true);
 		while (queue.size()) {
-			// LOG(INFO) << queue.size();
+			if (queue.size() > msg_peak)
+			{
+				msg_peak = queue.size();
+				LOG(INFO) << "quotes package cache peak: " << msg_peak;
+			}
 			XTPQuoteBlock &msg = queue.front();
 			BroadcastQuote(msg);
 			queue.pop();
