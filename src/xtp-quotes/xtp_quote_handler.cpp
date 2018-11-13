@@ -172,8 +172,15 @@ void XTPQuoteHandler::OnUnSubMarketData(XTPST *ticker, XTPRI *error_info, bool i
 		kline_builder_.del(ticker->ticker);
 	}
 }
-void XTPQuoteHandler::OnSubOrderBook(XTPST *ticker, XTPRI *error_info, bool is_last) {}
-void XTPQuoteHandler::OnUnSubOrderBook(XTPST *ticker, XTPRI *error_info, bool is_last) {}
+void XTPQuoteHandler::OnSubOrderBook(XTPST *ticker, XTPRI *error_info, bool is_last)
+{
+	// output
+	OutputRspSubOrderBook(ticker, error_info, is_last);
+}
+void XTPQuoteHandler::OnUnSubOrderBook(XTPST *ticker, XTPRI *error_info, bool is_last)
+{
+	OutputRspUnsubOrderBook(ticker, error_info, is_last);
+}
 void XTPQuoteHandler::OnSubTickByTick(XTPST *ticker, XTPRI *error_info, bool is_last) {}
 void XTPQuoteHandler::OnUnSubTickByTick(XTPST *ticker, XTPRI *error_info, bool is_last) {}
 
@@ -338,6 +345,54 @@ void XTPQuoteHandler::OutputRspUnsubMarketData(XTPST *ticker, XTPRI *error_info,
 	writer.StartObject();
 	writer.Key("msg");
 	writer.String("rspunsubmarketdata");
+	writer.Key("error_id");
+	writer.Int(error_info->error_id);
+	writer.Key("error_msg");
+	writer.String(error_info->error_msg);
+
+	writer.Key("data");
+	writer.StartObject();
+	writer.Key("exhange");
+	writer.String(ConvertExchangeType2Str(ticker->exchange_id));
+	writer.Key("symbol");
+	writer.String(ticker->ticker);
+	writer.EndObject();
+
+	writer.EndObject();
+	LOG(INFO) << s.GetString();
+}
+void XTPQuoteHandler::OutputRspSubOrderBook(XTPST *ticker, XTPRI *error_info, bool is_last)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("rspsuborderbook");
+	writer.Key("error_id");
+	writer.Int(error_info->error_id);
+	writer.Key("error_msg");
+	writer.String(error_info->error_msg);
+
+	writer.Key("data");
+	writer.StartObject();
+	writer.Key("exhange");
+	writer.String(ConvertExchangeType2Str(ticker->exchange_id));
+	writer.Key("symbol");
+	writer.String(ticker->ticker);
+	writer.EndObject();
+
+	writer.EndObject();
+	LOG(INFO) << s.GetString();
+}
+void XTPQuoteHandler::OutputRspUnsubOrderBook(XTPST *ticker, XTPRI *error_info, bool is_last)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("rspunsuborderbook");
 	writer.Key("error_id");
 	writer.Int(error_info->error_id);
 	writer.Key("error_msg");
