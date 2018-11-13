@@ -37,6 +37,7 @@ public:
 
 	////////////////////////////////////////
 	// spi virtual function
+	virtual void OnDisconnected(uint64_t session_id, int reason) override;
 	virtual void OnOrderEvent(XTPOrderInfo *order_info, XTPRI *error_info, uint64_t session_id) override;
 	virtual void OnTradeEvent(XTPTradeReport *trade_info, uint64_t session_id) override;
 	virtual void OnQueryOrder(XTPQueryOrderRsp *order_info, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id) override;
@@ -47,6 +48,8 @@ public:
 private:
 	void RunAPI();
 	void RunService();
+
+	void Reconn();
 
 	////////////////////////////////////////
 	// convert common struct to xtp struct
@@ -102,6 +105,7 @@ private:
 
 	////////////////////////////////////////
 	// output
+	void OutputFrontDisconnected(uint64_t session_id, int reason);
 	void OutputOrderInsert(XTPOrderInsertInfo &req);
 	void OutputOrderEvent(XTPOrderInfo *order_info, XTPRI *error_info, uint64_t session_id);
 	void OutputTradeEvent(XTPTradeReport *trade_info, uint64_t session_id);
@@ -120,6 +124,7 @@ private:
 
 private:
 	XTP::API::TraderApi *api_;
+	// NOTE: api_ready_ can't fully guarantee api status ready, but for performance, ignore the problem
 	bool api_ready_;
 	uint64_t xtp_session_id_;
 

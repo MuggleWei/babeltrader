@@ -112,9 +112,7 @@ void XTPQuoteHandler::OnDisconnected(int reason)
 	}
 
 	// reconnect
-	auto old_api = api_;
-	RunAPI();
-	old_api->Release();
+	Reconn();
 }
 void XTPQuoteHandler::OnError(XTPRI *error_info)
 {
@@ -244,6 +242,25 @@ void XTPQuoteHandler::RunService()
 	});
 
 	loop_thread.join();
+}
+
+void XTPQuoteHandler::Reconn()
+{
+	int ret = 0;
+	do {
+		LOG(WARNING) << "xtp reconnect...";
+		int ms = 1000;
+#if WIN32
+		Sleep(ms);
+#else
+		usleep((double)(ms) * 1000.0);
+#endif
+
+		ret = api_->Login(
+			conf_.ip.c_str(), conf_.port,
+			conf_.user_id.c_str(), conf_.password.c_str(),
+			(XTP_PROTOCOL_TYPE)conf_.quote_protocol);
+	} while (ret != 0);
 }
 
 void XTPQuoteHandler::OutputFrontDisconnected()

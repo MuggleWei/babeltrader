@@ -209,6 +209,14 @@ void XTPTradeHandler::QueryProduct(uWS::WebSocket<uWS::SERVER> *ws, ProductQuery
 	throw std::runtime_error("'QueryProduct' not supported in xtp");
 }
 
+void XTPTradeHandler::OnDisconnected(uint64_t session_id, int reason)
+{
+	api_ready_ = false;
+
+	OutputFrontDisconnected(session_id, reason);
+
+	Reconn();
+}
 void XTPTradeHandler::OnOrderEvent(XTPOrderInfo *order_info, XTPRI *error_info, uint64_t session_id)
 {
 	OutputOrderEvent(order_info, error_info, session_id);
@@ -499,6 +507,23 @@ void XTPTradeHandler::RunService()
 	});
 
 	loop_thread.join();
+}
+
+void XTPTradeHandler::Reconn()
+{
+	do {
+		LOG(WARNING) << "xtp reconnect...";
+		int ms = 1000;
+#if WIN32
+		Sleep(ms);
+#else
+		usleep((double)(ms) * 1000.0);
+#endif
+
+		xtp_session_id_ = api_->Login(conf_.ip.c_str(), conf_.port, conf_.user_id.c_str(), conf_.password.c_str(), (XTP_PROTOCOL_TYPE)conf_.trade_protocol);
+	} while (xtp_session_id_ <= 0);
+
+	api_ready_ = true;
 }
 
 void XTPTradeHandler::ConvertInsertOrderCommon2XTP(Order &order, XTPOrderInsertInfo &req)
@@ -1241,6 +1266,26 @@ void XTPTradeHandler::SerializeXTPAsset(rapidjson::Writer<rapidjson::StringBuffe
 	writer.Double(rsp->preferred_amount);
 }
 
+void XTPTradeHandler::OutputFrontDisconnected(uint64_t session_id, int reason)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("xtp_frontdisconnect");
+
+	writer.Key("data");
+	writer.StartObject();
+	writer.Key("session_id");
+	writer.Uint64(session_id);
+	writer.Key("reason");
+	writer.Int(reason);
+	writer.EndObject();
+
+	writer.EndObject();
+	LOG(INFO) << s.GetString();
+}
 void XTPTradeHandler::OutputOrderInsert(XTPOrderInsertInfo &req)
 {
 	rapidjson::StringBuffer s;

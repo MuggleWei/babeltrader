@@ -57,6 +57,8 @@ private:
 	void RunAPI();
 	void RunService();
 
+	void Reconn();
+
 	void OutputFrontDisconnected();
 	void OutputRspSubMarketData(XTPST *ticker, XTPRI *error_info, bool is_last);
 	void OutputRspUnsubMarketData(XTPST *ticker, XTPRI *error_info, bool is_last);

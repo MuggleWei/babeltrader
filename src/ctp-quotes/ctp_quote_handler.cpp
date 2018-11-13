@@ -113,11 +113,7 @@ void CTPQuoteHandler::OnFrontDisconnected(int nReason)
 		}
 	}
 
-	// reconnect
-	auto old_api = api_;
-	RunAPI();
-	old_api->RegisterSpi(nullptr);
-	old_api->Release();
+	// don't need to reconnect, ctp will do it auto
 }
 void CTPQuoteHandler::OnHeartBeatWarning(int nTimeLapse)
 {
