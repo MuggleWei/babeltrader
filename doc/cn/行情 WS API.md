@@ -5,8 +5,9 @@
 - [行情结构](#行情结构) 
     - [通用结构](#通用结构)
     - [marketdata](#marketdata)
-    - [orderbook](#orderbook)
     - [kline](#kline)
+    - [orderbook](#orderbook)
+    - [level2](#level2)
     - [depth](#depth)
     - [ticker](#ticker)
     
@@ -108,28 +109,6 @@ trading_day(string): 交易日
 action_day(string): 日期, 注意, 这里不一定是utc时间, 可能是当地时间, CTP使用的就是东八区时间
 ```
 
-#### orderbook
-
-示例:
-```
-{
-    "ts":1539755434000,
-    "last":4181.0,
-    "vol":3188636.0,
-    "bids":[[4180.0,990], ...],
-    "asks":[[4181.0,13], ...]
-}
-```
-
-字段说明:
-```
-ts(long): 时间戳, 毫秒为单位
-last(double): 最新价格
-vol(double): 本交易日的累计量
-bids(array): 价,量, 按顺序为买1, 买2 ... 买n, 注意使用时需要判断vol的数量, 为0时, 价格为无效数据
-asks(array): 价,量, 按顺序为卖1, 卖2 ... 卖n, 注意使用时需要判断vol的数量, 为0时, 价格为无效数据
-```
-
 #### kline
 说明:
 k线数据, 当k线的最高价或最低价发送变化, 或是出现了新的k线时, 才推送此数据
@@ -158,6 +137,71 @@ vol(double): 量
 
 注意:
 在传统的交易API中, 通常并没有提供k线数据的推送, 此时的k线数据, 由BabelTrader生成, 只提供1分钟级别的推送
+
+
+#### orderbook
+示例:
+```
+{
+    "ts":1539755434000,
+    "last":4181.0,
+    "vol":3188636.0,
+    "bids":[[4180.0,990], ...],
+    "asks":[[4181.0,13], ...]
+}
+```
+
+字段说明:
+```
+ts(long): 时间戳, 毫秒为单位
+last(double): 最新价格
+vol(double): 本交易日的累计量
+bids(array): 价,量, 按顺序为买1, 买2 ... 买n, 注意使用时需要判断vol的数量, 为0时, 价格为无效数据
+asks(array): 价,量, 按顺序为卖1, 卖2 ... 卖n, 注意使用时需要判断vol的数量, 为0时, 价格为无效数据
+```
+
+#### level2
+说明: 中国股票市场的level2逐笔数据
+
+示例:
+```
+{
+    "ts":1535439099100,
+    "action":"trade",
+    "data":{
+        "channel_no":1,
+        "seq":1262183,
+        "price":15.950000000000001,
+        "vol":400.0,
+        "bid_no":2095191,
+        "ask_no":2088161,
+        "trade_flag":"buy"
+    }
+}
+```
+
+字段说明:
+```
+ts(long): 时间戳, 毫秒为单位
+action(string): 逐笔信息, data中的字段, 根据此决定  trade - 交易, entrust - 委托
+
+trade:
+channel_no(long): 频道
+seq(long): 序号
+price(double): 成交价格
+vol(double): 成交量
+bid_no(long): 买方订单号
+ask_no(long): 卖方订单号
+trade_flag(string): 交易标志位 - buy(主动买), sell(主动卖), cancel(撤单), deal(成交)
+
+entrust:
+channel_no(long): 频道
+seq(long): 序号
+price(double): 委托价格
+vol(double): 委托量
+dir(string): 方向 - buy(主动买), sell(主动卖), borrow(借入), lend(借出)
+order_type(string): 订单类型 - market(市价单), limit(限价单), best(本方最优)
+```
 
 #### depth
 说明:
