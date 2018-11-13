@@ -99,6 +99,33 @@ void SerializeMarketData(rapidjson::Writer<rapidjson::StringBuffer> &writer, con
 	writer.Key("action_day");
 	writer.String(md.action_day.c_str());
 }
+void SerializeOrderBook(rapidjson::Writer<rapidjson::StringBuffer> &writer, const OrderBook &order_book)
+{
+	writer.Key("ts");
+	writer.Int64(order_book.ts);
+	writer.Key("last");
+	writer.Double(order_book.last);
+	writer.Key("bids");
+	writer.StartArray();
+	for (auto price_vol : order_book.bids) {
+		writer.StartArray();
+		writer.Double(price_vol.price);
+		writer.Int(price_vol.vol);
+		writer.EndArray();
+	}
+	writer.EndArray();
+	writer.Key("asks");
+	writer.StartArray();
+	for (auto price_vol : order_book.asks) {
+		writer.StartArray();
+		writer.Double(price_vol.price);
+		writer.Int(price_vol.vol);
+		writer.EndArray();
+	}
+	writer.EndArray();
+	writer.Key("vol");
+	writer.Double(order_book.vol);
+}
 
 void SerializeKline(rapidjson::Writer<rapidjson::StringBuffer> &writer, const Kline &kline)
 {

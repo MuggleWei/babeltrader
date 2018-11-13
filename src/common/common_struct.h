@@ -56,6 +56,15 @@ struct MarketData
 	std::string action_day;
 };
 
+struct OrderBook
+{
+	int64_t ts;
+	double last;
+	double vol;
+	std::vector<PriceVol> bids;
+	std::vector<PriceVol> asks;
+};
+
 struct Kline
 {
 	int64_t ts;

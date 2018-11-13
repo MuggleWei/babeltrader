@@ -5,6 +5,7 @@
 - [行情结构](#行情结构) 
     - [通用结构](#通用结构)
     - [marketdata](#marketdata)
+    - [orderbook](#orderbook)
     - [kline](#kline)
     - [depth](#depth)
     - [ticker](#ticker)
@@ -105,6 +106,28 @@ high(double):当前交易日最高价
 low(double):当前交易日最低价
 trading_day(string): 交易日
 action_day(string): 日期, 注意, 这里不一定是utc时间, 可能是当地时间, CTP使用的就是东八区时间
+```
+
+#### orderbook
+
+示例:
+```
+{
+    "ts":1539755434000,
+    "last":4181.0,
+    "vol":3188636.0,
+    "bids":[[4180.0,990], ...],
+    "asks":[[4181.0,13], ...]
+}
+```
+
+字段说明:
+```
+ts(long): 时间戳, 毫秒为单位
+last(double): 最新价格
+vol(double): 本交易日的累计量
+bids(array): 价,量, 按顺序为买1, 买2 ... 买n, 注意使用时需要判断vol的数量, 为0时, 价格为无效数据
+asks(array): 价,量, 按顺序为卖1, 卖2 ... 卖n, 注意使用时需要判断vol的数量, 为0时, 价格为无效数据
 ```
 
 #### kline

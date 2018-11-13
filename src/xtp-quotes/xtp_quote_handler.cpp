@@ -52,6 +52,11 @@ std::vector<Quote> XTPQuoteHandler::GetSubTopics(std::vector<bool> &vec_b)
 		topics.push_back(msg);
 		vec_b.push_back(it->second);
 
+		msg.info1 = "orderbook";
+		msg.info2 = "";
+		topics.push_back(msg);
+		vec_b.push_back(it->second);
+
 		msg.info1 = "kline";
 		msg.info2 = "1m";
 		topics.push_back(msg);
@@ -83,6 +88,7 @@ void XTPQuoteHandler::SubTopic(const Quote &msg)
 	strncpy(buf[0], msg.symbol.c_str(), 64 - 1);
 
 	api_->SubscribeMarketData(topics, 1, GetExchangeType(msg.exchange));
+	api_->SubscribeOrderBook(topics, 1, GetExchangeType(msg.exchange));
 }
 void XTPQuoteHandler::UnsubTopic(const Quote &msg)
 {
@@ -106,6 +112,7 @@ void XTPQuoteHandler::UnsubTopic(const Quote &msg)
 	strncpy(buf[0], msg.symbol.c_str(), 64 - 1);
 
 	api_->UnSubscribeMarketData(topics, 1, exhange_type);
+	api_->UnSubscribeOrderBook(topics, 1, exhange_type);
 }
 
 
@@ -201,7 +208,20 @@ void XTPQuoteHandler::OnDepthMarketData(XTPMD *market_data, int64_t bid1_qty[], 
 	}
 
 }
-void XTPQuoteHandler::OnOrderBook(XTPOB *order_book) {}
+void XTPQuoteHandler::OnOrderBook(XTPOB *order_book)
+{
+#ifndef NDEBUG
+	OutputOrderBook(order_book);
+#endif
+
+	// convert to common struct
+	Quote quote;
+	OrderBook common_order_book;
+
+	ConvertOrderBook(order_book, quote, common_order_book);
+
+	BroadcastOrderBook(quote, common_order_book);
+}
 void XTPQuoteHandler::OnTickByTick(XTPTBT *tbt_data) {}
 
 
@@ -430,6 +450,77 @@ void XTPQuoteHandler::OutputMarketData(XTPMD *market_data, int64_t bid1_qty[], i
 
 	LOG(INFO) << s.GetString();
 }
+void XTPQuoteHandler::OutputOrderBook(XTPOB *order_book)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("orderbook");
+	writer.Key("data");
+	writer.StartObject();
+
+	if (order_book)
+	{
+		writer.Key("exchange_id");
+		writer.Int((int)order_book->exchange_id);
+		writer.Key("ticker");
+		writer.String(order_book->ticker);
+		writer.Key("last_price");
+		writer.Double(order_book->last_price);
+		writer.Key("qty");
+		writer.Int64(order_book->qty);
+		writer.Key("turnover");
+		writer.Double(order_book->turnover);
+		writer.Key("trades_count");
+		writer.Int64(order_book->trades_count);
+
+		int len = sizeof(order_book->bid) / sizeof(order_book->bid[0]);
+
+		writer.Key("bid");
+		writer.StartArray();
+		for (int i = 0; i < len; i++)
+		{
+			writer.Double(order_book->bid[i]);
+		}
+		writer.EndArray();
+
+		writer.Key("ask");
+		writer.StartArray();
+		for (int i = 0; i < len; i++)
+		{
+			writer.Double(order_book->ask[i]);
+		}
+		writer.EndArray();
+
+		writer.Key("bid_qty");
+		writer.StartArray();
+		for (int i = 0; i < len; i++)
+		{
+			writer.Int64(order_book->bid_qty[i]);
+		}
+		writer.EndArray();
+
+		writer.Key("ask_qty");
+		writer.StartArray();
+		for (int i = 0; i < len; i++)
+		{
+			writer.Int64(order_book->ask_qty[i]);
+		}
+		writer.EndArray();
+
+		writer.Key("data_time");
+		writer.Int64(order_book->data_time);
+	}
+
+	writer.EndObject(); // data
+
+	writer.EndObject(); // object
+
+	LOG(INFO) << s.GetString();
+
+}
 
 void XTPQuoteHandler::ConvertMarketData(XTPMD *market_data, Quote &quote, MarketData &md)
 {
@@ -469,6 +560,24 @@ void XTPQuoteHandler::ConvertMarketData(XTPMD *market_data, Quote &quote, Market
 	md.trading_day = "";
 	md.action_day = "";
 }
+void XTPQuoteHandler::ConvertOrderBook(XTPOB *xtp_order_book, Quote &quote, OrderBook &order_book)
+{
+	quote.market = g_markets[Market_XTP];
+	quote.exchange = ConvertExchangeType2Str(xtp_order_book->exchange_id);
+	quote.symbol = xtp_order_book->ticker;
+	quote.contract = "";
+	quote.contract_id = "";
+	quote.info1 = "orderbook";
+	quote.info2 = "";
+
+	order_book.ts = XTPGetTimestamp(xtp_order_book->data_time);
+	order_book.last = xtp_order_book->last_price;
+	order_book.vol = xtp_order_book->qty;
+	for (int i = 0; i < sizeof(xtp_order_book->bid)/sizeof(xtp_order_book->bid[0]); i++) {
+		order_book.bids.push_back({ xtp_order_book->bid[i], xtp_order_book->bid_qty[i] });
+		order_book.asks.push_back({ xtp_order_book->ask[i], xtp_order_book->ask_qty[i] });
+	}
+}
 
 void XTPQuoteHandler::BroadcastMarketData(const Quote &quote, const MarketData &md)
 {
@@ -478,6 +587,22 @@ void XTPQuoteHandler::BroadcastMarketData(const Quote &quote, const MarketData &
 
 	SerializeQuoteBegin(writer, quote);
 	SerializeMarketData(writer, md);
+	SerializeQuoteEnd(writer, quote);
+
+#ifndef NDEBUG
+	LOG(INFO) << s.GetString();
+#endif
+
+	uws_hub_.getDefaultGroup<uWS::SERVER>().broadcast(s.GetString(), s.GetLength(), uWS::OpCode::TEXT);
+}
+void XTPQuoteHandler::BroadcastOrderBook(const Quote &quote, const OrderBook &order_book)
+{
+	// serialize
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	SerializeQuoteBegin(writer, quote);
+	SerializeOrderBook(writer, order_book);
 	SerializeQuoteEnd(writer, quote);
 
 #ifndef NDEBUG
@@ -507,6 +632,7 @@ void XTPQuoteHandler::SubTopics()
 	if (conf_.sub_all)
 	{
 		api_->SubscribeAllMarketData();
+		api_->SubscribeAllOrderBook();
 	}
 	else
 	{
@@ -521,6 +647,7 @@ void XTPQuoteHandler::SubTopics()
 			if (it->second == false) {
 				strncpy(buf[0], it->first.c_str(), sizeof(buf[0]) - 1);
 				api_->SubscribeMarketData(topics, 1, topic_exchange_[it->first]);
+				api_->SubscribeOrderBook(topics, 1, topic_exchange_[it->first]);
 			}
 		}
 	}
