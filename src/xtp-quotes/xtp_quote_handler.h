@@ -86,6 +86,13 @@ private:
 	void OutputRspSubTickByTick(XTPST *ticker, XTPRI *error_info, bool is_last);
 	void OutputRspUnsubTickByTick(XTPST *ticker, XTPRI *error_info, bool is_last);
 
+	void OutputRspSubAllMarketData(XTP_EXCHANGE_TYPE exchange_id, XTPRI *error_info);
+	void OutputRspUnsubAllMarketData(XTP_EXCHANGE_TYPE exchange_id, XTPRI *error_info);
+	void OutputRspSubAllOrderBook(XTP_EXCHANGE_TYPE exchange_id, XTPRI *error_info);
+	void OutputRspUnsubAllOrderBook(XTP_EXCHANGE_TYPE exchange_id, XTPRI *error_info);
+	void OutputRspSubAllTickByTick(XTP_EXCHANGE_TYPE exchange_id, XTPRI *error_info);
+	void OutputRspUnsubAllTickByTick(XTP_EXCHANGE_TYPE exchange_id, XTPRI *error_info);
+
 	void OutputMarketData(XTPMD *market_data, int64_t bid1_qty[], int32_t bid1_count, int32_t max_bid1_count, int64_t ask1_qty[], int32_t ask1_count, int32_t max_ask1_count);
 	void OutputOrderBook(XTPOB *order_book);
 	void OutputTickByTick(XTPTBT *tbt_data);

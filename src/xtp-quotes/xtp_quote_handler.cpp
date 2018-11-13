@@ -207,12 +207,30 @@ void XTPQuoteHandler::OnUnSubTickByTick(XTPST *ticker, XTPRI *error_info, bool i
 	OutputRspUnsubTickByTick(ticker, error_info, is_last);
 }
 
-void XTPQuoteHandler::OnSubscribeAllMarketData(XTP_EXCHANGE_TYPE exchange_id, XTPRI *error_info) {}
-void XTPQuoteHandler::OnUnSubscribeAllMarketData(XTP_EXCHANGE_TYPE exchange_id, XTPRI *error_info) {}
-void XTPQuoteHandler::OnSubscribeAllOrderBook(XTP_EXCHANGE_TYPE exchange_id, XTPRI *error_info) {}
-void XTPQuoteHandler::OnUnSubscribeAllOrderBook(XTP_EXCHANGE_TYPE exchange_id, XTPRI *error_info) {}
-void XTPQuoteHandler::OnSubscribeAllTickByTick(XTP_EXCHANGE_TYPE exchange_id, XTPRI *error_info) {}
-void XTPQuoteHandler::OnUnSubscribeAllTickByTick(XTP_EXCHANGE_TYPE exchange_id, XTPRI *error_info) {}
+void XTPQuoteHandler::OnSubscribeAllMarketData(XTP_EXCHANGE_TYPE exchange_id, XTPRI *error_info)
+{
+	OutputRspSubAllMarketData(exchange_id, error_info);
+}
+void XTPQuoteHandler::OnUnSubscribeAllMarketData(XTP_EXCHANGE_TYPE exchange_id, XTPRI *error_info)
+{
+	OutputRspUnsubAllMarketData(exchange_id, error_info);
+}
+void XTPQuoteHandler::OnSubscribeAllOrderBook(XTP_EXCHANGE_TYPE exchange_id, XTPRI *error_info)
+{
+	OutputRspSubAllOrderBook(exchange_id, error_info);
+}
+void XTPQuoteHandler::OnUnSubscribeAllOrderBook(XTP_EXCHANGE_TYPE exchange_id, XTPRI *error_info)
+{
+	OutputRspUnsubAllOrderBook(exchange_id, error_info);
+}
+void XTPQuoteHandler::OnSubscribeAllTickByTick(XTP_EXCHANGE_TYPE exchange_id, XTPRI *error_info)
+{
+	OutputRspSubAllTickByTick(exchange_id, error_info);
+}
+void XTPQuoteHandler::OnUnSubscribeAllTickByTick(XTP_EXCHANGE_TYPE exchange_id, XTPRI *error_info)
+{
+	OutputRspUnsubAllTickByTick(exchange_id, error_info);
+}
 
 void XTPQuoteHandler::OnDepthMarketData(XTPMD *market_data, int64_t bid1_qty[], int32_t bid1_count, int32_t max_bid1_count, int64_t ask1_qty[], int32_t ask1_count, int32_t max_ask1_count)
 {
@@ -545,6 +563,139 @@ void XTPQuoteHandler::OutputRspUnsubTickByTick(XTPST *ticker, XTPRI *error_info,
 	writer.String(ConvertExchangeType2Str(ticker->exchange_id));
 	writer.Key("symbol");
 	writer.String(ticker->ticker);
+	writer.EndObject();
+
+	writer.EndObject();
+	LOG(INFO) << s.GetString();
+}
+
+void XTPQuoteHandler::OutputRspSubAllMarketData(XTP_EXCHANGE_TYPE exchange_id, XTPRI *error_info)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("rspsuballmarketdata");
+	writer.Key("error_id");
+	writer.Int(error_info->error_id);
+	writer.Key("error_msg");
+	writer.String(error_info->error_msg);
+
+	writer.Key("data");
+	writer.StartObject();
+	writer.Key("exhange");
+	writer.String(ConvertExchangeType2Str(exchange_id));
+	writer.EndObject();
+
+	writer.EndObject();
+	LOG(INFO) << s.GetString();
+}
+void XTPQuoteHandler::OutputRspUnsubAllMarketData(XTP_EXCHANGE_TYPE exchange_id, XTPRI *error_info)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("rspunsuballmarketdata");
+	writer.Key("error_id");
+	writer.Int(error_info->error_id);
+	writer.Key("error_msg");
+	writer.String(error_info->error_msg);
+
+	writer.Key("data");
+	writer.StartObject();
+	writer.Key("exhange");
+	writer.String(ConvertExchangeType2Str(exchange_id));
+	writer.EndObject();
+
+	writer.EndObject();
+	LOG(INFO) << s.GetString();
+}
+void XTPQuoteHandler::OutputRspSubAllOrderBook(XTP_EXCHANGE_TYPE exchange_id, XTPRI *error_info)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("rspsuballorderbook");
+	writer.Key("error_id");
+	writer.Int(error_info->error_id);
+	writer.Key("error_msg");
+	writer.String(error_info->error_msg);
+
+	writer.Key("data");
+	writer.StartObject();
+	writer.Key("exhange");
+	writer.String(ConvertExchangeType2Str(exchange_id));
+	writer.EndObject();
+
+	writer.EndObject();
+	LOG(INFO) << s.GetString();
+}
+void XTPQuoteHandler::OutputRspUnsubAllOrderBook(XTP_EXCHANGE_TYPE exchange_id, XTPRI *error_info)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("rspunsuballorderbook");
+	writer.Key("error_id");
+	writer.Int(error_info->error_id);
+	writer.Key("error_msg");
+	writer.String(error_info->error_msg);
+
+	writer.Key("data");
+	writer.StartObject();
+	writer.Key("exhange");
+	writer.String(ConvertExchangeType2Str(exchange_id));
+	writer.EndObject();
+
+	writer.EndObject();
+	LOG(INFO) << s.GetString();
+}
+void XTPQuoteHandler::OutputRspSubAllTickByTick(XTP_EXCHANGE_TYPE exchange_id, XTPRI *error_info)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("rspsuballtickbytick");
+	writer.Key("error_id");
+	writer.Int(error_info->error_id);
+	writer.Key("error_msg");
+	writer.String(error_info->error_msg);
+
+	writer.Key("data");
+	writer.StartObject();
+	writer.Key("exhange");
+	writer.String(ConvertExchangeType2Str(exchange_id));
+	writer.EndObject();
+
+	writer.EndObject();
+	LOG(INFO) << s.GetString();
+}
+void XTPQuoteHandler::OutputRspUnsubAllTickByTick(XTP_EXCHANGE_TYPE exchange_id, XTPRI *error_info)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("rspunsuballtickbytick");
+	writer.Key("error_id");
+	writer.Int(error_info->error_id);
+	writer.Key("error_msg");
+	writer.String(error_info->error_msg);
+
+	writer.Key("data");
+	writer.StartObject();
+	writer.Key("exhange");
+	writer.String(ConvertExchangeType2Str(exchange_id));
 	writer.EndObject();
 
 	writer.EndObject();
