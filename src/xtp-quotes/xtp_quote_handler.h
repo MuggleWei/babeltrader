@@ -30,6 +30,9 @@ struct XTPQuoteBlock
 {
 	int quote_type;
 	char buf[XTPQuoteBlockSize];
+#if ENABLE_PERFORMANCE_TEST
+	int64_t ts;
+#endif
 };
 
 class XTPQuoteHandler : public QuoteService, XTP::API::QuoteSpi
@@ -108,12 +111,12 @@ private:
 
 	void SubTopics();
 
-	XTP_EXCHANGE_TYPE GetExchangeType(const std::string &exchange);
-	const char* ConvertExchangeType2Str(XTP_EXCHANGE_TYPE exchange_type);
+	XTP_EXCHANGE_TYPE ConvertExchangeTypeCommon2XTP(ExchangeEnum exchange);
+	ExchangeEnum ConvertExchangeTypeXTP2Common(XTP_EXCHANGE_TYPE exchange_type);
 
-	const char* ConvertOrderAction(char side);
-	const char* ConvertOrderType(char order_type);
-	const char* ConvertTradeFlag(char trade_flag);
+	OrderActionEnum ConvertOrderAction(char side);
+	OrderTypeEnum ConvertOrderType(char order_type);
+	OrderBookL2TradeFlagEnum ConvertTradeFlag(char trade_flag);
 
 private:
 	XTP::API::QuoteApi *api_;
@@ -127,7 +130,7 @@ private:
 
 	std::mutex topic_mtx_;
 	std::map<std::string, bool> sub_topics_;
-	std::map<std::string, XTP_EXCHANGE_TYPE> topic_exchange_;
+	std::map<std::string, ExchangeEnum> topic_exchange_;
 	KlineBuilder kline_builder_;
 
 	muggle::Tunnel<XTPQuoteBlock> quote_tunnel_;

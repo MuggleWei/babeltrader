@@ -172,6 +172,13 @@ else()
 	)
 endif()
 
+option(BABELTRADER_ENABLE_PERFORMANCE "enable performance" OFF)
+if (${BABELTRADER_ENABLE_PERFORMANCE})
+	add_compile_definitions(ENABLE_PERFORMANCE_TEST=1)
+else()
+	add_compile_definitions(ENABLE_PERFORMANCE_TEST=0)
+endif()
+
 # BabelTrader-CTP-Quote
 add_serv(BabelTrader-CTP-Quote ${CMAKE_CURRENT_LIST_DIR}/src/ctp-quotes)
 target_include_directories(BabelTrader-CTP-Quote PRIVATE ${CMAKE_CURRENT_LIST_DIR}/thirdparty/ctp/include)

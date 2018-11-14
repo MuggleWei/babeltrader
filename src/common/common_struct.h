@@ -14,16 +14,24 @@ namespace babeltrader
 //////////////////////////
 // quotes
 
+#define QUOTE_SYMBOL_LEN 16
+#define QUOTE_CONTRACT_LEN 16
+#define QUOTE_INFO1_LEN 16
+#define QUOTE_INFO2_LEN 16
+
 struct Quote
 {
-	std::string market;			// e.g. okex, bitmex, CTP, XTP, IB ...
-	std::string exchange;		// e.g. okex, bitmex, SHFE, SSE, NYMEX ...
-	std::string type;			// e.g. spot, future ...
-	std::string symbol;			// e.g. btc, btc_usd, rb, cl ...
-	std::string contract;		// e.g. this_week, 1901 ...
-	std::string contract_id;	// e.g. 20180928, 1901 ...
-	std::string info1;			// e.g. ticker, depth, kline, marketdata
-	std::string info2;			// e.g. 1m, 1h
+	uint8_t market;		// MarketEnum
+	uint8_t exchange;	// ExchangeEnum
+	uint8_t type;		// ProductTypeEnum
+	uint8_t info1;		// QuoteInfo1Enum
+	char symbol[QUOTE_SYMBOL_LEN];
+	char contract[QUOTE_CONTRACT_LEN];
+	char contract_id[QUOTE_CONTRACT_LEN];
+	uint8_t info2;		// QuoteInfo2Enum
+#if ENABLE_PERFORMANCE_TEST
+	int64_t ts;
+#endif
 };
 
 struct PriceVol
@@ -71,8 +79,8 @@ struct OrderBookLevel2Entrust
 	int64_t seq;
 	double price;
 	double vol;
-	std::string dir;
-	std::string order_type;
+	OrderActionEnum dir;
+	OrderTypeEnum order_type;
 };
 
 struct OrderBookLevel2Trade
@@ -83,7 +91,7 @@ struct OrderBookLevel2Trade
 	double vol;
 	int64_t bid_no;
 	int64_t ask_no;
-	std::string trade_flag;
+	OrderBookL2TradeFlagEnum trade_flag;
 };
 
 struct OrderBookLevel2

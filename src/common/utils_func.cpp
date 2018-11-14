@@ -21,6 +21,19 @@ void CTPSplitInstrument(const char *instrument, std::string &symbol, std::string
 	symbol = buf;
 	contract = p;
 }
+void CTPSplitInstrument(const char *instrument, size_t instrument_len, char* symbol, char *contract)
+{
+	const char *p = instrument;
+	while (*p) {
+		if (*p >= '0' && *p <= '9') {
+			break;
+		}
+		p++;
+	}
+	auto len = p - instrument;
+	strncpy(symbol, instrument, len);
+	strncpy(contract, p, instrument_len - len);
+}
 int64_t CTPGetTimestamp(const char *str_date, const char *str_time, int millisec)
 {
 	struct tm time_info = { 0 };

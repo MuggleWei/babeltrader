@@ -61,21 +61,21 @@ void HttpService::GetSubtopics(uWS::HttpResponse *res)
 
 		writer.StartObject();
 		writer.Key("market");
-		writer.String(msg.market.c_str());
+		writer.String(g_markets[msg.market]);
 		writer.Key("exchange");
-		writer.String(msg.exchange.c_str());
+		writer.String(g_exchanges[msg.exchange]);
 		writer.Key("type");
-		writer.String(msg.type.c_str());
+		writer.String(g_product_types[msg.type]);
 		writer.Key("symbol");
-		writer.String(msg.symbol.c_str());
+		writer.String(msg.symbol);
 		writer.Key("contract");
-		writer.String(msg.contract.c_str());
+		writer.String(msg.contract);
 		writer.Key("contract_id");
-		writer.String(msg.contract_id.c_str());
+		writer.String(msg.contract_id);
 		writer.Key("info1");
-		writer.String(msg.info1.c_str());
+		writer.String(g_quote_info1[msg.info1]);
 		writer.Key("info2");
-		writer.String(msg.info2.c_str());
+		writer.String(g_quote_info1[msg.info2]);
 		writer.Key("subed");
 		writer.Int(vec_b[idx] ? 1 : 0);
 		writer.EndObject();
@@ -156,29 +156,29 @@ bool HttpService::ParseSubunsubMsg(const char *data, size_t length, Quote& msg, 
 
 	if (!d.HasMember("market") || !d["market"].IsString())
 	{
-		msg.market = "";
+		msg.market = Market_Unknown;
 	}
 	else
 	{
-		msg.market = d["market"].GetString();
+		msg.market = getMarketEnum(d["market"].GetString());
 	}
 
 	if (!d.HasMember("exchange") || !d["exchange"].IsString()) 
 	{
-		msg.exchange = "";
+		msg.exchange = Exchange_Unknown;
 	}
 	else
 	{
-		msg.exchange = d["exchange"].GetString();
+		msg.exchange = getExchangeEnum(d["exchange"].GetString());
 	}
 
 	if (!d.HasMember("type") || !d["type"].IsString())
 	{
-		msg.type = "";
+		msg.type = ProductType_Unknown;
 	}
 	else
 	{
-		msg.type = d["type"].GetString();
+		msg.type = getProductTypeEnum(d["type"].GetString());
 	}
 
 	if (!d.HasMember("symbol") || !d["symbol"].IsString()) {
@@ -189,43 +189,43 @@ bool HttpService::ParseSubunsubMsg(const char *data, size_t length, Quote& msg, 
 	}
 	else
 	{
-		msg.symbol = d["symbol"].GetString();
+		strncpy(msg.symbol, d["symbol"].GetString(), sizeof(msg.symbol) - 1);
 	}
 
 	if (!d.HasMember("contract") || !d["contract"].IsString())
 	{
-		msg.contract = "";
+		msg.contract[0] = '\0';
 	}
 	else
 	{
-		msg.contract = d["contract"].GetString();
+		strncpy(msg.contract, d["contract"].GetString(), sizeof(msg.contract) - 1);
 	}
 
 	if (!d.HasMember("contract_id") || !d["contract_id"].IsString())
 	{
-		msg.contract_id = "";
+		msg.contract_id[0] = '\0';
 	}
 	else
 	{
-		msg.contract_id = d["contract_id"].GetString();
+		strncpy(msg.contract_id, d["contract_id"].GetString(), sizeof(msg.contract_id) - 1);
 	}
 
 	if (!d.HasMember("info1") || !d["info1"].IsString()) 
 	{
-		msg.info1 = "";
+		msg.info1 = QuoteInfo1_Unknown;
 	}
 	else
 	{
-		msg.info1 = d["info1"].GetString();
+		msg.info1 = getQuoteInfo1Enum(d["info1"].GetString());
 	}
 
 	if (!d.HasMember("info2") || !d["info2"].IsString())
 	{
-		msg.info2 = "";
+		msg.info2 = QuoteInfo2_Unknown;
 	}
 	else
 	{
-		msg.info2 = d["info2"].GetString();
+		msg.info2 = getQuoteInfo2Enum(d["info2"].GetString());
 	}
 
 	return true;

@@ -15,21 +15,26 @@ void SerializeQuoteBegin(rapidjson::Writer<rapidjson::StringBuffer> &writer, con
 	writer.Key("data");
 	writer.StartObject();
 	writer.Key("market");
-	writer.String(quote.market.c_str());
+	writer.String(g_markets[quote.market]);
 	writer.Key("exchange_id");
-	writer.String(quote.exchange.c_str());
+	writer.String(g_exchanges[quote.exchange]);
 	writer.Key("type");
-	writer.String(quote.type.c_str());
+	writer.String(g_product_types[quote.type]);
 	writer.Key("symbol");
-	writer.String(quote.symbol.c_str());
+	writer.String(quote.symbol);
 	writer.Key("contract");
-	writer.String(quote.contract.c_str());
+	writer.String(quote.contract);
 	writer.Key("contract_id");
-	writer.String(quote.contract_id.c_str());
+	writer.String(quote.contract_id);
 	writer.Key("info1");
-	writer.String(quote.info1.c_str());
+	writer.String(g_quote_info1[quote.info1]);
 	writer.Key("info2");
-	writer.String(quote.info2.c_str());
+	writer.String(g_quote_info2[quote.info2]);
+
+#if ENABLE_PERFORMANCE_TEST
+	writer.Key("ts");
+	writer.Int64(quote.ts);
+#endif
 	
 	// inner data
 	writer.String("data");
@@ -163,9 +168,9 @@ void SerializeLevel2(rapidjson::Writer<rapidjson::StringBuffer> &writer, const O
 		writer.Key("vol");
 		writer.Double(level2.entrust.vol);
 		writer.Key("dir");
-		writer.String(level2.entrust.dir.c_str());
+		writer.String(g_order_dir[level2.entrust.dir]);
 		writer.Key("order_type");
-		writer.String(level2.entrust.order_type.c_str());
+		writer.String(g_order_type[level2.entrust.order_type]);
 	}break;
 	case OrderBookL2Action_Trade:
 	{
@@ -182,7 +187,7 @@ void SerializeLevel2(rapidjson::Writer<rapidjson::StringBuffer> &writer, const O
 		writer.Key("ask_no");
 		writer.Int64(level2.trade.ask_no);
 		writer.Key("trade_flag");
-		writer.String(level2.trade.trade_flag.c_str());
+		writer.String(g_orderbookl2_trade_flag[level2.trade.trade_flag]);
 	}break;
 	}
 	writer.EndObject();

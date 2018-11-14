@@ -36,18 +36,17 @@ std::vector<Quote> CTPQuoteHandler::GetSubTopics(std::vector<bool> &vec_b)
 
 	std::unique_lock<std::mutex> lock(topic_mtx_);
 	for (auto it = sub_topics_.begin(); it != sub_topics_.end(); ++it) {
-		Quote msg;
-		msg.market = g_markets[Market_CTP];
-		msg.exchange = "";
-		msg.type = g_product_types[ProductType_Future];
-		CTPSplitInstrument(it->first.c_str(), msg.symbol, msg.contract);
-		msg.contract_id = msg.contract;
-		msg.info1 = "marketdata";
+		Quote msg = { 0 };
+		msg.market = Market_CTP;
+		msg.exchange = Exchange_Unknown;
+		msg.type = ProductType_Future;
+		CTPSplitInstrument(it->first.c_str(), it->first.size(), msg.symbol, msg.contract);
+		msg.info1 = QuoteInfo1_MarketData;
 		topics.push_back(msg);
 		vec_b.push_back(it->second);
 
-		msg.info1 = "kline";
-		msg.info2 = "1m";
+		msg.info1 = QuoteInfo1_Kline;
+		msg.info2 = QuoteInfo2_1Min;
 		topics.push_back(msg);
 		vec_b.push_back(it->second);
 	}
@@ -56,7 +55,8 @@ std::vector<Quote> CTPQuoteHandler::GetSubTopics(std::vector<bool> &vec_b)
 }
 void CTPQuoteHandler::SubTopic(const Quote &msg)
 {
-	auto instrument = msg.symbol + msg.contract;
+	char instrument[128] = { 0 };
+	snprintf(instrument, sizeof(instrument) - 1, "%s%s", msg.symbol, msg.contract);
 	{
 		std::unique_lock<std::mutex> lock(topic_mtx_);
 		if (sub_topics_.find(instrument) != sub_topics_.end() && sub_topics_[instrument] == true) {
@@ -70,13 +70,14 @@ void CTPQuoteHandler::SubTopic(const Quote &msg)
 	char buf[2][64];
 	char* topics[2];
 	topics[0] = buf[0];
-	strncpy(buf[0], instrument.c_str(), 64-1);
+	strncpy(buf[0], instrument, 64-1);
 
 	api_->SubscribeMarketData(topics, 1);
 }
 void CTPQuoteHandler::UnsubTopic(const Quote &msg)
 {
-	auto instrument = msg.symbol + msg.contract;
+	char instrument[128] = { 0 };
+	snprintf(instrument, sizeof(instrument) - 1, "%s%s", msg.symbol, msg.contract);
 	{
 		std::unique_lock<std::mutex> lock(topic_mtx_);
 		if (sub_topics_.find(instrument) == sub_topics_.end()) {
@@ -87,7 +88,7 @@ void CTPQuoteHandler::UnsubTopic(const Quote &msg)
 	char buf[2][64];
 	char* topics[2];
 	topics[0] = buf[0];
-	strncpy(buf[0], instrument.c_str(), 64 - 1);
+	strncpy(buf[0], instrument, 64 - 1);
 
 	api_->UnSubscribeMarketData(topics, 1);
 }
@@ -203,7 +204,7 @@ void CTPQuoteHandler::OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDept
 #endif
 
 	// convert to common struct
-	Quote quote;
+	Quote quote = { 0 };
 	MarketData md;
 	ConvertMarketData(pDepthMarketData, quote, md);
 
@@ -213,8 +214,8 @@ void CTPQuoteHandler::OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDept
 	int64_t sec = (int64_t)time(nullptr);
 	Kline kline;
 	if (kline_builder_.updateMarketData(sec, pDepthMarketData->InstrumentID, md, kline)) {
-		quote.info1 = "kline";
-		quote.info2 = "1m";
+		quote.info1 = QuoteInfo1_Kline;
+		quote.info2 = QuoteInfo2_1Min;
 		BroadcastKline(quote, kline);
 	}
 }
@@ -518,20 +519,14 @@ void CTPQuoteHandler::OutputMarketData(CThostFtdcDepthMarketDataField *pDepthMar
 
 void CTPQuoteHandler::ConvertMarketData(CThostFtdcDepthMarketDataField *pDepthMarketData, Quote &quote, MarketData &md)
 {
-	// split instrument into symbol and contract
-	std::string symbol, contract;
-	CTPSplitInstrument(pDepthMarketData->InstrumentID, symbol, contract);
-
 	// get update time
 	int64_t ts = GetUpdateTimeMs(pDepthMarketData);
 
-	quote.market = g_markets[Market_CTP];
-	quote.exchange = pDepthMarketData->ExchangeID;
-	quote.type = g_product_types[ProductType_Future];
-	quote.symbol = std::move(symbol);
-	quote.contract = std::move(contract);
-	quote.contract_id = quote.contract;
-	quote.info1 = "marketdata";
+	quote.market = Market_CTP;
+	quote.exchange = getExchangeEnum(pDepthMarketData->ExchangeID);
+	quote.type = ProductType_Future;
+	CTPSplitInstrument(pDepthMarketData->InstrumentID, strlen(pDepthMarketData->InstrumentID), quote.symbol, quote.contract);
+	quote.info1 = QuoteInfo1_MarketData;
 
 	md.ts = ts;
 	md.last = pDepthMarketData->LastPrice;

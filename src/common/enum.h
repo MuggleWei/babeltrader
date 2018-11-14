@@ -15,6 +15,7 @@ enum MarketEnum
 	Market_Max,
 };
 extern const char *g_markets[Market_Max];
+MarketEnum getMarketEnum(const char *market);
 
 enum ExchangeEnum
 {
@@ -36,6 +37,7 @@ enum ExchangeEnum
 	Exchange_Max,
 };
 extern const char *g_exchanges[Exchange_Max];
+ExchangeEnum getExchangeEnum(const char *exchange);
 
 enum ProductTypeEnum
 {
@@ -48,6 +50,31 @@ enum ProductTypeEnum
 	ProductType_Max,
 };
 extern const char *g_product_types[ProductType_Max];
+ProductTypeEnum getProductTypeEnum(const char *product_type);
+
+enum QuoteInfo1Enum
+{
+	QuoteInfo1_Unknown = 0,
+	QuoteInfo1_MarketData,
+	QuoteInfo1_Kline,
+	QuoteInfo1_OrderBook,
+	QuoteInfo1_Level2,
+	QuoteInfo1_Depth,
+	QuoteInfo1_Ticker,
+	QuoteInfo1_Max,
+};
+extern const char *g_quote_info1[QuoteInfo1_Max];
+QuoteInfo1Enum getQuoteInfo1Enum(const char *quote_info1);
+
+enum QuoteInfo2Enum
+{
+	QuoteInfo2_Unknown = 0,
+	QuoteInfo2_1Hour,
+	QuoteInfo2_1Min,
+	QuoteInfo2_Max,
+};
+extern const char *g_quote_info2[QuoteInfo2_Max];
+QuoteInfo2Enum getQuoteInfo2Enum(const char *quote_info2);
 
 enum OrderTypeEnum
 {
@@ -135,7 +162,7 @@ enum OrderBookL2Action
 };
 extern const char *g_orderbookl2_action[OrderBookL2Action_Max];
 
-enum OrderBookL2TradeFlag
+enum OrderBookL2TradeFlagEnum
 {
 	OrderBookL2TradeFlag_Unknown = 0,
 	OrderBookL2TradeFlag_Buy,

@@ -148,8 +148,8 @@ bool LoadConfig(const std::string &file_path, XTPQuoteConf &conf)
 			for (auto i = 0; i < topics.Size(); i++) {
 				const auto &topic = topics[i].GetArray();
 				Quote quote;
-				quote.exchange = topic[0].GetString();
-				quote.symbol = topic[1].GetString();
+				quote.exchange = getExchangeEnum(topic[0].GetString());
+				strncpy(quote.symbol, topic[1].GetString(), sizeof(quote.symbol) - 1);
 				conf.default_sub_topics.push_back(std::move(quote));
 			}
 		}
