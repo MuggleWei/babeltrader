@@ -38,6 +38,11 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
+	if (conf.sub_all && conf.sub_l2) {
+		LOG(ERROR) << "Don't subscribe level2 and all market quotes in the same time";
+		return -1;
+	}
+
 	// run xtp handler
 	XTPQuoteHandler handler(conf);
 	handler.run();
