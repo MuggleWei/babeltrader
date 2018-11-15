@@ -175,9 +175,9 @@ endif()
 # performance test
 option(BABELTRADER_ENABLE_PERFORMANCE "enable performance" OFF)
 if (${BABELTRADER_ENABLE_PERFORMANCE})
-	add_compile_definitions(ENABLE_PERFORMANCE_TEST=1)
+	add_definitions(-DENABLE_PERFORMANCE_TEST=1)
 else()
-	add_compile_definitions(ENABLE_PERFORMANCE_TEST=0)
+	add_definitions(-DENABLE_PERFORMANCE_TEST=0)
 endif()
 
 # babletrader-ctp-quote

@@ -95,19 +95,19 @@ void QuoteService::Dispatch(QuoteBlock &msg)
 	{
 	case QuoteBlockType_MarketData:
 	{
-		SyncBroadcastMarketData((const QuoteMarketData*)msg.buf);
+		SyncBroadcastMarketData((const QuoteMarketData*)&msg);
 	}break;
 	case QuoteBlockType_Kline:
 	{
-		SyncBroadcastKline((const QuoteKline*)msg.buf);
+		SyncBroadcastKline((const QuoteKline*)&msg);
 	}break;
 	case QuoteBlockType_OrderBook:
 	{
-		SyncBroadcastOrderBook((const QuoteOrderBook*)msg.buf);
+		SyncBroadcastOrderBook((const QuoteOrderBook*)&msg);
 	}break;
 	case QuoteBlockType_Level2:
 	{
-		SyncBroadcastLevel2((const QuoteOrderBookLevel2*)msg.buf);
+		SyncBroadcastLevel2((const QuoteOrderBookLevel2*)&msg);
 	}break;
 	}
 }

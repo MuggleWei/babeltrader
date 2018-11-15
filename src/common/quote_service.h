@@ -21,10 +21,10 @@ public:
 
 	void RunAsyncLoop();
 
-	void BroadcastMarketData(QuoteMarketData &msg, bool async = false);
-	void BroadcastKline(QuoteKline &msg, bool async = false);
-	void BroadcastOrderBook(QuoteOrderBook &msg, bool async = false);
-	void BroadcastLevel2(QuoteOrderBookLevel2 &msg, bool async = false);
+	void BroadcastMarketData(QuoteMarketData &msg, bool async = true);
+	void BroadcastKline(QuoteKline &msg, bool async = true);
+	void BroadcastOrderBook(QuoteOrderBook &msg, bool async = true);
+	void BroadcastLevel2(QuoteOrderBookLevel2 &msg, bool async = true);
 
 private:
 	void AsyncLoop();
