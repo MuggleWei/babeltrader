@@ -199,25 +199,33 @@ void CTPQuoteHandler::OnRspUnSubForQuoteRsp(CThostFtdcSpecificInstrumentField *p
 
 void CTPQuoteHandler::OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDepthMarketData)
 {
-#ifndef NDEBUG
+	QuoteMarketData msg = { 0 };
+
+#if ENABLE_PERFORMANCE_TEST
 	// OutputMarketData(pDepthMarketData);
+	static QuoteTransferMonitor monitor;
+	monitor.start();
+
+	auto t = monitor.ts_.time_since_epoch();
+	msg.quote.ts = std::chrono::duration_cast<std::chrono::milliseconds>(t).count();
 #endif
 
-	// convert to common struct
-	Quote quote = { 0 };
-	MarketData md = { 0 };
-	ConvertMarketData(pDepthMarketData, quote, md);
-
-	BroadcastMarketData(uws_hub_, quote, md);
+	ConvertMarketData(pDepthMarketData, msg.quote, msg.market_data);
+	BroadcastMarketData(uws_hub_, msg);
 
 	// try update kline
 	int64_t sec = (int64_t)time(nullptr);
-	Kline kline;
-	if (kline_builder_.updateMarketData(sec, pDepthMarketData->InstrumentID, md, kline)) {
-		quote.info1 = QuoteInfo1_Kline;
-		quote.info2 = QuoteInfo2_1Min;
-		BroadcastKline(uws_hub_, quote, kline);
+	QuoteKline kline_msg = { 0 };
+	if (kline_builder_.updateMarketData(sec, pDepthMarketData->InstrumentID, msg.market_data, kline_msg.kline)) {
+		memcpy(&kline_msg.quote, &msg.quote, sizeof(kline_msg.quote));
+		kline_msg.quote.info1 = QuoteInfo1_Kline;
+		kline_msg.quote.info2 = QuoteInfo2_1Min;
+		BroadcastKline(uws_hub_, kline_msg);
 	}
+
+#if ENABLE_PERFORMANCE_TEST
+	monitor.end("xtp OnDepthMarketData");
+#endif
 }
 void CTPQuoteHandler::OnRtnForQuoteRsp(CThostFtdcForQuoteRspField *pForQuoteRsp) {}
 

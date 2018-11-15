@@ -20,10 +20,10 @@ public:
 	virtual void SubTopic(const Quote &msg) = 0;
 	virtual void UnsubTopic(const Quote &msg) = 0;
 
-	void BroadcastMarketData(uWS::Hub &hub, const Quote &quote, const MarketData &md);
-	void BroadcastKline(uWS::Hub &hub, const Quote &quote, const Kline &kline);
-	void BroadcastOrderBook(uWS::Hub &hub, const Quote &quote, const OrderBook &order_book);
-	void BroadcastLevel2(uWS::Hub &hub, const Quote &quote, const OrderBookLevel2 &level2);
+	void BroadcastMarketData(uWS::Hub &hub, const QuoteMarketData &msg);
+	void BroadcastKline(uWS::Hub &hub, const QuoteKline &msg);
+	void BroadcastOrderBook(uWS::Hub &hub, const QuoteOrderBook &msg);
+	void BroadcastLevel2(uWS::Hub &hub, const QuoteOrderBookLevel2 &msg);
 
 public:
 	WsService *ws_service_;

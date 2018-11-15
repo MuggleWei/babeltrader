@@ -10,7 +10,7 @@ void TimeDiff(int64_t ts, int64_t cur_ms)
 {
 	static int64_t total_elapsed = 0;
 	static int64_t total_pkg = 0;
-	const static int64_t step = 100000;
+	const static int64_t step = 10000;
 
 	total_elapsed += (cur_ms - ts);
 	total_pkg += 1;

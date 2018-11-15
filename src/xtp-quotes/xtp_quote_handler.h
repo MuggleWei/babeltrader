@@ -78,9 +78,6 @@ private:
 
 	void Reconn();
 
-	void QuoteMessageLoop();
-	void BroadcastQuote(XTPQuoteBlock &block);
-
 	void OutputFrontDisconnected();
 	void OutputRspSubMarketData(XTPST *ticker, XTPRI *error_info, bool is_last);
 	void OutputRspUnsubMarketData(XTPST *ticker, XTPRI *error_info, bool is_last);

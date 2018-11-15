@@ -4,8 +4,8 @@ import traceback
 
 import websocket
 
-# addr = "127.0.0.1:6001"
-addr = "127.0.0.1:6002"
+addr = "127.0.0.1:6001"
+# addr = "127.0.0.1:6002"
 
 if __name__ == '__main__':
     ws = websocket.create_connection("ws://" + addr + "/ws")

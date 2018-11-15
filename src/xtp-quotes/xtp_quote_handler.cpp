@@ -23,10 +23,6 @@ void XTPQuoteHandler::run()
 		topic_exchange_[topic.symbol] = (ExchangeEnum)topic.exchange;
 	}
 
-	// quote message dispatch loop
-	std::thread th(&XTPQuoteHandler::QuoteMessageLoop, this);
-	th.detach();
-
 	// init xtp api
 	RunAPI();
 
@@ -241,54 +237,73 @@ void XTPQuoteHandler::OnUnSubscribeAllTickByTick(XTP_EXCHANGE_TYPE exchange_id, 
 
 void XTPQuoteHandler::OnDepthMarketData(XTPMD *market_data, int64_t bid1_qty[], int32_t bid1_count, int32_t max_bid1_count, int64_t ask1_qty[], int32_t ask1_count, int32_t max_ask1_count)
 {
-	static_assert(XTPQuoteBlockSize > sizeof(XTPMD), "quote block size not enough");
-
-	XTPQuoteBlock msg = { 0 };
+	QuoteMarketData msg = { 0 };
 
 #if ENABLE_PERFORMANCE_TEST
 	// OutputMarketData(market_data, bid1_qty, bid1_count, max_bid1_count, ask1_qty, ask1_count, max_ask1_count);
-	auto t = std::chrono::system_clock::now().time_since_epoch();
-	msg.ts = std::chrono::duration_cast<std::chrono::milliseconds>(t).count();
-#endif
-	
-	msg.quote_type = XTPQuoteType_MarketData;
-	memcpy(msg.buf, market_data, sizeof(*market_data));
+	static QuoteTransferMonitor monitor;
+	monitor.start();
 
-	quote_tunnel_.Write(std::move(msg));
+	auto t = monitor.ts_.time_since_epoch();
+	msg.quote.ts = std::chrono::duration_cast<std::chrono::milliseconds>(t).count();
+#endif
+
+	ConvertMarketData(market_data, msg.quote, msg.market_data);
+	BroadcastMarketData(uws_hub_, msg);
+
+	// try update kline
+	int64_t sec = (int64_t)time(nullptr);
+	QuoteKline kline_msg = { 0 };
+	if (kline_builder_.updateMarketData(sec, market_data->ticker, msg.market_data, kline_msg.kline)) {
+		memcpy(&kline_msg.quote, &msg.quote, sizeof(kline_msg.quote));
+		kline_msg.quote.info1 = QuoteInfo1_Kline;
+		kline_msg.quote.info2 = QuoteInfo2_1Min;
+		BroadcastKline(uws_hub_, kline_msg);
+	}
+
+#if ENABLE_PERFORMANCE_TEST
+	monitor.end("xtp OnDepthMarketData");
+#endif
 }
 void XTPQuoteHandler::OnOrderBook(XTPOB *order_book)
 {
-	static_assert(XTPQuoteBlockSize > sizeof(XTPOB), "quote block size not enough");
-
-	XTPQuoteBlock msg = { 0 };
+	QuoteOrderBook msg = { 0 };
 
 #if ENABLE_PERFORMANCE_TEST
-	// OutputOrderBook(order_book);
-	auto t = std::chrono::system_clock::now().time_since_epoch();
-	msg.ts = std::chrono::duration_cast<std::chrono::milliseconds>(t).count();
-#endif
-	
-	msg.quote_type = XTPQuoteType_OrderBook;
-	memcpy(msg.buf, order_book, sizeof(*order_book));
+	// OutputMarketData(market_data, bid1_qty, bid1_count, max_bid1_count, ask1_qty, ask1_count, max_ask1_count);
+	static QuoteTransferMonitor monitor;
+	monitor.start();
 
-	quote_tunnel_.Write(std::move(msg));
+	auto t = std::chrono::system_clock::now().time_since_epoch();
+	msg.quote.ts = std::chrono::duration_cast<std::chrono::milliseconds>(t).count();
+#endif
+
+	ConvertOrderBook(order_book, msg.quote, msg.order_book);
+	BroadcastOrderBook(uws_hub_, msg);
+
+#if ENABLE_PERFORMANCE_TEST
+	monitor.end("xtp OnOrderBook");
+#endif
 }
 void XTPQuoteHandler::OnTickByTick(XTPTBT *tbt_data)
 {
-	static_assert(XTPQuoteBlockSize > sizeof(XTPTBT), "quote block size not enough");
-
-	XTPQuoteBlock msg = { 0 };
+	QuoteOrderBookLevel2 msg = { 0 };
 
 #if ENABLE_PERFORMANCE_TEST
-	// OutputTickByTick(tbt_data);
+	// OutputMarketData(market_data, bid1_qty, bid1_count, max_bid1_count, ask1_qty, ask1_count, max_ask1_count);
+	static QuoteTransferMonitor monitor;
+	monitor.start();
+
 	auto t = std::chrono::system_clock::now().time_since_epoch();
-	msg.ts = std::chrono::duration_cast<std::chrono::milliseconds>(t).count();
+	msg.quote.ts = std::chrono::duration_cast<std::chrono::milliseconds>(t).count();
 #endif
+	
+	ConvertTickByTick(tbt_data, msg.quote, msg.level2);
+	BroadcastLevel2(uws_hub_, msg);
 
-	msg.quote_type = XTPQuoteType_TickByTick;
-	memcpy(msg.buf, tbt_data, sizeof(*tbt_data));
-
-	quote_tunnel_.Write(std::move(msg));
+#if ENABLE_PERFORMANCE_TEST
+	monitor.end("xtp OnTickByTick");
+#endif
 }
 
 
@@ -360,135 +375,6 @@ void XTPQuoteHandler::Reconn()
 	} while (ret != 0);
 
 	SubTopics();
-}
-
-void XTPQuoteHandler::QuoteMessageLoop()
-{
-#if ENABLE_PERFORMANCE_TEST
-	static int msg_peak = 0;
-#endif
-
-	std::queue<XTPQuoteBlock> queue;
-	while (true) {
-		quote_tunnel_.Read(queue, true);
-
-#if ENABLE_PERFORMANCE_TEST
-		if (queue.size() > msg_peak)
-		{
-			msg_peak = queue.size();
-			LOG(INFO) << "quotes package cache peak: " << msg_peak;
-		}
-#endif
-
-		while (queue.size()) {
-			XTPQuoteBlock &msg = queue.front();
-			BroadcastQuote(msg);
-			queue.pop();
-		}
-	}
-}
-void XTPQuoteHandler::BroadcastQuote(XTPQuoteBlock &block)
-{
-#if ENABLE_PERFORMANCE_TEST
-	{
-		static int64_t total_elapsed = 0;
-		static int64_t total_pkg = 0;
-		const static int64_t step = 100000;
-
-		auto t = std::chrono::system_clock::now().time_since_epoch();
-		total_elapsed += std::chrono::duration_cast<std::chrono::milliseconds>(t).count() - block.ts;
-		total_pkg += 1;
-		if (total_pkg >= step)
-		{
-			double avg_elapsed_ms = (double)total_elapsed / total_pkg;
-			LOG(INFO)
-				<< "tunnel transfer - total pkg: " << total_pkg
-				<< ", avg elapsed ms: " << avg_elapsed_ms;
-			total_elapsed = 0;
-			total_pkg = 0;
-		}
-	}
-#endif
-
-	switch (block.quote_type)
-	{
-	case XTPQuoteType_MarketData:
-	{
-#if ENABLE_PERFORMANCE_TEST
-		static int64_t total_elapsed = 0;
-		static int64_t total_pkg = 0;
-		const static int64_t step = 100000;
-		auto start = std::chrono::high_resolution_clock::now();
-#endif
-
-		XTPMD *market_data = (XTPMD*)&block.buf;
-
-		Quote quote = { 0 };
-		MarketData md = { 0 };
-
-		ConvertMarketData(market_data, quote, md);
-
-#if ENABLE_PERFORMANCE_TEST
-		quote.ts = block.ts;
-#endif
-
-		BroadcastMarketData(uws_hub_, quote, md);
-
-		// try update kline
-		int64_t sec = (int64_t)time(nullptr);
-		Kline kline;
-		if (kline_builder_.updateMarketData(sec, market_data->ticker, md, kline)) {
-			quote.info1 = QuoteInfo1_Kline;
-			quote.info2 = QuoteInfo2_1Min;
-			BroadcastKline(uws_hub_, quote, kline);
-		}
-
-#if ENABLE_PERFORMANCE_TEST
-		auto end = std::chrono::high_resolution_clock::now();
-		total_elapsed += std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-		total_pkg += 1;
-		if (total_pkg >= step)
-		{
-			double avg_elapsed_ms = (double)total_elapsed / total_pkg;
-			LOG(INFO)
-				<< "broadcast marketdata - total pkg: " << total_pkg
-				<< ", avg elapsed ms: " << avg_elapsed_ms;
-			total_elapsed = 0;
-			total_pkg = 0;
-		}
-#endif
-	}break;
-	case XTPQuoteType_OrderBook:
-	{
-		XTPOB *order_book = (XTPOB*)block.buf;
-
-		Quote quote = { 0 };
-		OrderBook common_order_book = { 0 };
-
-		ConvertOrderBook(order_book, quote, common_order_book);
-
-#if ENABLE_PERFORMANCE_TEST
-		quote.ts = block.ts;
-#endif
-
-		BroadcastOrderBook(uws_hub_, quote, common_order_book);
-	}break;
-	case XTPQuoteType_TickByTick:
-	{
-		XTPTBT *tbt_data = (XTPTBT*)block.buf;
-
-		Quote quote = { 0 };
-		OrderBookLevel2 level2 = { 0 };
-
-		ConvertTickByTick(tbt_data, quote, level2);
-
-#if ENABLE_PERFORMANCE_TEST
-		quote.ts = block.ts;
-#endif
-
-		BroadcastLevel2(uws_hub_, quote, level2);
-	}break;
-	}
 }
 
 void XTPQuoteHandler::OutputFrontDisconnected()

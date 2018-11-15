@@ -2,6 +2,8 @@
 #include <time.h>
 #include <string.h>
 
+#include "glog/logging.h"
+
 namespace babeltrader
 {
 
@@ -77,6 +79,26 @@ int64_t XTPGetTimestamp(int64_t xtp_ts)
 
 	time_t utc_sec = mktime(&time_info);
 	return (int64_t)utc_sec * 1000 + mill;
+}
+
+
+void QuoteTransferMonitor::start()
+{
+	ts_ = std::chrono::system_clock::now();
+}
+void QuoteTransferMonitor::end(const char *title)
+{
+	auto end = std::chrono::system_clock::now();
+	total_pkg_ += 1;
+	total_elapsed_ms_ += std::chrono::duration_cast<std::chrono::milliseconds>(end - ts_).count();
+	if (total_pkg_ >= step_) {
+		double avg_elapsed_ms = (double)total_elapsed_ms_ / total_pkg_;
+		LOG(INFO) << title
+			<< " handle pkg count: " << total_pkg_
+			<< " avarage ms: " << avg_elapsed_ms;
+		total_elapsed_ms_ = 0;
+		total_pkg_ = 0;
+	}
 }
 
 }
