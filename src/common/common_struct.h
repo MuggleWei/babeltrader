@@ -48,8 +48,8 @@ struct MarketData
 	int64_t ts;
 	double last;
 	int bid_ask_len;
-	PriceVol bids[10];
-	PriceVol asks[10];
+	PriceVol bids[BIDASK_MAX_LEN];
+	PriceVol asks[BIDASK_MAX_LEN];
 	double vol;
 	double turnover;
 	double avg_price;
@@ -73,8 +73,9 @@ struct OrderBook
 	int64_t ts;
 	double last;
 	double vol;
-	std::vector<PriceVol> bids;
-	std::vector<PriceVol> asks;
+	int bid_ask_len;
+	PriceVol bids[BIDASK_MAX_LEN];
+	PriceVol asks[BIDASK_MAX_LEN];
 };
 
 struct OrderBookLevel2Entrust

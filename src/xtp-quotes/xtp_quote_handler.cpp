@@ -463,7 +463,7 @@ void XTPQuoteHandler::BroadcastQuote(XTPQuoteBlock &block)
 		XTPOB *order_book = (XTPOB*)block.buf;
 
 		Quote quote = { 0 };
-		OrderBook common_order_book;
+		OrderBook common_order_book = { 0 };
 
 		ConvertOrderBook(order_book, quote, common_order_book);
 
@@ -478,7 +478,7 @@ void XTPQuoteHandler::BroadcastQuote(XTPQuoteBlock &block)
 		XTPTBT *tbt_data = (XTPTBT*)block.buf;
 
 		Quote quote = { 0 };
-		OrderBookLevel2 level2;
+		OrderBookLevel2 level2 = { 0 };
 
 		ConvertTickByTick(tbt_data, quote, level2);
 
@@ -1070,9 +1070,12 @@ void XTPQuoteHandler::ConvertOrderBook(XTPOB *xtp_order_book, Quote &quote, Orde
 	order_book.ts = XTPGetTimestamp(xtp_order_book->data_time);
 	order_book.last = xtp_order_book->last_price;
 	order_book.vol = xtp_order_book->qty;
-	for (int i = 0; i < sizeof(xtp_order_book->bid)/sizeof(xtp_order_book->bid[0]); i++) {
-		order_book.bids.push_back({ xtp_order_book->bid[i], xtp_order_book->bid_qty[i] });
-		order_book.asks.push_back({ xtp_order_book->ask[i], xtp_order_book->ask_qty[i] });
+	order_book.bid_ask_len = sizeof(xtp_order_book->bid) / sizeof(xtp_order_book->bid[0]) > BIDASK_MAX_LEN ? BIDASK_MAX_LEN : sizeof(xtp_order_book->bid) / sizeof(xtp_order_book->bid[0]);
+	for (int i = 0; i < order_book.bid_ask_len; i++) {
+		order_book.bids[i].price = xtp_order_book->bid[i];
+		order_book.bids[i].vol = xtp_order_book->bid_qty[i];
+		order_book.asks[i].price = xtp_order_book->ask[i];
+		order_book.asks[i].vol = xtp_order_book->ask_qty[i];
 	}
 }
 void XTPQuoteHandler::ConvertTickByTick(XTPTBT *tbt_data, Quote &quote, OrderBookLevel2 &level2)
