@@ -205,7 +205,7 @@ void CTPQuoteHandler::OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDept
 
 	// convert to common struct
 	Quote quote = { 0 };
-	MarketData md;
+	MarketData md = { 0 };
 	ConvertMarketData(pDepthMarketData, quote, md);
 
 	BroadcastMarketData(uws_hub_, quote, md);
@@ -530,16 +530,27 @@ void CTPQuoteHandler::ConvertMarketData(CThostFtdcDepthMarketDataField *pDepthMa
 
 	md.ts = ts;
 	md.last = pDepthMarketData->LastPrice;
-	md.bids.push_back({ pDepthMarketData->BidPrice1, pDepthMarketData->BidVolume1 });
-	md.bids.push_back({ pDepthMarketData->BidPrice2, pDepthMarketData->BidVolume2 });
-	md.bids.push_back({ pDepthMarketData->BidPrice3, pDepthMarketData->BidVolume3 });
-	md.bids.push_back({ pDepthMarketData->BidPrice4, pDepthMarketData->BidVolume4 });
-	md.bids.push_back({ pDepthMarketData->BidPrice5, pDepthMarketData->BidVolume5 });
-	md.asks.push_back({ pDepthMarketData->AskPrice1, pDepthMarketData->AskVolume1 });
-	md.asks.push_back({ pDepthMarketData->AskPrice2, pDepthMarketData->AskVolume2 });
-	md.asks.push_back({ pDepthMarketData->AskPrice3, pDepthMarketData->AskVolume3 });
-	md.asks.push_back({ pDepthMarketData->AskPrice4, pDepthMarketData->AskVolume4 });
-	md.asks.push_back({ pDepthMarketData->AskPrice5, pDepthMarketData->AskVolume5 });
+	md.bid_ask_len = 5;
+	md.bids[0].price = pDepthMarketData->BidPrice1;
+	md.bids[0].vol = pDepthMarketData->BidVolume1;
+	md.bids[1].price = pDepthMarketData->BidPrice2;
+	md.bids[1].vol = pDepthMarketData->BidVolume2;
+	md.bids[2].price = pDepthMarketData->BidPrice3;
+	md.bids[2].vol = pDepthMarketData->BidVolume3;
+	md.bids[3].price = pDepthMarketData->BidPrice4;
+	md.bids[3].vol = pDepthMarketData->BidVolume4;
+	md.bids[4].price = pDepthMarketData->BidPrice5;
+	md.bids[4].vol = pDepthMarketData->BidVolume5;
+	md.asks[0].price = pDepthMarketData->BidPrice1;
+	md.asks[0].vol = pDepthMarketData->BidVolume1;
+	md.asks[1].price = pDepthMarketData->BidPrice2;
+	md.asks[1].vol = pDepthMarketData->BidVolume2;
+	md.asks[2].price = pDepthMarketData->BidPrice3;
+	md.asks[2].vol = pDepthMarketData->BidVolume3;
+	md.asks[3].price = pDepthMarketData->BidPrice4;
+	md.asks[3].vol = pDepthMarketData->BidVolume4;
+	md.asks[4].price = pDepthMarketData->BidPrice5;
+	md.asks[4].vol = pDepthMarketData->BidVolume5;
 	md.vol = pDepthMarketData->Volume;
 	md.turnover = pDepthMarketData->Turnover;
 	md.avg_price = pDepthMarketData->AveragePrice;
@@ -554,8 +565,8 @@ void CTPQuoteHandler::ConvertMarketData(CThostFtdcDepthMarketDataField *pDepthMa
 	md.open = pDepthMarketData->OpenPrice;
 	md.high = pDepthMarketData->HighestPrice;
 	md.low = pDepthMarketData->LowestPrice;
-	md.trading_day = pDepthMarketData->TradingDay;
-	md.action_day = pDepthMarketData->ActionDay;
+	strncpy(md.trading_day, pDepthMarketData->TradingDay, sizeof(md.trading_day) - 1);
+	strncpy(md.action_day, pDepthMarketData->ActionDay, sizeof(md.action_day) - 1);
 }
 
 int64_t CTPQuoteHandler::GetUpdateTimeMs(CThostFtdcDepthMarketDataField *pDepthMarketData)

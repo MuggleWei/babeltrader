@@ -19,6 +19,9 @@ namespace babeltrader
 #define QUOTE_INFO1_LEN 16
 #define QUOTE_INFO2_LEN 16
 
+#define BIDASK_MAX_LEN 10
+#define QUOTE_DATETIME_LEN 32
+
 struct Quote
 {
 	uint8_t market;		// MarketEnum
@@ -44,8 +47,9 @@ struct MarketData
 {
 	int64_t ts;
 	double last;
-	std::vector<PriceVol> bids;
-	std::vector<PriceVol> asks;
+	int bid_ask_len;
+	PriceVol bids[10];
+	PriceVol asks[10];
 	double vol;
 	double turnover;
 	double avg_price;
@@ -60,8 +64,8 @@ struct MarketData
 	double open;
 	double high;
 	double low;
-	std::string trading_day;
-	std::string action_day;
+	char trading_day[QUOTE_DATETIME_LEN];
+	char action_day[QUOTE_DATETIME_LEN];
 };
 
 struct OrderBook
@@ -111,6 +115,30 @@ struct Kline
 	double low;
 	double close;
 	double vol;
+};
+
+struct QuoteMarketData
+{
+	Quote quote;
+	MarketData market_data;
+};
+
+struct QuoteOrderBook
+{
+	Quote quote;
+	OrderBook order_book;
+};
+
+struct QuoteOrderBookLevel2
+{
+	Quote quote;
+	OrderBookLevel2 level2;
+};
+
+struct QuoteKline
+{
+	Quote quote;
+	Kline kline;
 };
 
 

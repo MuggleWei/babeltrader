@@ -172,6 +172,7 @@ else()
 	)
 endif()
 
+# performance test
 option(BABELTRADER_ENABLE_PERFORMANCE "enable performance" OFF)
 if (${BABELTRADER_ENABLE_PERFORMANCE})
 	add_compile_definitions(ENABLE_PERFORMANCE_TEST=1)

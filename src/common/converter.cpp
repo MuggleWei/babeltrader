@@ -16,7 +16,7 @@ void SerializeQuoteBegin(rapidjson::Writer<rapidjson::StringBuffer> &writer, con
 	writer.StartObject();
 	writer.Key("market");
 	writer.String(g_markets[quote.market]);
-	writer.Key("exchange_id");
+	writer.Key("exchange");
 	writer.String(g_exchanges[quote.exchange]);
 	writer.Key("type");
 	writer.String(g_product_types[quote.type]);
@@ -55,19 +55,19 @@ void SerializeMarketData(rapidjson::Writer<rapidjson::StringBuffer> &writer, con
 	writer.Double(md.last);
 	writer.Key("bids");
 	writer.StartArray();
-	for (auto price_vol : md.bids) {
+	for (int i = 0; i < md.bid_ask_len; i++ ){
 		writer.StartArray();
-		writer.Double(price_vol.price);
-		writer.Int(price_vol.vol);
+		writer.Double(md.bids[i].price);
+		writer.Int(md.bids[i].vol);
 		writer.EndArray();
 	}
 	writer.EndArray();
 	writer.Key("asks");
 	writer.StartArray();
-	for (auto price_vol : md.asks) {
+	for (int i = 0; i < md.bid_ask_len; i++) {
 		writer.StartArray();
-		writer.Double(price_vol.price);
-		writer.Int(price_vol.vol);
+		writer.Double(md.asks[i].price);
+		writer.Int(md.asks[i].vol);
 		writer.EndArray();
 	}
 	writer.EndArray();
@@ -100,9 +100,9 @@ void SerializeMarketData(rapidjson::Writer<rapidjson::StringBuffer> &writer, con
 	writer.Key("low");
 	writer.Double(md.low);
 	writer.Key("trading_day");
-	writer.String(md.trading_day.c_str());
+	writer.String(md.trading_day);
 	writer.Key("action_day");
-	writer.String(md.action_day.c_str());
+	writer.String(md.action_day);
 }
 void SerializeOrderBook(rapidjson::Writer<rapidjson::StringBuffer> &writer, const OrderBook &order_book)
 {

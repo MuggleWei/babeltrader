@@ -424,7 +424,7 @@ void XTPQuoteHandler::BroadcastQuote(XTPQuoteBlock &block)
 		XTPMD *market_data = (XTPMD*)&block.buf;
 
 		Quote quote = { 0 };
-		MarketData md;
+		MarketData md = { 0 };
 
 		ConvertMarketData(market_data, quote, md);
 
@@ -1036,9 +1036,12 @@ void XTPQuoteHandler::ConvertMarketData(XTPMD *market_data, Quote &quote, Market
 
 	md.ts = XTPGetTimestamp(market_data->data_time);
 	md.last = market_data->last_price;
+	md.bid_ask_len = 10;
 	for (int i = 0; i < 10; i++) {
-		md.bids.push_back({ market_data->bid[i], market_data->bid_qty[i] });
-		md.asks.push_back({ market_data->ask[i], market_data->ask_qty[i] });
+		md.bids[i].price = market_data->bid[i];
+		md.bids[i].vol = market_data->bid_qty[i];
+		md.asks[i].price = market_data->ask[i];
+		md.asks[i].vol = market_data->ask_qty[i];
 	}
 	md.vol = market_data->qty;
 	md.turnover = market_data->turnover;
@@ -1054,8 +1057,8 @@ void XTPQuoteHandler::ConvertMarketData(XTPMD *market_data, Quote &quote, Market
 	md.open = market_data->open_price;
 	md.high = market_data->high_price;
 	md.low = market_data->low_price;
-	md.trading_day = "";
-	md.action_day = "";
+	md.trading_day[0] = '\0';
+	md.action_day[0] = '\0';
 }
 void XTPQuoteHandler::ConvertOrderBook(XTPOB *xtp_order_book, Quote &quote, OrderBook &order_book)
 {
