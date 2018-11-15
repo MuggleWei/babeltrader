@@ -246,3 +246,13 @@ else()
 	)
 endif()
 
+# cpp demo
+add_serv(test_quote ${CMAKE_CURRENT_LIST_DIR}/demo/cpp/test_quote)
+
+if (WIN32)
+	set_target_properties(test_quote
+		PROPERTIES
+		FOLDER "demo"
+		VS_DEBUGGER_WORKING_DIRECTORY "$(OutDir)"
+	)
+endif()
