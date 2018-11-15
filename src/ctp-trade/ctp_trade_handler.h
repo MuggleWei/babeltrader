@@ -176,7 +176,6 @@ private:
 
 	CTPTradeConf conf_;
 
-	uWS::Hub uws_hub_;
 	WsService ws_service_;
 	HttpService http_service_;
 

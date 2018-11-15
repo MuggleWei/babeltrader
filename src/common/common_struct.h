@@ -10,7 +10,6 @@
 namespace babeltrader
 {
 
-
 //////////////////////////
 // quotes
 
@@ -21,6 +20,8 @@ namespace babeltrader
 
 #define BIDASK_MAX_LEN 10
 #define QUOTE_DATETIME_LEN 32
+
+#define QuoteBlockSize 1024
 
 struct Quote
 {
@@ -118,30 +119,47 @@ struct Kline
 	double vol;
 };
 
+enum QuoteBlockType
+{
+	QuoteBlockType_MarketData = 0,
+	QuoteBlockType_Kline,
+	QuoteBlockType_OrderBook,
+	QuoteBlockType_Level2,
+};
+
 struct QuoteMarketData
 {
+	uint8_t quote_type;
 	Quote quote;
 	MarketData market_data;
 };
 
 struct QuoteOrderBook
 {
+	uint8_t quote_type;
 	Quote quote;
 	OrderBook order_book;
 };
 
 struct QuoteOrderBookLevel2
 {
+	uint8_t quote_type;
 	Quote quote;
 	OrderBookLevel2 level2;
 };
 
 struct QuoteKline
 {
+	uint8_t quote_type;
 	Quote quote;
 	Kline kline;
 };
 
+struct QuoteBlock
+{
+	uint8_t quote_type;
+	char buf[QuoteBlockSize];
+};
 
 //////////////////////////
 // trade

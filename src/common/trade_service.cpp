@@ -82,7 +82,7 @@ void TradeService::OnReqQueryProduct(uWS::WebSocket<uWS::SERVER> *ws, rapidjson:
 }
 
 
-void TradeService::BroadcastConfirmOrder(uWS::Hub &hub, Order &order, int error_id, const char *error_msg)
+void TradeService::BroadcastConfirmOrder(Order &order, int error_id, const char *error_msg)
 {
 	rapidjson::StringBuffer s;
 	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
@@ -105,9 +105,9 @@ void TradeService::BroadcastConfirmOrder(uWS::Hub &hub, Order &order, int error_
 
 	LOG(INFO) << s.GetString();
 
-	hub.getDefaultGroup<uWS::SERVER>().broadcast(s.GetString(), s.GetLength(), uWS::OpCode::TEXT);
+	uws_hub_.getDefaultGroup<uWS::SERVER>().broadcast(s.GetString(), s.GetLength(), uWS::OpCode::TEXT);
 }
-void TradeService::BroadcastOrderStatus(uWS::Hub &hub, Order &order, OrderStatusNotify &order_status_notify, int error_id, const char *error_msg)
+void TradeService::BroadcastOrderStatus(Order &order, OrderStatusNotify &order_status_notify, int error_id, const char *error_msg)
 {
 	rapidjson::StringBuffer s;
 	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
@@ -136,9 +136,9 @@ void TradeService::BroadcastOrderStatus(uWS::Hub &hub, Order &order, OrderStatus
 
 	LOG(INFO) << s.GetString();
 
-	hub.getDefaultGroup<uWS::SERVER>().broadcast(s.GetString(), s.GetLength(), uWS::OpCode::TEXT);
+	uws_hub_.getDefaultGroup<uWS::SERVER>().broadcast(s.GetString(), s.GetLength(), uWS::OpCode::TEXT);
 }
-void TradeService::BroadcastOrderDeal(uWS::Hub &hub, Order &order, OrderDealNotify &order_deal)
+void TradeService::BroadcastOrderDeal(Order &order, OrderDealNotify &order_deal)
 {
 	rapidjson::StringBuffer s;
 	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
@@ -164,7 +164,7 @@ void TradeService::BroadcastOrderDeal(uWS::Hub &hub, Order &order, OrderDealNoti
 
 	LOG(INFO) << s.GetString();
 
-	hub.getDefaultGroup<uWS::SERVER>().broadcast(s.GetString(), s.GetLength(), uWS::OpCode::TEXT);
+	uws_hub_.getDefaultGroup<uWS::SERVER>().broadcast(s.GetString(), s.GetLength(), uWS::OpCode::TEXT);
 }
 void TradeService::RspOrderQry(uWS::WebSocket<uWS::SERVER>* ws, OrderQuery &order_qry, std::vector<Order> &orders, std::vector<OrderStatusNotify> &order_status, int error_id)
 {

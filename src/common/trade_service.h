@@ -38,9 +38,9 @@ public:
 	void OnReqQueryProduct(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Document &doc);
 
 	// response
-	void BroadcastConfirmOrder(uWS::Hub &hub, Order &order, int error_id, const char *error_msg);
-	void BroadcastOrderStatus(uWS::Hub &hub, Order &order, OrderStatusNotify &order_status_notify, int error_id, const char *error_msg);
-	void BroadcastOrderDeal(uWS::Hub &hub, Order &order, OrderDealNotify &order_deal);
+	void BroadcastConfirmOrder(Order &order, int error_id, const char *error_msg);
+	void BroadcastOrderStatus(Order &order, OrderStatusNotify &order_status_notify, int error_id, const char *error_msg);
+	void BroadcastOrderDeal(Order &order, OrderDealNotify &order_deal);
 	void RspOrderQry(uWS::WebSocket<uWS::SERVER>* ws, OrderQuery &order_qry, std::vector<Order> &orders, std::vector<OrderStatusNotify> &order_status, int error_id);
 	void RspTradeQry(uWS::WebSocket<uWS::SERVER>* ws, TradeQuery &trade_qry, std::vector<Order> &orders, std::vector<OrderDealNotify> &order_deal, int error_id);
 
@@ -53,6 +53,7 @@ public:
 	void RspTradeAccountQryType2(uWS::WebSocket<uWS::SERVER>* ws, TradeAccountQuery &tradeaccount_qry, std::vector<TradeAccountType2> &trade_accounts, int error_id);
 
 public:
+	uWS::Hub uws_hub_;
 	WsService *ws_service_;
 };
 

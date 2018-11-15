@@ -17,24 +17,6 @@
 
 using namespace babeltrader;
 
-#define XTPQuoteBlockSize 1024
-
-enum XTPQuoteType
-{
-	XTPQuoteType_MarketData = 0,
-	XTPQuoteType_OrderBook,
-	XTPQuoteType_TickByTick,
-};
-
-struct XTPQuoteBlock
-{
-	int quote_type;
-	char buf[XTPQuoteBlockSize];
-#if ENABLE_PERFORMANCE_TEST
-	int64_t ts;
-#endif
-};
-
 class XTPQuoteHandler : public QuoteService, XTP::API::QuoteSpi
 {
 public:
@@ -114,7 +96,6 @@ private:
 	XTP::API::QuoteApi *api_;
 	XTPQuoteConf conf_;
 
-	uWS::Hub uws_hub_;
 	WsService ws_service_;
 	HttpService http_service_;
 
@@ -124,8 +105,6 @@ private:
 	std::map<std::string, bool> sub_topics_;
 	std::map<std::string, ExchangeEnum> topic_exchange_;
 	KlineBuilder kline_builder_;
-
-	muggle::Tunnel<XTPQuoteBlock> quote_tunnel_;
 };
 
 #endif

@@ -211,7 +211,7 @@ void CTPQuoteHandler::OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDept
 #endif
 
 	ConvertMarketData(pDepthMarketData, msg.quote, msg.market_data);
-	BroadcastMarketData(uws_hub_, msg);
+	BroadcastMarketData(msg);
 
 	// try update kline
 	int64_t sec = (int64_t)time(nullptr);
@@ -220,7 +220,7 @@ void CTPQuoteHandler::OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDept
 		memcpy(&kline_msg.quote, &msg.quote, sizeof(kline_msg.quote));
 		kline_msg.quote.info1 = QuoteInfo1_Kline;
 		kline_msg.quote.info2 = QuoteInfo2_1Min;
-		BroadcastKline(uws_hub_, kline_msg);
+		BroadcastKline(kline_msg);
 	}
 
 #if ENABLE_PERFORMANCE_TEST
@@ -244,6 +244,8 @@ void CTPQuoteHandler::RunAPI()
 }
 void CTPQuoteHandler::RunService()
 {
+	RunAsyncLoop();
+
 	auto loop_thread = std::thread([&] {
 		uws_hub_.onConnection([&](uWS::WebSocket<uWS::SERVER> *ws, uWS::HttpRequest req) {
 			ws_service_.onConnection(ws, req);

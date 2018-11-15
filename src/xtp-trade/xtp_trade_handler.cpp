@@ -229,17 +229,17 @@ void XTPTradeHandler::OnOrderEvent(XTPOrderInfo *order_info, XTPRI *error_info, 
 	{
 		if (ret)
 		{
-			BroadcastConfirmOrder(uws_hub_, order, error_info->error_id, error_info->error_msg);
+			BroadcastConfirmOrder(order, error_info->error_id, error_info->error_msg);
 		}
-		BroadcastOrderStatus(uws_hub_, order, order_status, error_info->error_id, error_info->error_msg);
+		BroadcastOrderStatus(order, order_status, error_info->error_id, error_info->error_msg);
 	}
 	else
 	{
 		if (ret)
 		{
-			BroadcastConfirmOrder(uws_hub_, order, 0, "");
+			BroadcastConfirmOrder(order, 0, "");
 		}
-		BroadcastOrderStatus(uws_hub_, order, order_status, 0, "");
+		BroadcastOrderStatus(order, order_status, 0, "");
 	}
 }
 void XTPTradeHandler::OnTradeEvent(XTPTradeReport *trade_info, uint64_t session_id)
@@ -250,7 +250,7 @@ void XTPTradeHandler::OnTradeEvent(XTPTradeReport *trade_info, uint64_t session_
 	OrderDealNotify order_deal;
 	ConvertTradeReportXTP2Common(trade_info, order, order_deal);
 
-	BroadcastOrderDeal(uws_hub_, order, order_deal);
+	BroadcastOrderDeal(order, order_deal);
 }
 void XTPTradeHandler::OnQueryOrder(XTPQueryOrderRsp *order_info, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id)
 {

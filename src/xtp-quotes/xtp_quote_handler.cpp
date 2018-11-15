@@ -249,7 +249,7 @@ void XTPQuoteHandler::OnDepthMarketData(XTPMD *market_data, int64_t bid1_qty[], 
 #endif
 
 	ConvertMarketData(market_data, msg.quote, msg.market_data);
-	BroadcastMarketData(uws_hub_, msg);
+	BroadcastMarketData(msg);
 
 	// try update kline
 	int64_t sec = (int64_t)time(nullptr);
@@ -258,7 +258,7 @@ void XTPQuoteHandler::OnDepthMarketData(XTPMD *market_data, int64_t bid1_qty[], 
 		memcpy(&kline_msg.quote, &msg.quote, sizeof(kline_msg.quote));
 		kline_msg.quote.info1 = QuoteInfo1_Kline;
 		kline_msg.quote.info2 = QuoteInfo2_1Min;
-		BroadcastKline(uws_hub_, kline_msg);
+		BroadcastKline(kline_msg);
 	}
 
 #if ENABLE_PERFORMANCE_TEST
@@ -279,7 +279,7 @@ void XTPQuoteHandler::OnOrderBook(XTPOB *order_book)
 #endif
 
 	ConvertOrderBook(order_book, msg.quote, msg.order_book);
-	BroadcastOrderBook(uws_hub_, msg);
+	BroadcastOrderBook(msg);
 
 #if ENABLE_PERFORMANCE_TEST
 	monitor.end("xtp OnOrderBook");
@@ -299,7 +299,7 @@ void XTPQuoteHandler::OnTickByTick(XTPTBT *tbt_data)
 #endif
 	
 	ConvertTickByTick(tbt_data, msg.quote, msg.level2);
-	BroadcastLevel2(uws_hub_, msg);
+	BroadcastLevel2(msg);
 
 #if ENABLE_PERFORMANCE_TEST
 	monitor.end("xtp OnTickByTick");
@@ -330,6 +330,8 @@ void XTPQuoteHandler::RunAPI()
 }
 void XTPQuoteHandler::RunService()
 {
+	RunAsyncLoop();
+
 	auto loop_thread = std::thread([&] {
 		uws_hub_.onConnection([&](uWS::WebSocket<uWS::SERVER> *ws, uWS::HttpRequest req) {
 			ws_service_.onConnection(ws, req);

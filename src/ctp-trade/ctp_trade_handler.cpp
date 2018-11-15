@@ -348,7 +348,7 @@ void CTPTradeHandler::OnRspOrderInsert(CThostFtdcInputOrderField *pInputOrder, C
 	GetAndCleanRecordOrder(&order, pInputOrder->UserID, pInputOrder->OrderRef, ctp_front_id_, ctp_session_id_);
 	ConvertInsertOrderCTP2Common(*pInputOrder, order);
 
-	BroadcastConfirmOrder(uws_hub_, order, pRspInfo->ErrorID, pRspInfo->ErrorMsg);
+	BroadcastConfirmOrder(order, pRspInfo->ErrorID, pRspInfo->ErrorMsg);
 }
 void CTPTradeHandler::OnErrRtnOrderInsert(CThostFtdcInputOrderField *pInputOrder, CThostFtdcRspInfoField *pRspInfo)
 {
@@ -372,9 +372,9 @@ void CTPTradeHandler::OnRtnOrder(CThostFtdcOrderField *pOrder)
 	ConvertRtnOrderCTP2Common(pOrder, order, order_status);
 	if (ret)
 	{
-		BroadcastConfirmOrder(uws_hub_, order, 0, "");
+		BroadcastConfirmOrder(order, 0, "");
 	}
-	BroadcastOrderStatus(uws_hub_, order, order_status, 0, "");
+	BroadcastOrderStatus(order, order_status, 0, "");
 }
 void CTPTradeHandler::OnRtnTrade(CThostFtdcTradeField *pTrade)
 {
@@ -386,7 +386,7 @@ void CTPTradeHandler::OnRtnTrade(CThostFtdcTradeField *pTrade)
 	OrderDealNotify order_deal;
 	ConvertRtnTradeCTP2Common(pTrade, order, order_deal);
 
-	BroadcastOrderDeal(uws_hub_, order, order_deal);
+	BroadcastOrderDeal(order, order_deal);
 }
 
 void CTPTradeHandler::OnRspOrderAction(CThostFtdcInputOrderActionField *pInputOrderAction, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
