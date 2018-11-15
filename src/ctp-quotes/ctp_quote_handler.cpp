@@ -200,7 +200,7 @@ void CTPQuoteHandler::OnRspUnSubForQuoteRsp(CThostFtdcSpecificInstrumentField *p
 void CTPQuoteHandler::OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDepthMarketData)
 {
 #ifndef NDEBUG
-	OutputMarketData(pDepthMarketData);
+	// OutputMarketData(pDepthMarketData);
 #endif
 
 	// convert to common struct
@@ -208,7 +208,7 @@ void CTPQuoteHandler::OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDept
 	MarketData md;
 	ConvertMarketData(pDepthMarketData, quote, md);
 
-	BroadcastMarketData(quote, md);
+	BroadcastMarketData(uws_hub_, quote, md);
 
 	// try update kline
 	int64_t sec = (int64_t)time(nullptr);
@@ -216,7 +216,7 @@ void CTPQuoteHandler::OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDept
 	if (kline_builder_.updateMarketData(sec, pDepthMarketData->InstrumentID, md, kline)) {
 		quote.info1 = QuoteInfo1_Kline;
 		quote.info2 = QuoteInfo2_1Min;
-		BroadcastKline(quote, kline);
+		BroadcastKline(uws_hub_, quote, kline);
 	}
 }
 void CTPQuoteHandler::OnRtnForQuoteRsp(CThostFtdcForQuoteRspField *pForQuoteRsp) {}
@@ -556,38 +556,6 @@ void CTPQuoteHandler::ConvertMarketData(CThostFtdcDepthMarketDataField *pDepthMa
 	md.low = pDepthMarketData->LowestPrice;
 	md.trading_day = pDepthMarketData->TradingDay;
 	md.action_day = pDepthMarketData->ActionDay;
-}
-
-void CTPQuoteHandler::BroadcastMarketData(const Quote &quote, const MarketData &md)
-{
-	// serialize
-	rapidjson::StringBuffer s;
-	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
-
-	SerializeQuoteBegin(writer, quote);
-	SerializeMarketData(writer, md);
-	SerializeQuoteEnd(writer, quote);
-
-#ifndef NDEBUG
-	LOG(INFO) << s.GetString();
-#endif
-
-	uws_hub_.getDefaultGroup<uWS::SERVER>().broadcast(s.GetString(), s.GetLength(), uWS::OpCode::TEXT);
-}
-void CTPQuoteHandler::BroadcastKline(const Quote &quote, const Kline &kline)
-{
-	rapidjson::StringBuffer s;
-	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
-
-	SerializeQuoteBegin(writer, quote);
-	SerializeKline(writer, kline);
-	SerializeQuoteEnd(writer, quote);
-
-#ifndef NDEBUG
-	LOG(INFO) << s.GetString();
-#endif
-
-	uws_hub_.getDefaultGroup<uWS::SERVER>().broadcast(s.GetString(), s.GetLength(), uWS::OpCode::TEXT);
 }
 
 int64_t CTPQuoteHandler::GetUpdateTimeMs(CThostFtdcDepthMarketDataField *pDepthMarketData)

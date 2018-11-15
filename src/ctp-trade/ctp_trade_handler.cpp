@@ -348,7 +348,7 @@ void CTPTradeHandler::OnRspOrderInsert(CThostFtdcInputOrderField *pInputOrder, C
 	GetAndCleanRecordOrder(&order, pInputOrder->UserID, pInputOrder->OrderRef, ctp_front_id_, ctp_session_id_);
 	ConvertInsertOrderCTP2Common(*pInputOrder, order);
 
-	ws_service_.BroadcastConfirmOrder(uws_hub_, order, pRspInfo->ErrorID, pRspInfo->ErrorMsg);
+	BroadcastConfirmOrder(uws_hub_, order, pRspInfo->ErrorID, pRspInfo->ErrorMsg);
 }
 void CTPTradeHandler::OnErrRtnOrderInsert(CThostFtdcInputOrderField *pInputOrder, CThostFtdcRspInfoField *pRspInfo)
 {
@@ -372,9 +372,9 @@ void CTPTradeHandler::OnRtnOrder(CThostFtdcOrderField *pOrder)
 	ConvertRtnOrderCTP2Common(pOrder, order, order_status);
 	if (ret)
 	{
-		ws_service_.BroadcastConfirmOrder(uws_hub_, order, 0, "");
+		BroadcastConfirmOrder(uws_hub_, order, 0, "");
 	}
-	ws_service_.BroadcastOrderStatus(uws_hub_, order, order_status, 0, "");
+	BroadcastOrderStatus(uws_hub_, order, order_status, 0, "");
 }
 void CTPTradeHandler::OnRtnTrade(CThostFtdcTradeField *pTrade)
 {
@@ -386,7 +386,7 @@ void CTPTradeHandler::OnRtnTrade(CThostFtdcTradeField *pTrade)
 	OrderDealNotify order_deal;
 	ConvertRtnTradeCTP2Common(pTrade, order, order_deal);
 
-	ws_service_.BroadcastOrderDeal(uws_hub_, order, order_deal);
+	BroadcastOrderDeal(uws_hub_, order, order_deal);
 }
 
 void CTPTradeHandler::OnRspOrderAction(CThostFtdcInputOrderActionField *pInputOrderAction, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
@@ -438,7 +438,7 @@ void CTPTradeHandler::OnRspQryOrder(CThostFtdcOrderField *pOrder, CThostFtdcRspI
 			if (pRspInfo) {
 				error_id = pRspInfo->ErrorID;
 			}
-			ws_service_.RspOrderQry(ws, order_qry, common_orders, common_order_status, error_id);
+			RspOrderQry(ws, order_qry, common_orders, common_order_status, error_id);
 		}
 
 		rsp_qry_order_caches_.erase(nRequestID);
@@ -487,7 +487,7 @@ void CTPTradeHandler::OnRspQryTrade(CThostFtdcTradeField *pTrade, CThostFtdcRspI
 			if (pRspInfo) {
 				error_id = pRspInfo->ErrorID;
 			}
-			ws_service_.RspTradeQry(ws, trade_qry, common_orders, common_deals, error_id);
+			RspTradeQry(ws, trade_qry, common_orders, common_deals, error_id);
 		}
 
 		rsp_qry_trade_caches_.erase(nRequestID);
@@ -533,7 +533,7 @@ void CTPTradeHandler::OnRspQryInvestorPosition(CThostFtdcInvestorPositionField *
 			if (pRspInfo) {
 				error_id = pRspInfo->ErrorID;
 			}
-			ws_service_.RspPositionQryType1(ws, position_qry, positions, error_id);
+			RspPositionQryType1(ws, position_qry, positions, error_id);
 		}
 
 		rsp_qry_position_caches_.erase(nRequestID);
@@ -579,7 +579,7 @@ void CTPTradeHandler::OnRspQryInvestorPositionDetail(CThostFtdcInvestorPositionD
 			if (pRspInfo) {
 				error_id = pRspInfo->ErrorID;
 			}
-			ws_service_.RspPositionDetailQryType1(ws, position_detail_qry, position_details, error_id);
+			RspPositionDetailQryType1(ws, position_detail_qry, position_details, error_id);
 		}
 
 		rsp_qry_position_detail_caches_.erase(nRequestID);
@@ -625,7 +625,7 @@ void CTPTradeHandler::OnRspQryTradingAccount(CThostFtdcTradingAccountField *pTra
 			if (pRspInfo) {
 				error_id = pRspInfo->ErrorID;
 			}
-			ws_service_.RspTradeAccountQryType1(ws, trade_account_qry, trade_accounts, error_id);
+			RspTradeAccountQryType1(ws, trade_account_qry, trade_accounts, error_id);
 		}
 
 		rsp_qry_trade_account_caches_.erase(nRequestID);
@@ -671,7 +671,7 @@ void CTPTradeHandler::OnRspQryProduct(CThostFtdcProductField *pProduct, CThostFt
 			if (pRspInfo) {
 				error_id = pRspInfo->ErrorID;
 			}
-			ws_service_.RspProductQryType1(ws, product_qry, products, error_id);
+			RspProductQryType1(ws, product_qry, products, error_id);
 		}
 
 		rsp_qry_product_caches_.erase(nRequestID);
@@ -717,7 +717,7 @@ void CTPTradeHandler::OnRspQryInstrument(CThostFtdcInstrumentField *pInstrument,
 			if (pRspInfo) {
 				error_id = pRspInfo->ErrorID;
 			}
-			ws_service_.RspProductQryType1(ws, product_qry, products, error_id);
+			RspProductQryType1(ws, product_qry, products, error_id);
 		}
 
 		rsp_qry_instrument_caches_.erase(nRequestID);

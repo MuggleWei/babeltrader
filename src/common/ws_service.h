@@ -40,20 +40,6 @@ public:
 
 	void SendMsgToClient(uWS::WebSocket<uWS::SERVER> *ws, const char *msg);
 
-	void BroadcastConfirmOrder(uWS::Hub &hub, Order &order, int error_id, const char *error_msg);
-	void BroadcastOrderStatus(uWS::Hub &hub, Order &order, OrderStatusNotify &order_status_notify, int error_id, const char *error_msg);
-	void BroadcastOrderDeal(uWS::Hub &hub, Order &order, OrderDealNotify &order_deal);
-	void RspOrderQry(uWS::WebSocket<uWS::SERVER>* ws, OrderQuery &order_qry, std::vector<Order> &orders, std::vector<OrderStatusNotify> &order_status, int error_id);
-	void RspTradeQry(uWS::WebSocket<uWS::SERVER>* ws, TradeQuery &trade_qry, std::vector<Order> &orders, std::vector<OrderDealNotify> &order_deal, int error_id);
-
-	void RspPositionQryType1(uWS::WebSocket<uWS::SERVER>* ws, PositionQuery &position_qry, std::vector<PositionSummaryType1> &positions, int error_id);
-	void RspPositionDetailQryType1(uWS::WebSocket<uWS::SERVER>* ws, PositionQuery &position_qry, std::vector<PositionDetailType1> &positions, int error_id);
-	void RspTradeAccountQryType1(uWS::WebSocket<uWS::SERVER>* ws, TradeAccountQuery &tradeaccount_qry, std::vector<TradeAccountType1> &trade_accounts, int error_id);
-	void RspProductQryType1(uWS::WebSocket<uWS::SERVER>* ws, ProductQuery &product_qry, std::vector<ProductType1> &product_types, int error_id);
-
-	void RspPositionQryType2(uWS::WebSocket<uWS::SERVER>* ws, PositionQuery &position_qry, std::vector<PositionSummaryType2> &positions, int error_id);
-	void RspTradeAccountQryType2(uWS::WebSocket<uWS::SERVER>* ws, TradeAccountQuery &tradeaccount_qry, std::vector<TradeAccountType2> &trade_accounts, int error_id);
-
 private:
 	void MessageLoop();
 
@@ -62,15 +48,6 @@ private:
 
 	void OnClientMsgError(uWS::WebSocket<uWS::SERVER> *ws, char *message, size_t length, int error_id, const char  *error_msg);
 	void OnClientMsgError(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Document &doc, int error_id, const char  *error_msg);
-
-	void OnReqInsertOrder(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Document &doc);
-	void OnReqCancelOrder(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Document &doc);
-	void OnReqQueryOrder(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Document &doc);
-	void OnReqQueryTrade(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Document &doc);
-	void OnReqQueryPosition(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Document &doc);
-	void OnReqQueryPositionDetail(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Document &doc);
-	void OnReqQueryTradeAccount(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Document &doc);
-	void OnReqQueryProduct(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Document &doc);
 
 private:
 	QuoteService *quote_;

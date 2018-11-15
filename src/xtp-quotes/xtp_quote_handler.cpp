@@ -432,7 +432,7 @@ void XTPQuoteHandler::BroadcastQuote(XTPQuoteBlock &block)
 		quote.ts = block.ts;
 #endif
 
-		BroadcastMarketData(quote, md);
+		BroadcastMarketData(uws_hub_, quote, md);
 
 		// try update kline
 		int64_t sec = (int64_t)time(nullptr);
@@ -440,7 +440,7 @@ void XTPQuoteHandler::BroadcastQuote(XTPQuoteBlock &block)
 		if (kline_builder_.updateMarketData(sec, market_data->ticker, md, kline)) {
 			quote.info1 = QuoteInfo1_Kline;
 			quote.info2 = QuoteInfo2_1Min;
-			BroadcastKline(quote, kline);
+			BroadcastKline(uws_hub_, quote, kline);
 		}
 
 #if ENABLE_PERFORMANCE_TEST
@@ -471,7 +471,7 @@ void XTPQuoteHandler::BroadcastQuote(XTPQuoteBlock &block)
 		quote.ts = block.ts;
 #endif
 
-		BroadcastOrderBook(quote, common_order_book);
+		BroadcastOrderBook(uws_hub_, quote, common_order_book);
 	}break;
 	case XTPQuoteType_TickByTick:
 	{
@@ -486,7 +486,7 @@ void XTPQuoteHandler::BroadcastQuote(XTPQuoteBlock &block)
 		quote.ts = block.ts;
 #endif
 
-		BroadcastLevel2(quote, level2);
+		BroadcastLevel2(uws_hub_, quote, level2);
 	}break;
 	}
 }
@@ -1101,53 +1101,6 @@ void XTPQuoteHandler::ConvertTickByTick(XTPTBT *tbt_data, Quote &quote, OrderBoo
 		level2.trade.ask_no = tbt_data->trade.ask_no;
 		level2.trade.trade_flag = ConvertTradeFlag(tbt_data->trade.trade_flag);
 	}
-}
-
-void XTPQuoteHandler::BroadcastMarketData(const Quote &quote, const MarketData &md)
-{
-	// serialize
-	rapidjson::StringBuffer s;
-	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
-
-	SerializeQuoteBegin(writer, quote);
-	SerializeMarketData(writer, md);
-	SerializeQuoteEnd(writer, quote);
-
-	uws_hub_.getDefaultGroup<uWS::SERVER>().broadcast(s.GetString(), s.GetLength(), uWS::OpCode::TEXT);
-}
-void XTPQuoteHandler::BroadcastKline(const Quote &quote, const Kline &kline)
-{
-	rapidjson::StringBuffer s;
-	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
-
-	SerializeQuoteBegin(writer, quote);
-	SerializeKline(writer, kline);
-	SerializeQuoteEnd(writer, quote);
-
-	uws_hub_.getDefaultGroup<uWS::SERVER>().broadcast(s.GetString(), s.GetLength(), uWS::OpCode::TEXT);
-}
-void XTPQuoteHandler::BroadcastOrderBook(const Quote &quote, const OrderBook &order_book)
-{
-	// serialize
-	rapidjson::StringBuffer s;
-	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
-
-	SerializeQuoteBegin(writer, quote);
-	SerializeOrderBook(writer, order_book);
-	SerializeQuoteEnd(writer, quote);
-
-	uws_hub_.getDefaultGroup<uWS::SERVER>().broadcast(s.GetString(), s.GetLength(), uWS::OpCode::TEXT);
-}
-void XTPQuoteHandler::BroadcastLevel2(const Quote &quote, const OrderBookLevel2 &level2)
-{
-	rapidjson::StringBuffer s;
-	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
-
-	SerializeQuoteBegin(writer, quote);
-	SerializeLevel2(writer, level2);
-	SerializeQuoteEnd(writer, quote);
-
-	uws_hub_.getDefaultGroup<uWS::SERVER>().broadcast(s.GetString(), s.GetLength(), uWS::OpCode::TEXT);
 }
 
 void XTPQuoteHandler::SubTopics()

@@ -104,11 +104,6 @@ private:
 	void ConvertOrderBook(XTPOB *xtp_order_book, Quote &quote, OrderBook &order_book);
 	void ConvertTickByTick(XTPTBT *tbt_data, Quote &quote, OrderBookLevel2 &level2);
 
-	void BroadcastMarketData(const Quote &quote, const MarketData &md);
-	void BroadcastKline(const Quote &quote, const Kline &kline);
-	void BroadcastOrderBook(const Quote &quote, const OrderBook &order_book);
-	void BroadcastLevel2(const Quote &quote, const OrderBookLevel2 &level2);
-
 	void SubTopics();
 
 	XTP_EXCHANGE_TYPE ConvertExchangeTypeCommon2XTP(ExchangeEnum exchange);

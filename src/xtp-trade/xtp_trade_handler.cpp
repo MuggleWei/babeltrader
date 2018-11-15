@@ -229,17 +229,17 @@ void XTPTradeHandler::OnOrderEvent(XTPOrderInfo *order_info, XTPRI *error_info, 
 	{
 		if (ret)
 		{
-			ws_service_.BroadcastConfirmOrder(uws_hub_, order, error_info->error_id, error_info->error_msg);
+			BroadcastConfirmOrder(uws_hub_, order, error_info->error_id, error_info->error_msg);
 		}
-		ws_service_.BroadcastOrderStatus(uws_hub_, order, order_status, error_info->error_id, error_info->error_msg);
+		BroadcastOrderStatus(uws_hub_, order, order_status, error_info->error_id, error_info->error_msg);
 	}
 	else
 	{
 		if (ret)
 		{
-			ws_service_.BroadcastConfirmOrder(uws_hub_, order, 0, "");
+			BroadcastConfirmOrder(uws_hub_, order, 0, "");
 		}
-		ws_service_.BroadcastOrderStatus(uws_hub_, order, order_status, 0, "");
+		BroadcastOrderStatus(uws_hub_, order, order_status, 0, "");
 	}
 }
 void XTPTradeHandler::OnTradeEvent(XTPTradeReport *trade_info, uint64_t session_id)
@@ -250,7 +250,7 @@ void XTPTradeHandler::OnTradeEvent(XTPTradeReport *trade_info, uint64_t session_
 	OrderDealNotify order_deal;
 	ConvertTradeReportXTP2Common(trade_info, order, order_deal);
 
-	ws_service_.BroadcastOrderDeal(uws_hub_, order, order_deal);
+	BroadcastOrderDeal(uws_hub_, order, order_deal);
 }
 void XTPTradeHandler::OnQueryOrder(XTPQueryOrderRsp *order_info, XTPRI *error_info, int request_id, bool is_last, uint64_t session_id)
 {
@@ -294,7 +294,7 @@ void XTPTradeHandler::OnQueryOrder(XTPQueryOrderRsp *order_info, XTPRI *error_in
 			if (error_info) {
 				error_id = error_info->error_id;
 			}
-			ws_service_.RspOrderQry(ws, order_qry, common_orders, common_order_status, error_id);
+			RspOrderQry(ws, order_qry, common_orders, common_order_status, error_id);
 		}
 
 		rsp_qry_order_caches_.erase(request_id);
@@ -342,7 +342,7 @@ void XTPTradeHandler::OnQueryTrade(XTPQueryTradeRsp *trade_info, XTPRI *error_in
 			if (error_info) {
 				error_id = error_info->error_id;
 			}
-			ws_service_.RspTradeQry(ws, trade_qry, common_orders, common_deals, error_id);
+			RspTradeQry(ws, trade_qry, common_orders, common_deals, error_id);
 		}
 
 		rsp_qry_trade_caches_.erase(request_id);
@@ -387,7 +387,7 @@ void XTPTradeHandler::OnQueryPosition(XTPQueryStkPositionRsp *position, XTPRI *e
 			if (error_info) {
 				error_id = error_info->error_id;
 			}
-			ws_service_.RspPositionQryType2(ws, position_qry, positions, error_id);
+			RspPositionQryType2(ws, position_qry, positions, error_id);
 		}
 
 		rsp_qry_position_caches_.erase(request_id);
@@ -432,7 +432,7 @@ void XTPTradeHandler::OnQueryAsset(XTPQueryAssetRsp *asset, XTPRI *error_info, i
 			if (error_info) {
 				error_id = error_info->error_id;
 			}
-			ws_service_.RspTradeAccountQryType2(ws, trade_account_qry, trade_accounts, error_id);
+			RspTradeAccountQryType2(ws, trade_account_qry, trade_accounts, error_id);
 		}
 
 		rsp_qry_trade_account_caches_.erase(request_id);
