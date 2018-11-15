@@ -4,6 +4,13 @@
 #include "rapidjson/document.h"
 #include "glog/logging.h"
 
+#if WIN32
+#include <windows.h>
+#else
+#include <sys/stat.h>
+#include <sys/types.h>
+#endif
+
 const char *addr = "ws://127.0.0.1:6002/ws";
 
 void TimeDiff(int64_t ts, int64_t cur_ms)
