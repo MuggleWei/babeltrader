@@ -155,6 +155,12 @@ struct QuoteKline
 	Kline kline;
 };
 
+struct QuoteBlockCommon
+{
+	uint8_t quote_type;
+	Quote quote;
+};
+
 struct QuoteBlock
 {
 	uint8_t quote_type;

@@ -274,7 +274,7 @@ void XTPQuoteHandler::OnOrderBook(XTPOB *order_book)
 	static QuoteTransferMonitor monitor;
 	monitor.start();
 
-	auto t = std::chrono::system_clock::now().time_since_epoch();
+	auto t = monitor.ts_.time_since_epoch();
 	msg.quote.ts = std::chrono::duration_cast<std::chrono::milliseconds>(t).count();
 #endif
 
@@ -294,7 +294,7 @@ void XTPQuoteHandler::OnTickByTick(XTPTBT *tbt_data)
 	static QuoteTransferMonitor monitor;
 	monitor.start();
 
-	auto t = std::chrono::system_clock::now().time_since_epoch();
+	auto t = monitor.ts_.time_since_epoch();
 	msg.quote.ts = std::chrono::duration_cast<std::chrono::milliseconds>(t).count();
 #endif
 	

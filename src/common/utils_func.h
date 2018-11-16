@@ -25,7 +25,7 @@ public:
 
 public:
 	int64_t total_pkg_;
-	int64_t total_elapsed_ms_;
+	int64_t total_elapsed_time_;
 	int64_t step_;
 
 	std::chrono::time_point<std::chrono::system_clock> ts_;

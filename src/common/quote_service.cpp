@@ -4,6 +4,7 @@
 
 #include "converter.h"
 #include "ws_service.h"
+#include "utils_func.h"
 
 
 namespace babeltrader
@@ -79,18 +80,74 @@ void QuoteService::BroadcastLevel2(QuoteOrderBookLevel2 &msg, bool async)
 
 void QuoteService::AsyncLoop()
 {
+#if ENABLE_PERFORMANCE_TEST
+	// cache peak monitor
+	static int64_t max_tunnel_cache = 0;
+
+	// avg cache pkgs and avg elapsed time monitor
+	static int64_t total_pkg = 0;
+	static int64_t step = 10000;
+
+	static int64_t rec_cnt = 0;
+
+	static int64_t total_elapsed_time = 0;
+#endif
+
 	std::queue<QuoteBlock> queue;
 	while (true) {
 		tunnel_.Read(queue, true);
+
+#if ENABLE_PERFORMANCE_TEST
+		if (queue.size() > max_tunnel_cache)
+		{
+			max_tunnel_cache = queue.size();
+			LOG(INFO) << "quote service async loop cache peak: " << max_tunnel_cache;
+		}
+
+		total_pkg += queue.size();
+		rec_cnt++;
+#endif
+
 		while (queue.size()) {
 			QuoteBlock &msg = queue.front();
+
+#if ENABLE_PERFORMANCE_TEST
+			auto t = std::chrono::system_clock::now().time_since_epoch();
+			auto cur_ms = std::chrono::duration_cast<std::chrono::milliseconds>(t).count();
+			QuoteBlockCommon *p = (QuoteBlockCommon*)&msg;
+			total_elapsed_time += (cur_ms - p->quote.ts);
+#endif
+
 			Dispatch(msg);
 			queue.pop();
 		}
+
+#if ENABLE_PERFORMANCE_TEST
+		if (total_pkg >= step)
+		{
+			double avg_tunnel_cache = (double)total_pkg / rec_cnt;
+			double avg_elapsed_time = (double)total_elapsed_time / total_pkg;
+			LOG(INFO)
+				<< "tunnel read: " << rec_cnt << " times"
+				<< ", total pkg: " << total_pkg
+				<< ", avg cache pkg: " << avg_tunnel_cache
+				<< ", total elapsed mill seconds: " << total_elapsed_time
+				<< ", avg elapsed mill seconds: " << avg_elapsed_time;
+			total_pkg = 0;
+			rec_cnt = 0;
+			total_elapsed_time = 0;
+		}
+#endif
+
 	}
 }
 void QuoteService::Dispatch(QuoteBlock &msg)
 {
+#if ENABLE_PERFORMANCE_TEST
+	static QuoteTransferMonitor monitor;
+	monitor.start();
+#endif
+
 	switch (msg.quote_type)
 	{
 	case QuoteBlockType_MarketData:
@@ -110,6 +167,10 @@ void QuoteService::Dispatch(QuoteBlock &msg)
 		SyncBroadcastLevel2((const QuoteOrderBookLevel2*)&msg);
 	}break;
 	}
+
+#if ENABLE_PERFORMANCE_TEST
+	monitor.end("quote service dispatch");
+#endif
 }
 
 void QuoteService::SyncBroadcastMarketData(const QuoteMarketData *msg)

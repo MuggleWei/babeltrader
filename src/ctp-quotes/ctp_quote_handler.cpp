@@ -224,7 +224,7 @@ void CTPQuoteHandler::OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDept
 	}
 
 #if ENABLE_PERFORMANCE_TEST
-	monitor.end("xtp OnDepthMarketData");
+	monitor.end("ctp OnDepthMarketData");
 #endif
 }
 void CTPQuoteHandler::OnRtnForQuoteRsp(CThostFtdcForQuoteRspField *pForQuoteRsp) {}

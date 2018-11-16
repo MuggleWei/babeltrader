@@ -90,13 +90,14 @@ void QuoteTransferMonitor::end(const char *title)
 {
 	auto end = std::chrono::system_clock::now();
 	total_pkg_ += 1;
-	total_elapsed_ms_ += std::chrono::duration_cast<std::chrono::milliseconds>(end - ts_).count();
+	total_elapsed_time_ += std::chrono::duration_cast<std::chrono::microseconds>(end - ts_).count();
 	if (total_pkg_ >= step_) {
-		double avg_elapsed_ms = (double)total_elapsed_ms_ / total_pkg_;
+		double avg_elapsed_time = (double)total_elapsed_time_ / total_pkg_;
 		LOG(INFO) << title
 			<< " handle pkg count: " << total_pkg_
-			<< " avarage ms: " << avg_elapsed_ms;
-		total_elapsed_ms_ = 0;
+			<< ", total use micro seconds: " << total_elapsed_time_
+			<< ", avarage elapsed micro seconds: " << avg_elapsed_time;
+		total_elapsed_time_ = 0;
 		total_pkg_ = 0;
 	}
 }

@@ -26,7 +26,8 @@ void TimeDiff(int64_t ts, int64_t cur_ms)
 		double avg_elapsed_ms = (double)total_elapsed / total_pkg;
 		LOG(INFO)
 			<< "receive quotes - total pkg: " << total_pkg
-			<< ", avg elapsed ms: " << avg_elapsed_ms;
+			<< ", total use mill seconds: " << total_elapsed
+			<< ", avg elapsed mill seconds: " << avg_elapsed_ms;
 		total_elapsed = 0;
 		total_pkg = 0;
 	}
