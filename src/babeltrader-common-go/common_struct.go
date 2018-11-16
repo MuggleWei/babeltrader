@@ -131,3 +131,18 @@ type MessageQuoteTicker struct {
 	Vol       float64 `json:"vol"`
 	Timestamp int64   `json:"ts"`
 }
+
+/*
+subunsub
+*/
+type MessageSubUnsub struct {
+	Market      string `json:"market,omitempty"`      // e.g. okex, bitmex, NYMEX, ctp, xtp
+	Exchange    string `json:"exchange,omitempty"`    // e.g. SHFE, SSE, NYMEX, bitmex, okex
+	Type        string `json:"type,omitempty"`        // e.g. spot, future, option
+	Symbol      string `json:"symbol,omitempty"`      // e.g. btc, btc_usd, CL, rb
+	Contract    string `json:"contract,omitempty"`    // e.g. this_week, next_week, quarter, 1810
+	ContractId  string `json:"contract_id,omitempty"` // e.g. 20180928 for coin or repeat Contract for commodity future
+	InfoPrimary string `json:"info1,omitempty"`       // e.g. ticker, depth, kline
+	InfoExtra   string `json:"info2,omitempty"`       // e.g. 1m, 1h, 5
+	Subed       int    `json:"subed,omitempty"`
+}
