@@ -26,9 +26,9 @@ int main(int argc, char *argv[])
 #else
 	mkdir("./log/", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 #endif
-	google::SetLogDestination(google::GLOG_INFO, "./log/BabelTrader-CTP-Quote.INFO.");
-	google::SetLogDestination(google::GLOG_WARNING, "./log/BabelTrader-CTP-Quote.WARNING.");
-	google::SetLogDestination(google::GLOG_ERROR, "./log/BabelTrader-CTP-Quote.ERROR.");
+	google::SetLogDestination(google::GLOG_INFO, "./log/babeltrader-ctp-quote.INFO.");
+	google::SetLogDestination(google::GLOG_WARNING, "./log/babeltrader-ctp-quote.WARNING.");
+	google::SetLogDestination(google::GLOG_ERROR, "./log/babeltrader-ctp-quote.ERROR.");
 	google::InitGoogleLogging(argv[0]);
 
 	// load config
