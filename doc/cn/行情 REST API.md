@@ -44,9 +44,9 @@ subed(int): 是否已经处于订阅状态
 1. 返回字段中，一定不为空的是 market, type, symbol, 当为期货合约时，contract也保证不为空。其余字段，是否为空，取决于对应的市场
 
 #### 2. 订阅/退订
-method: Post
-订阅：url: /topics/sub
-退订：url: /topics/unsub
+method: Post  
+订阅：url: /topics/sub  
+退订：url: /topics/unsub  
 示例:
 ```
 # Request
@@ -65,17 +65,17 @@ Post http://127.0.0.1:6888/topics/unsub
 
 # Response
 {
-    "err_id": 0,
-    "err_msg": ""
+    "error_id": 0,
+    "error_msg": ""
 }
 ```
 返回值说明:
 ```
-err_id(int): 错误编号, 0为操作成功
-err_msg(string): 错误说明
+error_id(int): 错误编号, 0为操作成功
+error_msg(string): 错误说明
 ```
 注意：
-1. 即使err_id为0，也不一定保证订阅成功，订阅的结果，由ws广播推送
+1. 即使error_id为0，也不一定保证订阅成功，订阅的结果，由ws广播推送
 1. BabelTrader的目标是作为上手服务，并没有打算在服务中实现订阅过滤分发，行情一律广播，策略的订阅过滤，应该由中间服务完成。所以最好在config中，配好需要的topic，而订阅与退订，只在合约换月/换季度时，由管理服务或手动进行。
 1. 某些市场，kline是由BableTrader生成的，无法单独订阅或退订kline。例如：CTP中，只提供了marketdata，一旦订阅/退订了marketdata，会自动订阅/退订kline。
 1. req中，必填项为 market, type, symbol, contract, 当不填info1时, 默认订阅此市场, 所有支持的类型
