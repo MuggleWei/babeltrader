@@ -34,6 +34,8 @@ func TopicUnsub(addr string, msg *common.MessageSubUnsub) ([]byte, error) {
 }
 
 func main() {
+	log.SetFlags(log.LstdFlags | log.LUTC | log.Lmicroseconds | log.Lshortfile)
+
 	// ctp demo
 	// addr := "127.0.0.1:6001"
 

@@ -84,11 +84,15 @@ func (this *DemoTradeService) OnHubObjectMessage(*cascade.HubObjectMessage) {
 
 //////////////////// method ////////////////////
 func (this *DemoTradeService) RegisterCallbacks() {
+	this.Callbacks["error"] = this.OnError
 	this.Callbacks["confirmorder"] = this.OnConfirmOrder
 	this.Callbacks["orderstatus"] = this.OnOrderStatus
 	this.Callbacks["orderdeal"] = this.OnOrderDeal
 }
 
+func (this *DemoTradeService) OnError(data interface{}) {
+	log.Printf("error: %+v\n", data)
+}
 func (this *DemoTradeService) OnConfirmOrder(data interface{}) {
 	log.Printf("confirmorder: %+v\n", data)
 }
@@ -102,6 +106,21 @@ func (this *DemoTradeService) OnOrderDeal(data interface{}) {
 func (this *DemoTradeService) ReqInsertOrder(order *common.MessageOrder) {
 	req := common.MessageReqCommon{
 		Message: "insert_order",
+		Data:    *order,
+	}
+
+	msg, err := json.Marshal(req)
+	if err != nil {
+		log.Printf("failed to marshal message: %v\n", req)
+		return
+	}
+
+	this.Hub.ByteMessageChannel <- &cascade.HubByteMessage{Peer: nil, Message: msg}
+}
+
+func (this *DemoTradeService) ReqCancelOrder(order *common.MessageOrder) {
+	req := common.MessageReqCommon{
+		Message: "cancel_order",
 		Data:    *order,
 	}
 
