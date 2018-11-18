@@ -762,7 +762,7 @@ contract(string): 合约类型 - 例如: 1901, this_week
 示例:
 ```
 {
-    "msg": "orderstatus",
+    "msg": "orderdeal",
     "error_id": 0,
     "data": { 订单成交结构 }
     }
