@@ -146,3 +146,28 @@ type MessageSubUnsub struct {
 	InfoExtra   string `json:"info2,omitempty"`       // e.g. 1m, 1h, 5
 	Subed       int    `json:"subed,omitempty"`
 }
+
+//////////////////////// trade ////////////////////////
+/*
+order
+*/
+type MessageOrder struct {
+	UserId        string  `json:"user_id,omitempty"`
+	OrderId       string  `json:"order_id,omitempty"`
+	OutsideUserId string  `json:"outside_user_id,omitempty"`
+	OutsideId     string  `json:"outside_id,omitempty"`
+	ClientOrderId string  `json:"client_order_id,omitempty"`
+	Market        string  `json:"market,omitempty"`
+	Exchange      string  `json:"exchange,omitempty"`
+	ProductType   string  `json:"type,omitempty"`
+	Symbol        string  `json:"symbol,omitempty"`
+	Contract      string  `json:"contract,omitempty"`
+	ContractId    string  `json:"contract_id,omitempty"`
+	OrderType     string  `json:"order_type,omitempty"`
+	OrderFlag1    string  `json:"order_flag1,omitempty"`
+	Dir           string  `json:"dir,omitempty"`
+	Price         float64 `json:"price,omitempty"`
+	Amount        float64 `json:"amount,omitempty"`
+	TotalPrice    float64 `json:"total_price,omitempty"`
+	Timestamp     int64   `json:"ts,omitempty"`
+}

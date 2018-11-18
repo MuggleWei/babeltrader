@@ -16,7 +16,7 @@ type QuoteService struct {
 	Callbacks map[string]fnQuoteCallback
 }
 
-func NewQuoteSerice() *QuoteService {
+func NewQuoteService() *QuoteService {
 	service := &QuoteService{
 		Hub:       nil,
 		Callbacks: make(map[string]fnQuoteCallback),
