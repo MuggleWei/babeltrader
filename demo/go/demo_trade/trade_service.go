@@ -88,19 +88,54 @@ func (this *DemoTradeService) RegisterCallbacks() {
 	this.Callbacks["confirmorder"] = this.OnConfirmOrder
 	this.Callbacks["orderstatus"] = this.OnOrderStatus
 	this.Callbacks["orderdeal"] = this.OnOrderDeal
+	this.Callbacks["rsp_qryorder"] = this.OnRspQryOrder
+	this.Callbacks["rsp_qrytrade"] = this.OnRspQryTrade
+	this.Callbacks["rsp_qryposition"] = this.OnRspQryPosition
+	this.Callbacks["rsp_qrypositiondetail"] = this.OnRspQryPositionDetail
+	this.Callbacks["rsp_qrytradeaccount"] = this.OnRspQryTradeAccount
+	this.Callbacks["rsp_qryproduct"] = this.OnRspQryProduct
 }
 
 func (this *DemoTradeService) OnError(data interface{}) {
-	log.Printf("error: %+v\n", data)
+	s, _ := json.Marshal(data)
+	log.Printf("error: %v\n", string(s))
 }
 func (this *DemoTradeService) OnConfirmOrder(data interface{}) {
-	log.Printf("confirmorder: %+v\n", data)
+	s, _ := json.Marshal(data)
+	log.Printf("confirmorder: %v\n", string(s))
 }
 func (this *DemoTradeService) OnOrderStatus(data interface{}) {
-	log.Printf("orderstatus: %+v\n", data)
+	s, _ := json.Marshal(data)
+	log.Printf("orderstatus: %v\n", string(s))
 }
 func (this *DemoTradeService) OnOrderDeal(data interface{}) {
-	log.Printf("orderdeal: %+v\n", data)
+	s, _ := json.Marshal(data)
+	log.Printf("orderdeal: %v\n", string(s))
+}
+
+func (this *DemoTradeService) OnRspQryOrder(data interface{}) {
+	s, _ := json.Marshal(data)
+	log.Printf("rsp_qryorder: %v\n", string(s))
+}
+func (this *DemoTradeService) OnRspQryTrade(data interface{}) {
+	s, _ := json.Marshal(data)
+	log.Printf("rsp_qrytrade: %v\n", string(s))
+}
+func (this *DemoTradeService) OnRspQryPosition(data interface{}) {
+	s, _ := json.Marshal(data)
+	log.Printf("rsp_qryposition: %v\n", string(s))
+}
+func (this *DemoTradeService) OnRspQryPositionDetail(data interface{}) {
+	s, _ := json.Marshal(data)
+	log.Printf("rsp_qrypositiondetail: %v\n", string(s))
+}
+func (this *DemoTradeService) OnRspQryTradeAccount(data interface{}) {
+	s, _ := json.Marshal(data)
+	log.Printf("rsp_qrytradeaccount: %v\n", string(s))
+}
+func (this *DemoTradeService) OnRspQryProduct(data interface{}) {
+	s, _ := json.Marshal(data)
+	log.Printf("rsp_qryproduct: %v\n", string(s))
 }
 
 func (this *DemoTradeService) ReqInsertOrder(order *common.MessageOrder) {
@@ -111,7 +146,7 @@ func (this *DemoTradeService) ReqInsertOrder(order *common.MessageOrder) {
 
 	msg, err := json.Marshal(req)
 	if err != nil {
-		log.Printf("failed to marshal message: %v\n", req)
+		log.Printf("failed to marshal message: %+v\n", req)
 		return
 	}
 
@@ -126,9 +161,62 @@ func (this *DemoTradeService) ReqCancelOrder(order *common.MessageOrder) {
 
 	msg, err := json.Marshal(req)
 	if err != nil {
-		log.Printf("failed to marshal message: %v\n", req)
+		log.Printf("failed to marshal message: %+v\n", req)
 		return
 	}
 
 	this.Hub.ByteMessageChannel <- &cascade.HubByteMessage{Peer: nil, Message: msg}
+}
+
+func (this *DemoTradeService) DoQuery(req *common.MessageReqCommon) {
+	msg, err := json.Marshal(*req)
+	if err != nil {
+		log.Printf("failed to marshal query message: %+v\n", *req)
+		return
+	}
+
+	this.Hub.ByteMessageChannel <- &cascade.HubByteMessage{Peer: nil, Message: msg}
+}
+
+func (this *DemoTradeService) ReqQueryOrder(qry *common.MessageQuery) {
+	req := common.MessageReqCommon{
+		Message: "query_order",
+		Data:    *qry,
+	}
+	this.DoQuery(&req)
+}
+func (this *DemoTradeService) ReqQueryTrade(qry *common.MessageQuery) {
+	req := common.MessageReqCommon{
+		Message: "query_trade",
+		Data:    *qry,
+	}
+	this.DoQuery(&req)
+}
+func (this *DemoTradeService) ReqQueryPosition(qry *common.MessageQuery) {
+	req := common.MessageReqCommon{
+		Message: "query_position",
+		Data:    *qry,
+	}
+	this.DoQuery(&req)
+}
+func (this *DemoTradeService) ReqQueryPositionDetail(qry *common.MessageQuery) {
+	req := common.MessageReqCommon{
+		Message: "query_positiondetail",
+		Data:    *qry,
+	}
+	this.DoQuery(&req)
+}
+func (this *DemoTradeService) ReqQueryTradeAccount(qry *common.MessageQuery) {
+	req := common.MessageReqCommon{
+		Message: "query_tradeaccount",
+		Data:    *qry,
+	}
+	this.DoQuery(&req)
+}
+func (this *DemoTradeService) ReqQueryProduct(qry *common.MessageQuery) {
+	req := common.MessageReqCommon{
+		Message: "query_product",
+		Data:    *qry,
+	}
+	this.DoQuery(&req)
 }
