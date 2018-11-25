@@ -10,7 +10,7 @@ build/
 .vscode/
 
 # private config
-/config/
+config/
 
 # python
 venv/
@@ -21,3 +21,7 @@ __pycache__/
 
 /demo/java/*.iml
 /demo/java/target/
+
+# golang run files
+nohup.out
+log/
