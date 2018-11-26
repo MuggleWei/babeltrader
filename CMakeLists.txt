@@ -27,6 +27,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 # add custom cmake modules
 INCLUDE(FindPackageHandleStandardArgs)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_LIST_DIR}/cmake/Modules)
+include(${CMAKE_CURRENT_LIST_DIR}/thirdparty/muggleCC/cmake/muggle_utils.cmake)
 
 # dependencies
 find_package(Threads)
@@ -113,6 +114,24 @@ set_target_properties(muggleCC
 	PROPERTIES
 	FOLDER "thirdparty/muggle"
 )
+
+# ctp
+muggle_install_headers(${CMAKE_CURRENT_LIST_DIR}/thirdparty/ctp/include include/ctp)
+if (WIN32)
+	file(GLOB ctp_libs ${CMAKE_CURRENT_LIST_DIR}/thirdparty/ctp/lib/win64/*)
+else()
+	file(GLOB ctp_libs ${CMAKE_CURRENT_LIST_DIR}/thirdparty/ctp/lib/linux/*)
+endif()
+install(FILES ${ctp_libs} DESTINATION lib)
+
+# xtp
+muggle_install_headers(${CMAKE_CURRENT_LIST_DIR}/thirdparty/xtp/include include/xtp)
+if (WIN32)
+	file(GLOB xtp_libs ${CMAKE_CURRENT_LIST_DIR}/thirdparty/xtp/lib/win64/*)
+else()
+	file(GLOB xtp_libs ${CMAKE_CURRENT_LIST_DIR}/thirdparty/xtp/lib/linux/*)
+endif()
+install(FILES ${xtp_libs} DESTINATION lib)
 
 # dependencies
 set(dependencies_inc
