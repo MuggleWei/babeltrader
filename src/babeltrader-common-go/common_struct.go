@@ -212,3 +212,15 @@ type MessageOrderDeal struct {
 	Timestamp  int64        `json:"ts,omitempty"`
 	Order      MessageOrder `json:"order,omitempty"`
 }
+
+//////////////////////// system ////////////////////////
+type MessageHttpHeader struct {
+	User  string      `json:"user"`
+	Token string      `json:"token"`
+	Data  interface{} `json:"data"`
+}
+
+type MessageLogin struct {
+	User     string `json:"user"`
+	Password string `json:"password"`
+}
