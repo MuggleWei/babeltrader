@@ -721,10 +721,10 @@ symbol(string): 符号 - 例如: rb, CL, btc, btc_usdt
 contract(string): 合约类型 - 例如: 1901, this_week
 ```
 
-说明:
-symbol, contract全为空时, 默认查询所有合约信息
-symbol不为空, contract为空时, 查询品种信息
-symbol, contract都不为空时, 查询指定的合约信息
+说明:  
+symbol, contract全为空时, 默认查询所有合约信息  
+symbol不为空, contract为空时, 查询品种信息  
+symbol, contract都不为空时, 查询指定的合约信息  
 
 
 ## 应答消息
