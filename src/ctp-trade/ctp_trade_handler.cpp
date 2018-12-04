@@ -216,16 +216,7 @@ void CTPTradeHandler::QueryProduct(uWS::WebSocket<uWS::SERVER> *ws, ProductQuery
 		throw std::runtime_error("trade api not ready yet");
 	}
 
-	if (product_query.symbol.size() == 0)
-	{
-		throw std::runtime_error("can't query product without symbol");
-	}
-	if (product_query.exchange.size() == 0)
-	{
-		throw std::runtime_error("can't query product without exchange");
-	}
-
-	if (product_query.contract.size() == 0)
+	if (product_query.symbol.size() != 0 && product_query.contract.size() == 0)
 	{
 		CThostFtdcQryProductField req = { 0 };
 		strncpy(req.ExchangeID, product_query.exchange.c_str(), sizeof(req.ExchangeID) - 1);
@@ -248,8 +239,12 @@ void CTPTradeHandler::QueryProduct(uWS::WebSocket<uWS::SERVER> *ws, ProductQuery
 	else
 	{
 		CThostFtdcQryInstrumentField req = { 0 };
-		strncpy(req.ExchangeID, product_query.exchange.c_str(), sizeof(req.ExchangeID) - 1);
-		snprintf(req.InstrumentID, sizeof(req.InstrumentID) - 1, "%s%s", product_query.symbol.c_str(), product_query.contract.c_str());
+		if (product_query.exchange.size() > 0) {
+			strncpy(req.ExchangeID, product_query.exchange.c_str(), sizeof(req.ExchangeID) - 1);
+		}
+		if (product_query.symbol.size() > 0 && product_query.contract.size() > 0) {
+			snprintf(req.InstrumentID, sizeof(req.InstrumentID) - 1, "%s%s", product_query.symbol.c_str(), product_query.contract.c_str());
+		}
 
 		OutputInstrumentQuery(&req);
 

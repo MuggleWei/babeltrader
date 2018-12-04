@@ -32,5 +32,15 @@ if __name__ == '__main__':
         symbol="rb",
         contract="1901",
     )
+    time.sleep(3)
+    trader.query_product(
+        qry_id="3",
+        user_id="weidaizi",
+        market="ctp",
+        exchange="",
+        type="",
+        symbol="",
+        contract=""
+    )
 
     trader.message_loop()
