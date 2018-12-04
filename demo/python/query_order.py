@@ -9,7 +9,7 @@ class TraderQueryOrder(Trader):
 
     def on_qryorder(self, msg):
         if msg['error_id'] != 0:
-            print("query error: " + msg['error_id'])
+            print("query error: " + str(msg['error_id']))
             return
 
         qry_result = msg['data']['data']
