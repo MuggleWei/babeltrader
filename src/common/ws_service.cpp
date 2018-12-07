@@ -155,30 +155,17 @@ void WsService::Dispatch(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Document &d
 	}
 }
 
-void WsService::OnClientMsgError(uWS::WebSocket<uWS::SERVER> *ws, char *message, size_t length, int error_id, const char  *error_msg)
+void WsService::OnClientMsgError(uWS::WebSocket<uWS::SERVER> *ws, const char *message, size_t length, int error_id, const char  *error_msg)
 {
-	rapidjson::StringBuffer s;
-	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
-
-	writer.StartObject();
-	writer.Key("msg");
-	writer.String("error");
-	writer.Key("error_id");
-	writer.Int(error_id);
-	writer.Key("error_msg");
-	writer.String(error_msg);
-	writer.Key("data");
-	writer.String(message, length, true);
-	writer.EndObject();
-
-	LOG(INFO) << s.GetString();
-
-	{
-		std::unique_lock<std::mutex> lock(ws_mtx_);
-		if (ws_set_.find(ws) != ws_set_.end()) {
-			ws->send(s.GetString());
-		}
+	rapidjson::Document doc;
+	doc.Parse<0>(message, length);
+	if (doc.HasParseError()) {
+		LOG(WARNING) << "failed parse json from message";
+		LOG(WARNING).write(message, length);
+		return;
 	}
+
+	OnClientMsgError(ws, doc, error_id, error_msg);
 }
 void WsService::OnClientMsgError(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Document &doc, int error_id, const char  *error_msg)
 {
