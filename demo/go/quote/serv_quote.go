@@ -31,11 +31,13 @@ func NewQuoteService() *QuoteService {
 }
 
 func (this *QuoteService) Run() {
-	// addr := "127.0.0.1:6001"
-	addr := "127.0.0.1:6002"
+	addr := "127.0.0.1:6001"
+	// addr := "127.0.0.1:6002"
 
 	url := "ws://" + addr + "/ws"
-	this.Hub.ConnectAndRun(url, true, 5, nil)
+	this.Hub.ConnectAndRun(url, true, 5, nil, func(addr string, err error) {
+		log.Printf("[Error] failed dial to %v: %v", addr, err.Error())
+	})
 }
 
 // Slot callbacks

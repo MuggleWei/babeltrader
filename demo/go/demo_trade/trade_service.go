@@ -36,7 +36,9 @@ func (this *DemoTradeService) Run(addr string, callbackOnActive func()) {
 	url := "ws://" + addr + "/ws"
 	this.CallbackOnActive = callbackOnActive
 
-	this.Hub.ConnectAndRun(url, true, 5, nil)
+	this.Hub.ConnectAndRun(url, true, 5, nil, func(addr string, err error) {
+		log.Printf("[Error] failed dial to %v: %v", addr, err.Error())
+	})
 }
 
 // Slot callbacks
