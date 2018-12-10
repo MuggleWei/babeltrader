@@ -71,12 +71,12 @@ def TestInsertOrder_CTP(trader):
         exchange="SHFE",
         type="future",
         symbol="rb",
-        contract="1901",
-        contract_id="1901",
+        contract="1905",
+        contract_id="1905",
         order_type="limit",
         order_flag1="speculation",  # speculation, hedge, arbitrage
-        dir="open_short",  # [action: open, close, closetoday, closehistory; dir: long, short] or [buy, sell]
-        price=3900,
+        dir="open_long",  # [action: open, close, closetoday, closehistory; dir: long, short] or [buy, sell]
+        price=3400,
         amount=1,
         total_price=0,
         ts=ts

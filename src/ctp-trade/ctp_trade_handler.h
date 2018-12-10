@@ -66,6 +66,11 @@ private:
 	void RunAPI();
 	void RunService();
 
+	void AsyncLoop();
+
+	void OnOrderStatus(TradeBlock &msg);
+	void OnOrderDeal(TradeBlock &msg);
+
 	void FillConnectionInfo(const char *tradeing_day, const char *login_time, int front_id, int session_id);
 	void ClearConnectionInfo();
 
@@ -100,6 +105,13 @@ private:
 	// order cache
 	void RecordOrder(Order &order, const std::string &order_ref, int front_id, int session_id);
 	bool GetAndCleanRecordOrder(Order *p_order, const std::string &user_id, const std::string &order_ref, int front_id, int session_id);
+
+	////////////////////////////////////////
+	// order map
+	void CacheOrderInfoMap(Order &order, OrderStatusNotify &order_status);
+	void GetOrderInfoMap(Order &order);
+	void GetOrderInfoMap(Order &order, OrderStatusNotify &order_status);
+	void ClearOrderInfoMap();
 
 	////////////////////////////////////////
 	// field convert
@@ -192,6 +204,11 @@ private:
 	// order recorder
 	std::map<std::string, Order> wait_deal_orders_;
 	std::mutex wati_deal_order_mtx_;
+
+	// ourside_order_id map
+	std::map<std::string, OrderMapInfo> outside_order_maps_;
+
+	muggle::Tunnel<TradeBlock> tunnel_;
 
 	// query cache
 	QueryCache qry_cache_;

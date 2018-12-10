@@ -510,6 +510,31 @@ struct ProductType1
 };
 
 
+#define TradeBlockSize 1024
+
+enum TradeBlockType
+{
+	TradeBlockType_OrderStatus = 0,
+	TradeBlockType_OrderDeal,
+};
+
+struct TradeBlock
+{
+	uint8_t trade_type;
+	char buf[TradeBlockSize];
+};
+
+// for map outside_order_id and system order info
+struct OrderMapInfo
+{
+	int64_t completed_ts;
+	Order order;
+
+	OrderMapInfo()
+		: completed_ts(0)
+	{}
+};
+
 }
 
 #endif
