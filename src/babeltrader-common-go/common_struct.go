@@ -173,28 +173,31 @@ type MessageOrder struct {
 }
 
 type MessageQuery struct {
-	QueryId       string      `json:"qry_id"`
-	CurrencyId    string      `json:"currency_id,omitempty"`
-	UserId        string      `json:"user_id,omitempty"`
-	OrderId       string      `json:"order_id,omitempty"`
-	OutsideUserId string      `json:"outside_user_id,omitempty"`
-	OutsideId     string      `json:"outside_id,omitempty"`
-	TradeId       string      `json:"trade_id,omitempty"`
-	ClientOrderId string      `json:"client_order_id,omitempty"`
-	Market        string      `json:"market,omitempty"`
-	Exchange      string      `json:"exchange,omitempty"`
-	ProductType   string      `json:"type,omitempty"`
-	Symbol        string      `json:"symbol,omitempty"`
-	Contract      string      `json:"contract,omitempty"`
-	ContractId    string      `json:"contract_id,omitempty"`
-	OrderType     string      `json:"order_type,omitempty"`
-	OrderFlag1    string      `json:"order_flag1,omitempty"`
-	Dir           string      `json:"dir,omitempty"`
-	Price         float64     `json:"price,omitempty"`
-	Amount        float64     `json:"amount,omitempty"`
-	TotalPrice    float64     `json:"total_price,omitempty"`
-	Timestamp     int64       `json:"ts,omitempty"`
-	Data          interface{} `json:"data,omitempty"`
+	QueryId             string      `json:"qry_id"`
+	CurrencyId          string      `json:"currency_id,omitempty"`
+	UserId              string      `json:"user_id,omitempty"`
+	OrderId             string      `json:"order_id,omitempty"`
+	OutsideUserId       string      `json:"outside_user_id,omitempty"`
+	OutsideId           string      `json:"outside_id,omitempty"`
+	ClientOrderId       string      `json:"client_order_id,omitempty"`
+	TradeId             string      `json:"trade_id,omitempty"`
+	PositionSummaryType string      `json:"position_summary_type,omitempty"`
+	PositionDetailType  string      `json:"position_detail_type,omitempty"`
+	TradeAccountType    string      `json:"trade_account_type,omitempty"`
+	ProductType         string      `json:"type,omitempty"`
+	Market              string      `json:"market,omitempty"`
+	Exchange            string      `json:"exchange,omitempty"`
+	Symbol              string      `json:"symbol,omitempty"`
+	Contract            string      `json:"contract,omitempty"`
+	ContractId          string      `json:"contract_id,omitempty"`
+	OrderType           string      `json:"order_type,omitempty"`
+	OrderFlag1          string      `json:"order_flag1,omitempty"`
+	Dir                 string      `json:"dir,omitempty"`
+	Price               float64     `json:"price,omitempty"`
+	Amount              float64     `json:"amount,omitempty"`
+	TotalPrice          float64     `json:"total_price,omitempty"`
+	Timestamp           int64       `json:"ts,omitempty"`
+	Data                interface{} `json:"data,omitempty"`
 }
 
 type MessageOrderStatus struct {
