@@ -173,8 +173,8 @@ type MessageOrder struct {
 }
 
 type MessageQuery struct {
-	QueryId       string      `json:"qry_id,omitempty"`
-	CurrencyId    string      `json:currency_id,omitempty"`
+	QueryId       string      `json:"qry_id"`
+	CurrencyId    string      `json:"currency_id,omitempty"`
 	UserId        string      `json:"user_id,omitempty"`
 	OrderId       string      `json:"order_id,omitempty"`
 	OutsideUserId string      `json:"outside_user_id,omitempty"`
