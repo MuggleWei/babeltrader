@@ -179,6 +179,7 @@ type MessageQuery struct {
 	OrderId       string      `json:"order_id,omitempty"`
 	OutsideUserId string      `json:"outside_user_id,omitempty"`
 	OutsideId     string      `json:"outside_id,omitempty"`
+	TradeId       string      `json:"trade_id,omitempty"`
 	ClientOrderId string      `json:"client_order_id,omitempty"`
 	Market        string      `json:"market,omitempty"`
 	Exchange      string      `json:"exchange,omitempty"`
