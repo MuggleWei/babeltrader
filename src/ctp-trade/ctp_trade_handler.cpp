@@ -780,27 +780,31 @@ void CTPTradeHandler::AsyncLoop()
 	while (true) {
 		tunnel_.Read(queue, true);
 
-		TradeBlock &msg = queue.front();
+		while (queue.size() > 0)
+		{
+			TradeBlock &msg = queue.front();
 
-		switch (msg.trade_type) {
-		case TradeBlockType_OrderStatus:
-		{
-			OnOrderStatus(msg);
-		}break;
-		case TradeBlockType_OrderDeal:
-		{
-			OnOrderDeal(msg);
-		}break;
+			switch (msg.trade_type) {
+			case TradeBlockType_OrderStatus:
+			{
+				OnOrderStatus(msg);
+			}break;
+			case TradeBlockType_OrderDeal:
+			{
+				OnOrderDeal(msg);
+			}break;
+			}
+
+			queue.pop();
 		}
 
+		// try clear clear order info map
 		++cnt;
 		if (cnt >= 5)
 		{
 			ClearOrderInfoMap();
 			cnt = 0;
 		}
-		
-		queue.pop();
 	}
 }
 
