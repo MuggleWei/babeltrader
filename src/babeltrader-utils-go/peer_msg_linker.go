@@ -1,8 +1,10 @@
 package babeltrader_utils_go
 
 import (
+	"bytes"
 	"errors"
-	"sync"
+	"fmt"
+	"log"
 	"time"
 
 	cascade "github.com/MuggleWei/cascade"
@@ -16,7 +18,7 @@ type innerPeer struct {
 type PeerMsgLinker struct {
 	msgPeer  map[string]innerPeer
 	peerMsgs map[*cascade.Peer]map[string]bool
-	mtx      sync.Mutex
+	// mtx      sync.Mutex
 }
 
 func NewPeerMsgLinker() *PeerMsgLinker {
@@ -27,8 +29,8 @@ func NewPeerMsgLinker() *PeerMsgLinker {
 }
 
 func (this *PeerMsgLinker) AddPeer(peer *cascade.Peer) error {
-	this.mtx.Lock()
-	defer this.mtx.Unlock()
+	//	this.mtx.Lock()
+	//	defer this.mtx.Unlock()
 
 	_, ok := this.peerMsgs[peer]
 	if ok {
@@ -41,8 +43,8 @@ func (this *PeerMsgLinker) AddPeer(peer *cascade.Peer) error {
 }
 
 func (this *PeerMsgLinker) DelPeer(peer *cascade.Peer) error {
-	this.mtx.Lock()
-	defer this.mtx.Unlock()
+	//	this.mtx.Lock()
+	//	defer this.mtx.Unlock()
 
 	msgs, ok := this.peerMsgs[peer]
 	if !ok {
@@ -58,8 +60,8 @@ func (this *PeerMsgLinker) DelPeer(peer *cascade.Peer) error {
 }
 
 func (this *PeerMsgLinker) CacheMsg(peer *cascade.Peer, msg string) error {
-	this.mtx.Lock()
-	defer this.mtx.Unlock()
+	//	this.mtx.Lock()
+	//	defer this.mtx.Unlock()
 
 	_, ok := this.msgPeer[msg]
 	if ok {
@@ -81,8 +83,8 @@ func (this *PeerMsgLinker) CacheMsg(peer *cascade.Peer, msg string) error {
 }
 
 func (this *PeerMsgLinker) GetMsgPeer(msg string) (*cascade.Peer, error) {
-	this.mtx.Lock()
-	defer this.mtx.Unlock()
+	//	this.mtx.Lock()
+	//	defer this.mtx.Unlock()
 
 	ipeer, ok := this.msgPeer[msg]
 	if !ok {
@@ -101,8 +103,8 @@ func (this *PeerMsgLinker) GetMsgPeer(msg string) (*cascade.Peer, error) {
 func (this *PeerMsgLinker) CleanExpire(expireSecond int64) {
 	ts := time.Now().Unix()
 
-	this.mtx.Lock()
-	defer this.mtx.Unlock()
+	//	this.mtx.Lock()
+	//	defer this.mtx.Unlock()
 
 	var waitDelMsgs []string
 	for k, v := range this.msgPeer {
@@ -118,4 +120,14 @@ func (this *PeerMsgLinker) CleanExpire(expireSecond int64) {
 	for _, msg := range waitDelMsgs {
 		delete(this.msgPeer, msg)
 	}
+}
+
+func (this *PeerMsgLinker) OutputMsgPeer() {
+	var buffer bytes.Buffer
+	buffer.WriteString("current msg peer: \n")
+	for k, v := range this.msgPeer {
+		s := fmt.Sprintf("    %v: %v\n", k, v.peer.Conn.RemoteAddr().String())
+		buffer.WriteString(s)
+	}
+	log.Printf("%v", buffer.String())
 }
