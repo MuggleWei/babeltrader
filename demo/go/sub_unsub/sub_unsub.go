@@ -8,11 +8,12 @@ import (
 	"time"
 
 	common "github.com/MuggleWei/babel-trader/src/babeltrader-common-go"
+	utils "github.com/MuggleWei/babel-trader/src/babeltrader-utils-go"
 )
 
 func TopicGet(addr string) ([]byte, error) {
 	url := "http://" + addr + "/topic/get"
-	return common.HttpRequest(http.DefaultClient, "GET", "", url, nil)
+	return utils.HttpRequest(http.DefaultClient, "GET", "", url, nil)
 }
 
 func TopicSub(addr string, msg *common.MessageSubUnsub) ([]byte, error) {
@@ -21,7 +22,7 @@ func TopicSub(addr string, msg *common.MessageSubUnsub) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return common.HttpRequest(http.DefaultClient, "Post", string(bytes), url, nil)
+	return utils.HttpRequest(http.DefaultClient, "Post", string(bytes), url, nil)
 }
 
 func TopicUnsub(addr string, msg *common.MessageSubUnsub) ([]byte, error) {
@@ -30,7 +31,7 @@ func TopicUnsub(addr string, msg *common.MessageSubUnsub) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return common.HttpRequest(http.DefaultClient, "Post", string(bytes), url, nil)
+	return utils.HttpRequest(http.DefaultClient, "Post", string(bytes), url, nil)
 }
 
 func main() {

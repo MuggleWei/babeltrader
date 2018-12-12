@@ -1,15 +1,15 @@
-package babeltrader_common_go_test
+package babeltrader_utils_go_test
 
 import (
 	"testing"
 	"time"
 
-	common "github.com/MuggleWei/babel-trader/src/babeltrader-common-go"
+	utils "github.com/MuggleWei/babel-trader/src/babeltrader-utils-go"
 	"github.com/MuggleWei/cascade"
 )
 
 func TestAddDelPeer(t *testing.T) {
-	linker := common.NewPeerMsgLinker()
+	linker := utils.NewPeerMsgLinker()
 
 	err := linker.AddPeer(nil)
 	if err != nil {
@@ -23,7 +23,7 @@ func TestAddDelPeer(t *testing.T) {
 }
 
 func TestRepeatedAddPeer(t *testing.T) {
-	linker := common.NewPeerMsgLinker()
+	linker := utils.NewPeerMsgLinker()
 
 	err := linker.AddPeer(nil)
 	if err != nil {
@@ -37,7 +37,7 @@ func TestRepeatedAddPeer(t *testing.T) {
 }
 
 func TestRepeatedDelPeer(t *testing.T) {
-	linker := common.NewPeerMsgLinker()
+	linker := utils.NewPeerMsgLinker()
 
 	err := linker.AddPeer(nil)
 	if err != nil {
@@ -56,7 +56,7 @@ func TestRepeatedDelPeer(t *testing.T) {
 }
 
 func TestCacheGet(t *testing.T) {
-	linker := common.NewPeerMsgLinker()
+	linker := utils.NewPeerMsgLinker()
 
 	var peer cascade.Peer
 
@@ -91,7 +91,7 @@ func TestCacheGet(t *testing.T) {
 }
 
 func TestRepeatedCache(t *testing.T) {
-	linker := common.NewPeerMsgLinker()
+	linker := utils.NewPeerMsgLinker()
 
 	var peer cascade.Peer
 
@@ -122,7 +122,7 @@ func TestRepeatedCache(t *testing.T) {
 }
 
 func TestRepeatedGet(t *testing.T) {
-	linker := common.NewPeerMsgLinker()
+	linker := utils.NewPeerMsgLinker()
 
 	var peer cascade.Peer
 
@@ -153,7 +153,7 @@ func TestRepeatedGet(t *testing.T) {
 }
 
 func TestCleanExpire(t *testing.T) {
-	linker := common.NewPeerMsgLinker()
+	linker := utils.NewPeerMsgLinker()
 
 	var peer cascade.Peer
 

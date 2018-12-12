@@ -1,4 +1,4 @@
-package babeltrader_common_go
+package babeltrader_utils_go
 
 import (
 	"errors"
