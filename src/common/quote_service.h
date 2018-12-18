@@ -28,7 +28,7 @@ public:
 
 private:
 	void AsyncLoop();
-	void Dispatch(QuoteBlock &msg);
+	// void Dispatch(QuoteBlock &msg);
 
 	void SyncBroadcastMarketData(const QuoteMarketData *msg);
 	void SyncBroadcastKline(const QuoteKline *msg);

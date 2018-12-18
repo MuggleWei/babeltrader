@@ -60,19 +60,23 @@ int main(int argc, char *argv[])
 		rapidjson::Document doc;
 		doc.Parse(message, length);
 
-		if (doc.HasParseError()) {
+		if (doc.HasParseError() || !doc.IsArray()) {
 			return;
 		}
 
-		if (!(doc.HasMember("data") && doc["data"].IsObject()))
+		for (unsigned int i = 0; i < doc.Size(); ++i)
 		{
-			return;
-		}
+			rapidjson::Value &quote = doc[i];
+			if (!(quote.HasMember("data") && quote["data"].IsObject()))
+			{
+				return;
+			}
 
-		if (doc["data"].HasMember("ts") && doc["data"]["ts"].IsInt64())
-		{
-			int64_t ts = doc["data"]["ts"].GetInt64();
-			TimeDiff(ts, cur_ms);
+			if (quote["data"].HasMember("ts") && quote["data"]["ts"].IsInt64())
+			{
+				int64_t ts = quote["data"]["ts"].GetInt64();
+				TimeDiff(ts, cur_ms);
+			}
 		}
 #else
 		LOG(INFO).write(message, length);

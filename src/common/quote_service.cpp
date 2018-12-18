@@ -108,6 +108,15 @@ void QuoteService::AsyncLoop()
 		rec_cnt++;
 #endif
 
+		if (queue.size() == 0) {
+			continue;
+		}
+
+		rapidjson::StringBuffer s;
+		rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+		writer.StartArray();
+
 		while (queue.size()) {
 			QuoteBlock &msg = queue.front();
 
@@ -118,9 +127,40 @@ void QuoteService::AsyncLoop()
 			total_elapsed_time += (cur_ms - p->quote.ts);
 #endif
 
-			Dispatch(msg);
+			// Dispatch(msg);
+			switch (msg.quote_type)
+			{
+				case QuoteBlockType_MarketData:
+				{
+					SerializeQuoteBegin(writer, ((const QuoteMarketData*)&msg)->quote);
+					SerializeMarketData(writer, ((const QuoteMarketData*)&msg)->market_data);
+					SerializeQuoteEnd(writer, ((const QuoteMarketData*)&msg)->quote);
+				}break;
+				case QuoteBlockType_Kline:
+				{
+					SerializeQuoteBegin(writer, ((const QuoteKline*)&msg)->quote);
+					SerializeKline(writer, ((const QuoteKline*)&msg)->kline);
+					SerializeQuoteEnd(writer, ((const QuoteKline*)&msg)->quote);
+				}break;
+				case QuoteBlockType_OrderBook:
+				{
+					SerializeQuoteBegin(writer, ((const QuoteOrderBook*)&msg)->quote);
+					SerializeOrderBook(writer, ((const QuoteOrderBook*)&msg)->order_book);
+					SerializeQuoteEnd(writer, ((const QuoteOrderBook*)&msg)->quote);
+				}break;
+				case QuoteBlockType_Level2:
+				{
+					SerializeQuoteBegin(writer, ((const QuoteOrderBookLevel2*)&msg)->quote);
+					SerializeLevel2(writer, ((const QuoteOrderBookLevel2*)&msg)->level2);
+					SerializeQuoteEnd(writer, ((const QuoteOrderBookLevel2*)&msg)->quote);
+				}break;
+			}
+
 			queue.pop();
 		}
+
+		writer.EndArray();
+		uws_hub_.getDefaultGroup<uWS::SERVER>().broadcast(s.GetString(), s.GetLength(), uWS::OpCode::TEXT);
 
 #if ENABLE_PERFORMANCE_TEST
 		if (total_pkg >= step)
@@ -141,46 +181,48 @@ void QuoteService::AsyncLoop()
 
 	}
 }
-void QuoteService::Dispatch(QuoteBlock &msg)
-{
-#if ENABLE_PERFORMANCE_TEST
-	static QuoteTransferMonitor monitor;
-	monitor.start();
-#endif
-
-	switch (msg.quote_type)
-	{
-	case QuoteBlockType_MarketData:
-	{
-		SyncBroadcastMarketData((const QuoteMarketData*)&msg);
-	}break;
-	case QuoteBlockType_Kline:
-	{
-		SyncBroadcastKline((const QuoteKline*)&msg);
-	}break;
-	case QuoteBlockType_OrderBook:
-	{
-		SyncBroadcastOrderBook((const QuoteOrderBook*)&msg);
-	}break;
-	case QuoteBlockType_Level2:
-	{
-		SyncBroadcastLevel2((const QuoteOrderBookLevel2*)&msg);
-	}break;
-	}
-
-#if ENABLE_PERFORMANCE_TEST
-	monitor.end("quote service dispatch");
-#endif
-}
+// void QuoteService::Dispatch(QuoteBlock &msg)
+// {
+// #if ENABLE_PERFORMANCE_TEST
+// 	static QuoteTransferMonitor monitor;
+// 	monitor.start();
+// #endif
+// 
+// 	switch (msg.quote_type)
+// 	{
+// 	case QuoteBlockType_MarketData:
+// 	{
+// 		SyncBroadcastMarketData((const QuoteMarketData*)&msg);
+// 	}break;
+// 	case QuoteBlockType_Kline:
+// 	{
+// 		SyncBroadcastKline((const QuoteKline*)&msg);
+// 	}break;
+// 	case QuoteBlockType_OrderBook:
+// 	{
+// 		SyncBroadcastOrderBook((const QuoteOrderBook*)&msg);
+// 	}break;
+// 	case QuoteBlockType_Level2:
+// 	{
+// 		SyncBroadcastLevel2((const QuoteOrderBookLevel2*)&msg);
+// 	}break;
+// 	}
+// 
+// #if ENABLE_PERFORMANCE_TEST
+// 	monitor.end("quote service dispatch");
+// #endif
+// }
 
 void QuoteService::SyncBroadcastMarketData(const QuoteMarketData *msg)
 {
 	rapidjson::StringBuffer s;
 	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
 
+	writer.StartArray();
 	SerializeQuoteBegin(writer, msg->quote);
 	SerializeMarketData(writer, msg->market_data);
 	SerializeQuoteEnd(writer, msg->quote);
+	writer.EndArray();
 
 	uws_hub_.getDefaultGroup<uWS::SERVER>().broadcast(s.GetString(), s.GetLength(), uWS::OpCode::TEXT);
 }
@@ -189,9 +231,11 @@ void QuoteService::SyncBroadcastKline(const QuoteKline *msg)
 	rapidjson::StringBuffer s;
 	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
 
+	writer.StartArray();
 	SerializeQuoteBegin(writer, msg->quote);
 	SerializeKline(writer, msg->kline);
 	SerializeQuoteEnd(writer, msg->quote);
+	writer.EndArray();
 
 	uws_hub_.getDefaultGroup<uWS::SERVER>().broadcast(s.GetString(), s.GetLength(), uWS::OpCode::TEXT);
 }
@@ -200,9 +244,11 @@ void QuoteService::SyncBroadcastOrderBook(const QuoteOrderBook *msg)
 	rapidjson::StringBuffer s;
 	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
 
+	writer.StartArray();
 	SerializeQuoteBegin(writer, msg->quote);
 	SerializeOrderBook(writer, msg->order_book);
 	SerializeQuoteEnd(writer, msg->quote);
+	writer.EndArray();
 
 	uws_hub_.getDefaultGroup<uWS::SERVER>().broadcast(s.GetString(), s.GetLength(), uWS::OpCode::TEXT);
 }
@@ -211,9 +257,11 @@ void QuoteService::SyncBroadcastLevel2(const QuoteOrderBookLevel2 *msg)
 	rapidjson::StringBuffer s;
 	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
 
+	writer.StartArray();
 	SerializeQuoteBegin(writer, msg->quote);
 	SerializeLevel2(writer, msg->level2);
 	SerializeQuoteEnd(writer, msg->quote);
+	writer.EndArray();
 
 	uws_hub_.getDefaultGroup<uWS::SERVER>().broadcast(s.GetString(), s.GetLength(), uWS::OpCode::TEXT);
 }
