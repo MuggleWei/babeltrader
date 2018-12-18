@@ -50,40 +50,42 @@ func (this *QuoteService) OnInactive(peer *cascade.Peer) {
 }
 
 func (this *QuoteService) OnRead(peer *cascade.Peer, message []byte) {
-	var msg common.MessageRspCommon
-	err := json.Unmarshal(message, &msg)
+	var msgs []common.MessageRspCommon
+	err := json.Unmarshal(message, &msgs)
 	if err != nil {
 		log.Printf("failed unmarshal message: %v\n", string(message))
 		return
 	}
 
-	if msg.Message != "quote" {
-		log.Printf("don't handle message: %v\n", msg.Message)
-		return
+	for _, msg := range msgs {
+		if msg.Message != "quote" {
+			log.Printf("don't handle message: %v\n", msg.Message)
+			return
+		}
+
+		var quote common.MessageQuote
+
+		config := &mapstructure.DecoderConfig{TagName: "json", Result: &quote}
+		decoder, err := mapstructure.NewDecoder(config)
+		if err != nil {
+			log.Println("failed new mapstructure decoder")
+			return
+		}
+
+		err = decoder.Decode(msg.Data)
+		if err != nil {
+			log.Printf("failed unmarshal quote message: %v\n", msg.Data)
+			return
+		}
+
+		fn, ok := this.Callbacks[quote.InfoPrimary]
+		if !ok {
+			log.Printf("failed find callback function for %v\n", quote.InfoPrimary)
+			return
+		}
+
+		fn(&quote)
 	}
-
-	var quote common.MessageQuote
-
-	config := &mapstructure.DecoderConfig{TagName: "json", Result: &quote}
-	decoder, err := mapstructure.NewDecoder(config)
-	if err != nil {
-		log.Println("failed new mapstructure decoder")
-		return
-	}
-
-	err = decoder.Decode(msg.Data)
-	if err != nil {
-		log.Printf("failed unmarshal quote message: %v\n", msg.Data)
-		return
-	}
-
-	fn, ok := this.Callbacks[quote.InfoPrimary]
-	if !ok {
-		log.Printf("failed find callback function for %v\n", quote.InfoPrimary)
-		return
-	}
-
-	fn(&quote)
 }
 
 func (this *QuoteService) OnHubByteMessage(msg *cascade.HubByteMessage) {
