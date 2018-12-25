@@ -1,0 +1,22 @@
+{
+	"rest_endpoint": "https://www.okex.com/",
+	"ws_endpoint": "wss://real.okex.com:10442/ws/v3",
+	"key": "xxxxxxxx",
+	"secret": "yyyyyyy",
+	"passphrase": "zzzzzzzz",
+	"rest_timeout_sec": 45,
+	"quote_sub_topics": [
+		"swap/depth:BTC-USD-SWAP",
+		"swap/depth5:BTC-USD-SWAP",
+		"swap/ticker:BTC-USD-SWAP",
+		"swap/candle60s:BTC-USD-SWAP",
+		"futures/depth:BTC-USD-190329",
+		"futures/depth5:BTC-USD-190329",
+		"futures/ticker:BTC-USD-190329",
+		"futures/candle60s:BTC-USD-190329",
+		"spot/depth:BTC-USDT",
+		"spot/depth5:BTC-USDT",
+		"spot/ticker:BTC-USDT",
+		"spot/candle60s:BTC-USDT"
+	]
+}

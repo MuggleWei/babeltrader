@@ -7,6 +7,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+
+	common "github.com/MuggleWei/babel-trader/src/babeltrader-common-go"
 )
 
 func HttpRequest(client *http.Client, reqType string, data string, url string, requstHeaders map[string]string) ([]byte, error) {
@@ -49,4 +51,27 @@ func ReadPostBody(r *http.Request, obj interface{}) error {
 	}
 
 	return nil
+}
+
+func HttpResponse(w http.ResponseWriter, msg string, errId int64, errMsg string, data interface{}) {
+	rsp := common.MessageRspCommon{
+		Message: msg,
+		ErrId:   errId,
+		ErrMsg:  errMsg,
+		Data:    data,
+	}
+
+	b, err := json.Marshal(rsp)
+	if err != nil {
+		rsp = common.MessageRspCommon{
+			Message: msg,
+			ErrId:   -1,
+			ErrMsg:  err.Error(),
+		}
+
+		b, _ = json.Marshal(rsp)
+		fmt.Fprint(w, string(b))
+	}
+
+	fmt.Fprint(w, string(b))
 }
