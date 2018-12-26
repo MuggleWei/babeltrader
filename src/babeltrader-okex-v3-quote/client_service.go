@@ -50,13 +50,10 @@ func (this *ClientService) OnInactive(peer *cascade.Peer) {
 }
 
 func (this *ClientService) OnRead(peer *cascade.Peer, message []byte) {
-	// TODO:
-	// utils.DispatchRequests(peer, message, this.ReqCallbacks)
 }
 
 func (this *ClientService) OnHubByteMessage(msg *cascade.HubByteMessage) {
-	// TODO:
-	// utils.DispatchResponse(msg, this.RspCallbacks)
+	log.Println(string(msg.Message))
 }
 
 func (this *ClientService) OnHubObjectMessage(msg *cascade.HubObjectMessage) {

@@ -12,3 +12,8 @@ type RspCommon struct {
 	Success string      `json:"success"` // for login response
 	Channel string      `json:"channel"` // for subscribe
 }
+
+type Candle struct {
+	Candle       []string `json:"candle"`
+	InstrumentId string   `json:"instrument_id"`
+}

@@ -1,13 +1,16 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 	"sync"
 
 	common "github.com/MuggleWei/babel-trader/src/babeltrader-common-go"
 	okex "github.com/MuggleWei/babel-trader/src/babeltrader-okex-v3"
+	utils "github.com/MuggleWei/babel-trader/src/babeltrader-utils-go"
 	"github.com/MuggleWei/cascade"
 )
 
@@ -80,7 +83,31 @@ func (this *OkexQuoteService) OnUnsub(msg *okex.RspCommon) {
 }
 
 func (this *OkexQuoteService) OnKline(msg *okex.RspCommon) {
-	// TODO:
+	// only support 1m kline
+	if !strings.HasSuffix(msg.Tabel, "60s") {
+		return
+	}
+
+	var candles []okex.Candle
+	err := utils.DecodeInterfaceByJson(msg.Data, &candles)
+	if err != nil {
+		log.Printf("[Warning] failed unmarshal candles %v\n", *msg)
+		return
+	}
+
+	quotes, err := okex.ConvertCandleToQuotes(msg.Tabel, candles)
+	if err != nil {
+		log.Printf("[Warning] failed convert candles to quotes %v\n", *msg)
+		return
+	}
+
+	b, err := json.Marshal(quotes)
+	if err != nil {
+		log.Printf("[Warning] failed marshal quotes %v\n", quotes)
+		return
+	}
+
+	this.ClientService.Hub.ByteMessageChannel <- &cascade.HubByteMessage{Peer: nil, Message: b}
 }
 func (this *OkexQuoteService) OnTicker(msg *okex.RspCommon) {
 	// TODO:
