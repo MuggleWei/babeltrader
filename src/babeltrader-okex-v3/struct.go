@@ -6,10 +6,9 @@ type ReqCommon struct {
 }
 
 type RspCommon struct {
-	Event       string      `json:"event"`
-	Tabel       string      `json:"table"`
-	Data        interface{} `json:"data"`
-	Success     string      `json:"success"`     // for login response
-	Channel     string      `json:"channel"`     // for subscribe
-	Unsubscribe string      `json:"unsubscribe"` // for unsubscribe
+	Event   string      `json:"event"`
+	Tabel   string      `json:"table"`
+	Data    interface{} `json:"data"`
+	Success string      `json:"success"` // for login response
+	Channel string      `json:"channel"` // for subscribe
 }

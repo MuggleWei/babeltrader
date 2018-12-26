@@ -1,6 +1,8 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"log"
 	"sync"
 
@@ -39,7 +41,7 @@ func (this *OkexQuoteService) Run() {
 
 ///////////////// quote spi /////////////////
 func (this *OkexQuoteService) OnConnected(peer *cascade.Peer) {
-	log.Printf("okex quote connected: %v\n", peer.Conn.RemoteAddr().String())
+	log.Printf("[Info] okex quote connected: %v\n", peer.Conn.RemoteAddr().String())
 	this.Api.Subscribe(this.config.QuoteSubTopics)
 
 	this.channelMtx.Lock()
@@ -49,7 +51,7 @@ func (this *OkexQuoteService) OnConnected(peer *cascade.Peer) {
 	}
 }
 func (this *OkexQuoteService) OnDisconnected(peer *cascade.Peer) {
-	log.Printf("okex quote disconnected: %v\n", peer.Conn.RemoteAddr().String())
+	log.Printf("[Warning] okex quote disconnected: %v\n", peer.Conn.RemoteAddr().String())
 
 	this.channelMtx.Lock()
 	defer this.channelMtx.Unlock()
@@ -57,20 +59,24 @@ func (this *OkexQuoteService) OnDisconnected(peer *cascade.Peer) {
 }
 
 func (this *OkexQuoteService) OnLogin(msg *okex.RspCommon) {
-	log.Printf("OnLogin")
+	log.Printf("[Info] OnLogin")
 }
 func (this *OkexQuoteService) OnError(msg *okex.RspCommon) {
-	log.Printf("OnError: %+v\n", msg)
+	log.Printf("[Info] OnError: %+v\n", msg)
 }
 func (this *OkexQuoteService) OnSub(msg *okex.RspCommon) {
+	log.Printf("[Info] success sub channel: %v\n", msg.Channel)
+
 	this.channelMtx.Lock()
 	defer this.channelMtx.Unlock()
 	this.channels[msg.Channel] = true
 }
 func (this *OkexQuoteService) OnUnsub(msg *okex.RspCommon) {
+	log.Printf("[Info] success unsub channel: %v\n", msg.Channel)
+
 	this.channelMtx.Lock()
 	defer this.channelMtx.Unlock()
-	delete(this.channels, msg.Unsubscribe)
+	delete(this.channels, msg.Channel)
 }
 
 func (this *OkexQuoteService) OnKline(msg *okex.RspCommon) {
@@ -109,10 +115,56 @@ func (this *OkexQuoteService) GetSubTopics() []common.MessageSubUnsub {
 	return topics
 }
 
-func (this *OkexQuoteService) SubTopics([]common.MessageSubUnsub) {
-	// TODO:
+func (this *OkexQuoteService) SubTopics(msgs []common.MessageQuote) error {
+	var channels []string
+	for _, msg := range msgs {
+		channel, err := okex.ConvertQuoteToChannel(&msg)
+		if err != nil {
+			return err
+		}
+		channels = append(channels, channel)
+	}
+
+	this.channelMtx.Lock()
+	defer this.channelMtx.Unlock()
+
+	for _, channel := range channels {
+		subed, ok := this.channels[channel]
+		if ok && subed {
+			s := fmt.Sprintf("not allowed to sub channel %v repeated", channel)
+			return errors.New(s)
+		}
+	}
+
+	for _, channel := range channels {
+		this.channels[channel] = false
+	}
+
+	log.Printf("[Info] req sub channels: %v\n", channels)
+	return this.Api.Subscribe(channels)
 }
 
-func (this *OkexQuoteService) UnsubTopics([]common.MessageSubUnsub) {
-	// TODO:
+func (this *OkexQuoteService) UnsubTopics(msgs []common.MessageQuote) error {
+	var channels []string
+	for _, msg := range msgs {
+		channel, err := okex.ConvertQuoteToChannel(&msg)
+		if err != nil {
+			return err
+		}
+		channels = append(channels, channel)
+	}
+
+	this.channelMtx.Lock()
+	defer this.channelMtx.Unlock()
+
+	for _, channel := range channels {
+		_, ok := this.channels[channel]
+		if !ok {
+			s := fmt.Sprintf("not allowed unsub channel %v, cause not subed", channel)
+			return errors.New(s)
+		}
+	}
+
+	log.Printf("[Info] req unsub channels: %v\n", channels)
+	return this.Api.Unsubscribe(channels)
 }

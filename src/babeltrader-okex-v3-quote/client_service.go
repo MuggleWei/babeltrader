@@ -74,7 +74,11 @@ func (this *ClientService) TopicsSub(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	this.QuoteService.SubTopics(req)
+	err = this.QuoteService.SubTopics(req)
+	if err != nil {
+		utils.HttpResponse(w, "", -1, err.Error(), nil)
+		return
+	}
 	utils.HttpResponse(w, "", 0, "", nil)
 }
 func (this *ClientService) TopicsUnsub(w http.ResponseWriter, r *http.Request) {
@@ -85,6 +89,10 @@ func (this *ClientService) TopicsUnsub(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	this.QuoteService.UnsubTopics(req)
+	err = this.QuoteService.UnsubTopics(req)
+	if err != nil {
+		utils.HttpResponse(w, "", -1, err.Error(), nil)
+		return
+	}
 	utils.HttpResponse(w, "", 0, "", nil)
 }
