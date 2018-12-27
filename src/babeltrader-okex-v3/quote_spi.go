@@ -1,4 +1,4 @@
-package babeltrader_okex_common
+package babeltrader_okex_v3
 
 import "github.com/MuggleWei/cascade"
 

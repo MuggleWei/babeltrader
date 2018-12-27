@@ -1,4 +1,4 @@
-package babeltrader_okex_common
+package babeltrader_okex_v3
 
 import (
 	"errors"
@@ -205,7 +205,7 @@ func ConvertCandleToQuotes(table string, candles []Candle) ([]common.MessageRspC
 				InfoPrimary: info1,
 				InfoExtra:   info2,
 				Data: common.MessageQuoteKLine{
-					Timestamp: ts.Unix() + int64(ts.Nanosecond())/int64(time.Millisecond),
+					Timestamp: ts.Unix()*1000 + int64(ts.Nanosecond())/int64(time.Millisecond),
 					Open:      open,
 					High:      high,
 					Low:       low,

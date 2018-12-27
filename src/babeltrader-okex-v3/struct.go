@@ -1,4 +1,4 @@
-package babeltrader_okex_common
+package babeltrader_okex_v3
 
 type ReqCommon struct {
 	Op   string      `json:"op"`

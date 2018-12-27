@@ -54,6 +54,10 @@ func (this *ClientService) OnRead(peer *cascade.Peer, message []byte) {
 
 func (this *ClientService) OnHubByteMessage(msg *cascade.HubByteMessage) {
 	log.Println(string(msg.Message))
+
+	for peer := range this.Hub.Peers {
+		peer.SendChannel <- msg.Message
+	}
 }
 
 func (this *ClientService) OnHubObjectMessage(msg *cascade.HubObjectMessage) {
