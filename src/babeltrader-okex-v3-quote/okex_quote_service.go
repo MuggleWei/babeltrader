@@ -110,7 +110,51 @@ func (this *OkexQuoteService) OnKline(msg *okex.RspCommon) {
 	this.ClientService.Hub.ByteMessageChannel <- &cascade.HubByteMessage{Peer: nil, Message: b}
 }
 func (this *OkexQuoteService) OnTicker(msg *okex.RspCommon) {
-	// TODO:
+	var tickers []okex.Ticker
+
+	// NOTE: fucking okex v3 api, spot/swap ticker's price/vol fields use string, futures's price/vol fields use double?!!! :(
+	if strings.HasPrefix(msg.Tabel, "futures") {
+		var futuresTickers []okex.FuturesTicker
+		err := utils.DecodeInterfaceByJson(msg.Data, &futuresTickers)
+		if err != nil {
+			log.Printf("[Warning] failed unmarshal tickers: %v\n", *msg)
+			return
+		}
+
+		for _, futureTicker := range futuresTickers {
+			tickers = append(tickers, okex.Ticker{
+				InstrumentId: futureTicker.InstrumentId,
+				Last:         fmt.Sprintf("%v", futureTicker.Last),
+				BestBid:      fmt.Sprintf("%v", futureTicker.BestBid),
+				BestAsk:      fmt.Sprintf("%v", futureTicker.BestAsk),
+				Open24H:      fmt.Sprintf("%v", futureTicker.Open24H),
+				High24H:      fmt.Sprintf("%v", futureTicker.High24H),
+				Low24H:       fmt.Sprintf("%v", futureTicker.Low24H),
+				Vol24H:       fmt.Sprintf("%v", futureTicker.Vol24H),
+				Timestamp:    futureTicker.Timestamp,
+			})
+		}
+	} else {
+		err := utils.DecodeInterfaceByJson(msg.Data, &tickers)
+		if err != nil {
+			log.Printf("[Warning] failed unmarshal tickers: %v\n", *msg)
+			return
+		}
+	}
+
+	quotes, err := okex.ConvertTickerToQuotes(msg.Tabel, tickers)
+	if err != nil {
+		log.Printf("[Warning] failed convert tickers to quotes %v\n", *msg)
+		return
+	}
+
+	b, err := json.Marshal(quotes)
+	if err != nil {
+		log.Printf("[Warning] failed marshal quotes %v\n", quotes)
+		return
+	}
+
+	this.ClientService.Hub.ByteMessageChannel <- &cascade.HubByteMessage{Peer: nil, Message: b}
 }
 func (this *OkexQuoteService) OnDepth(msg *okex.RspCommon) {
 	// TODO:

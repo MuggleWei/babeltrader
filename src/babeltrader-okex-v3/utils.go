@@ -12,62 +12,81 @@ import (
 )
 
 ///////////////// converter /////////////////
-func ConvertChannelToSubUnsub(channel string) (*common.MessageSubUnsub, error) {
+func SplitChannel(channel string) (*ChannelSplit, error) {
+	var msg ChannelSplit
+
 	idx := strings.Index(channel, "/")
 	if idx <= 0 || idx >= len(channel)-1 {
 		s := fmt.Sprintf("failed find '/' in channel %v", channel)
+		log.Println(s)
 		return nil, errors.New(s)
 	}
 
 	idx2 := strings.Index(channel, ":")
-	if idx2 <= 0 || idx2 >= len(channel)-1 {
-		s := fmt.Sprintf("failed find ':' in channel %v", channel)
+	if idx2 == -1 {
+		// table format, e.g. futures/depth, futures/ticker, spot/candle60s ...
+		msg.ProductType = channel[:idx]
+		msg.Info1 = channel[idx+1:]
+	} else if idx2 < len(channel)-1 {
+		// channel format, e.g. swap/ticker:BTC-USD-SWAP, futures/ticker:BTC-USD-190329 ...
+		msg.ProductType = channel[:idx]
+		msg.Info1 = channel[idx+1 : idx2]
+
+		if msg.ProductType == "futures" || msg.ProductType == "swap" {
+			idx3 := strings.LastIndex(channel, "-")
+			if idx3 <= 0 || idx3 >= len(channel)-1 {
+				s := fmt.Sprintf("failed find last index '-' in channel %v", channel)
+				log.Println(s)
+				return nil, errors.New(s)
+			}
+			msg.Symbol = channel[idx2+1 : idx3]
+			msg.Contract = channel[idx3+1:]
+		} else {
+			msg.Symbol = channel[idx2+1:]
+		}
+	} else {
+		s := fmt.Sprintf("invalid channel format: %v", channel)
+		log.Println(s)
 		return nil, errors.New(s)
 	}
 
-	productType := channel[:idx]
-	info1 := channel[idx+1 : idx2]
-	info2 := ""
-	if strings.HasPrefix(info1, "candle") {
-		if strings.HasSuffix(info1, "60s") {
-			info2 = "1m"
+	if msg.ProductType == "futures" || msg.ProductType == "swap" {
+		msg.ProductType = "future"
+	}
+
+	if strings.HasPrefix(msg.Info1, "candle") {
+		if strings.HasSuffix(msg.Info1, "60s") {
+			msg.Info2 = "1m"
 		} else {
 			s := fmt.Sprintf("unsupport channel: %v", channel)
+			log.Println(s)
 			return nil, errors.New(s)
 		}
-		info1 = "kline"
-	} else if info1 == "depth5" {
-		info1 = "depth"
-	} else if info1 == "depth" {
-		info1 = "depthL2"
+		msg.Info1 = "kline"
+	} else if msg.Info1 == "depth5" {
+		msg.Info1 = "depth"
+	} else if msg.Info1 == "depth" {
+		msg.Info1 = "depthL2"
 	}
-	symbol := ""
-	contract := ""
 
-	if productType == "futures" || productType == "swap" {
-		productType = "future"
-		idx3 := strings.LastIndex(channel, "-")
-		if idx3 <= 0 || idx3 >= len(channel)-1 {
-			s := fmt.Sprintf("failed find last index '-' in channel %v", channel)
-			return nil, errors.New(s)
-		}
-		symbol = channel[idx2+1 : idx3]
-		contract = channel[idx3+1:]
-	} else if productType == "spot" {
-		symbol = channel[idx2+1:]
-	} else {
-		s := fmt.Sprintf("unsupport channel: %v", channel)
-		return nil, errors.New(s)
+	return &msg, nil
+}
+
+func ConvertChannelToSubUnsub(channel string) (*common.MessageSubUnsub, error) {
+	msg, err := SplitChannel(channel)
+	if err != nil {
+		log.Printf("failed split channel: %v\n", channel)
+		return nil, err
 	}
 
 	return &common.MessageSubUnsub{
 		Market:      "okex",
 		Exchange:    "okex",
-		Type:        productType,
-		Symbol:      symbol,
-		Contract:    contract,
-		InfoPrimary: info1,
-		InfoExtra:   info2,
+		Type:        msg.ProductType,
+		Symbol:      msg.Symbol,
+		Contract:    msg.Contract,
+		InfoPrimary: msg.Info1,
+		InfoExtra:   msg.Info2,
 	}, nil
 }
 
@@ -124,36 +143,25 @@ func ConvertCandleToQuotes(table string, candles []Candle) ([]common.MessageRspC
 		return nil, errors.New(s)
 	}
 
+	channelMsg, err := SplitChannel(table)
+	if err != nil {
+		return nil, err
+	}
+
 	var quotes []common.MessageRspCommon
 
-	idx := strings.Index(table, "/")
-	if idx < 0 || idx >= len(table)-1 {
-		s := fmt.Sprintf("invalid table name: %v", table)
-		log.Printf("[Warning] %v\n", s)
-		return nil, errors.New(s)
-	}
-
-	productType := table[:idx]
-	if productType == "futures" || productType == "swap" {
-		productType = "future"
-	}
-	symbol := ""
-	contract := ""
-	info1 := "kline"
-	info2 := "1m"
-
 	for _, candle := range candles {
-		if productType == "future" {
-			idx = strings.LastIndex(candle.InstrumentId, "-")
+		if channelMsg.ProductType == "future" {
+			idx := strings.LastIndex(candle.InstrumentId, "-")
 			if idx <= 0 || idx >= len(candle.InstrumentId)-1 {
 				s := fmt.Sprintf("invalid instrument id: %v", candle.InstrumentId)
 				log.Printf("[Warning] %v\n", s)
 				return nil, errors.New(s)
 			}
-			symbol = candle.InstrumentId[:idx]
-			contract = candle.InstrumentId[idx+1:]
-		} else if productType == "spot" {
-			symbol = candle.InstrumentId
+			channelMsg.Symbol = candle.InstrumentId[:idx]
+			channelMsg.Contract = candle.InstrumentId[idx+1:]
+		} else if channelMsg.ProductType == "spot" {
+			channelMsg.Symbol = candle.InstrumentId
 		}
 
 		if len(candle.Candle) < 6 {
@@ -199,11 +207,11 @@ func ConvertCandleToQuotes(table string, candles []Candle) ([]common.MessageRspC
 			Data: common.MessageQuote{
 				Market:      "okex",
 				Exchange:    "okex",
-				Type:        productType,
-				Symbol:      symbol,
-				Contract:    contract,
-				InfoPrimary: info1,
-				InfoExtra:   info2,
+				Type:        channelMsg.ProductType,
+				Symbol:      channelMsg.Symbol,
+				Contract:    channelMsg.Contract,
+				InfoPrimary: channelMsg.Info1,
+				InfoExtra:   channelMsg.Info2,
 				Data: common.MessageQuoteKLine{
 					Timestamp: ts.Unix()*1000 + int64(ts.Nanosecond())/int64(time.Millisecond),
 					Open:      open,
@@ -211,6 +219,99 @@ func ConvertCandleToQuotes(table string, candles []Candle) ([]common.MessageRspC
 					Low:       low,
 					Close:     close_price,
 					Vol:       vol,
+				},
+			},
+		}
+
+		quotes = append(quotes, quote)
+	}
+
+	return quotes, nil
+}
+
+func ConvertTickerToQuotes(table string, tickers []Ticker) ([]common.MessageRspCommon, error) {
+	channelMsg, err := SplitChannel(table)
+	if err != nil {
+		return nil, err
+	}
+
+	var quotes []common.MessageRspCommon
+
+	for _, ticker := range tickers {
+		if channelMsg.ProductType == "future" {
+			idx := strings.LastIndex(ticker.InstrumentId, "-")
+			if idx <= 0 || idx >= len(ticker.InstrumentId)-1 {
+				s := fmt.Sprintf("invalid instrument id: %v", ticker.InstrumentId)
+				log.Printf("[Warning] %v\n", s)
+				return nil, errors.New(s)
+			}
+			channelMsg.Symbol = ticker.InstrumentId[:idx]
+			channelMsg.Contract = ticker.InstrumentId[idx+1:]
+		} else if channelMsg.ProductType == "spot" {
+			channelMsg.Symbol = ticker.InstrumentId
+		}
+
+		ts, err := time.Parse(time.RFC3339, ticker.Timestamp)
+		if err != nil {
+			log.Printf("[Warning] %v\n", err.Error())
+			return nil, err
+		}
+
+		last, err := strconv.ParseFloat(ticker.Last, 64)
+		if err != nil {
+			log.Printf("[Warning] %v\n", err.Error())
+			return nil, err
+		}
+
+		bid, err := strconv.ParseFloat(ticker.BestBid, 64)
+		if err != nil {
+			log.Printf("[Warning] %v\n", err.Error())
+			return nil, err
+		}
+
+		ask, err := strconv.ParseFloat(ticker.BestAsk, 64)
+		if err != nil {
+			log.Printf("[Warning] %v\n", err.Error())
+			return nil, err
+		}
+
+		high, err := strconv.ParseFloat(ticker.High24H, 64)
+		if err != nil {
+			log.Printf("[Warning] %v\n", err.Error())
+			return nil, err
+		}
+
+		low, err := strconv.ParseFloat(ticker.Low24H, 64)
+		if err != nil {
+			log.Printf("[Warning] %v\n", err.Error())
+			return nil, err
+		}
+
+		vol := 0.0
+		if channelMsg.ProductType == "spot" {
+			vol, err = strconv.ParseFloat(ticker.BaseVol24H, 64)
+		} else {
+			vol, err = strconv.ParseFloat(ticker.Vol24H, 64)
+		}
+
+		quote := common.MessageRspCommon{
+			Message: "quote",
+			Data: common.MessageQuote{
+				Market:      "okex",
+				Exchange:    "okex",
+				Type:        channelMsg.ProductType,
+				Symbol:      channelMsg.Symbol,
+				Contract:    channelMsg.Contract,
+				InfoPrimary: channelMsg.Info1,
+				InfoExtra:   channelMsg.Info2,
+				Data: common.MessageQuoteTicker{
+					Bid:       bid,
+					Ask:       ask,
+					Last:      last,
+					High:      high,
+					Low:       low,
+					Vol:       vol,
+					Timestamp: ts.Unix()*1000 + int64(ts.Nanosecond())/int64(time.Millisecond),
 				},
 			},
 		}

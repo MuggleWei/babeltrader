@@ -15,11 +15,13 @@ func DecodeInterfaceByJson(data interface{}, result_pointer interface{}) error {
 	config := &mapstructure.DecoderConfig{TagName: "json", Result: result_pointer}
 	decoder, err := mapstructure.NewDecoder(config)
 	if err != nil {
+		log.Printf("[Warning] failed new decoder: %v\n", err.Error())
 		return err
 	}
 
 	err = decoder.Decode(data)
 	if err != nil {
+		log.Printf("[Warning] failed decode data: %v, %v\n", data, err.Error())
 		return err
 	}
 
