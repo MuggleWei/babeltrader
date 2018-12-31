@@ -7,7 +7,7 @@ type ReqCommon struct {
 
 type RspCommon struct {
 	Event   string      `json:"event"`
-	Tabel   string      `json:"table"`
+	Table   string      `json:"table"`
 	Data    interface{} `json:"data"`
 	Success string      `json:"success"` // for login response
 	Channel string      `json:"channel"` // for subscribe
@@ -40,7 +40,7 @@ type Ticker struct {
 	Timestamp    string `json:"timestamp"`
 }
 
-// NOTE: fucking okex v3 api, spot/swap ticker's price/vol fields use string, futures's price/vol fields use double?!!! :(
+// NOTE: the fucking okex v3 api, spot/swap ticker's price/vol fields use string, futures's price/vol fields use double?!!! :(
 type FuturesTicker struct {
 	InstrumentId string  `json:"instrument_id"`
 	Last         float64 `json:"last"`
@@ -51,4 +51,11 @@ type FuturesTicker struct {
 	Low24H       float64 `json:"low_24h"`
 	Vol24H       float64 `json:"volume_24h"`
 	Timestamp    string  `json:"timestamp"`
+}
+
+type Depth struct {
+	Asks         [][]interface{} `json:"asks"`
+	Bids         [][]interface{} `json:"bids"`
+	InstrumentId string          `json:"instrument_id"`
+	Timestamp    string          `json:"timestamp"`
 }

@@ -84,7 +84,7 @@ func (this *OkexQuoteService) OnUnsub(msg *okex.RspCommon) {
 
 func (this *OkexQuoteService) OnKline(msg *okex.RspCommon) {
 	// only support 1m kline
-	if !strings.HasSuffix(msg.Tabel, "60s") {
+	if !strings.HasSuffix(msg.Table, "60s") {
 		return
 	}
 
@@ -95,7 +95,7 @@ func (this *OkexQuoteService) OnKline(msg *okex.RspCommon) {
 		return
 	}
 
-	quotes, err := okex.ConvertCandleToQuotes(msg.Tabel, candles)
+	quotes, err := okex.ConvertCandleToQuotes(msg.Table, candles)
 	if err != nil {
 		log.Printf("[Warning] failed convert candles to quotes %v\n", *msg)
 		return
@@ -112,8 +112,8 @@ func (this *OkexQuoteService) OnKline(msg *okex.RspCommon) {
 func (this *OkexQuoteService) OnTicker(msg *okex.RspCommon) {
 	var tickers []okex.Ticker
 
-	// NOTE: fucking okex v3 api, spot/swap ticker's price/vol fields use string, futures's price/vol fields use double?!!! :(
-	if strings.HasPrefix(msg.Tabel, "futures") {
+	// NOTE: the fucking okex v3 api, spot/swap ticker's price/vol fields use string, futures's price/vol fields use double?!!! :(
+	if strings.HasPrefix(msg.Table, "futures") {
 		var futuresTickers []okex.FuturesTicker
 		err := utils.DecodeInterfaceByJson(msg.Data, &futuresTickers)
 		if err != nil {
@@ -142,7 +142,7 @@ func (this *OkexQuoteService) OnTicker(msg *okex.RspCommon) {
 		}
 	}
 
-	quotes, err := okex.ConvertTickerToQuotes(msg.Tabel, tickers)
+	quotes, err := okex.ConvertTickerToQuotes(msg.Table, tickers)
 	if err != nil {
 		log.Printf("[Warning] failed convert tickers to quotes %v\n", *msg)
 		return
@@ -157,7 +157,27 @@ func (this *OkexQuoteService) OnTicker(msg *okex.RspCommon) {
 	this.ClientService.Hub.ByteMessageChannel <- &cascade.HubByteMessage{Peer: nil, Message: b}
 }
 func (this *OkexQuoteService) OnDepth(msg *okex.RspCommon) {
-	// TODO:
+	var depths []okex.Depth
+
+	err := utils.DecodeInterfaceByJson(msg.Data, &depths)
+	if err != nil {
+		log.Printf("[Warning] failed unmarshal depths: %v\n", *msg)
+		return
+	}
+
+	quotes, err := okex.ConvertDepthToQuotes(msg.Table, depths)
+	if err != nil {
+		log.Printf("[Warning] failed convert tickers to quotes %v\n", *msg)
+		return
+	}
+
+	b, err := json.Marshal(quotes)
+	if err != nil {
+		log.Printf("[Warning] failed marshal quotes %v\n", quotes)
+		return
+	}
+
+	this.ClientService.Hub.ByteMessageChannel <- &cascade.HubByteMessage{Peer: nil, Message: b}
 }
 func (this *OkexQuoteService) OnDepthL2(msg *okex.RspCommon) {
 	// TODO:

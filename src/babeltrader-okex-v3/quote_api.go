@@ -95,10 +95,10 @@ func (this *QuoteApi) OnRead(peer *cascade.Peer, message []byte) {
 		return
 	}
 
-	if rsp.Tabel != "" {
-		idx := strings.Index(rsp.Tabel, "/")
-		if idx > -1 && idx < len(rsp.Tabel)-1 {
-			fn, ok := this.rspCallbacks[rsp.Tabel[idx+1:]]
+	if rsp.Table != "" {
+		idx := strings.Index(rsp.Table, "/")
+		if idx > -1 && idx < len(rsp.Table)-1 {
+			fn, ok := this.rspCallbacks[rsp.Table[idx+1:]]
 			if ok {
 				fn(&rsp)
 			} else {

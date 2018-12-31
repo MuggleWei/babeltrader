@@ -321,3 +321,94 @@ func ConvertTickerToQuotes(table string, tickers []Ticker) ([]common.MessageRspC
 
 	return quotes, nil
 }
+
+func ConvertDepthToQuotes(table string, depths []Depth) ([]common.MessageRspCommon, error) {
+	channelMsg, err := SplitChannel(table)
+	if err != nil {
+		return nil, err
+	}
+
+	var quotes []common.MessageRspCommon
+
+	for _, depth := range depths {
+		if channelMsg.ProductType == "future" {
+			idx := strings.LastIndex(depth.InstrumentId, "-")
+			if idx <= 0 || idx >= len(depth.InstrumentId)-1 {
+				s := fmt.Sprintf("invalid instrument id: %v", depth.InstrumentId)
+				log.Printf("[Warning] %v\n", s)
+				return nil, errors.New(s)
+			}
+			channelMsg.Symbol = depth.InstrumentId[:idx]
+			channelMsg.Contract = depth.InstrumentId[idx+1:]
+		} else if channelMsg.ProductType == "spot" {
+			channelMsg.Symbol = depth.InstrumentId
+		}
+
+		ts, err := time.Parse(time.RFC3339, depth.Timestamp)
+		if err != nil {
+			log.Printf("[Warning] %v\n", err.Error())
+			return nil, err
+		}
+
+		asks := [][]float64{}
+		bids := [][]float64{}
+
+		if strings.HasPrefix(table, "futures") {
+			for _, ask := range depth.Asks {
+				asks = append(asks, []float64{ask[0].(float64), ask[1].(float64)})
+			}
+			for _, bid := range depth.Bids {
+				bids = append(bids, []float64{bid[0].(float64), bid[1].(float64)})
+			}
+		} else {
+			for _, ask := range depth.Asks {
+				price, err := strconv.ParseFloat(ask[0].(string), 64)
+				if err != nil {
+					log.Printf("[Warning] %v\n", err.Error())
+					return nil, err
+				}
+				vol, err := strconv.ParseFloat(ask[1].(string), 64)
+				if err != nil {
+					log.Printf("[Warning] %v\n", err.Error())
+					return nil, err
+				}
+				asks = append(asks, []float64{price, vol})
+			}
+			for _, bid := range depth.Bids {
+				price, err := strconv.ParseFloat(bid[0].(string), 64)
+				if err != nil {
+					log.Printf("[Warning] %v\n", err.Error())
+					return nil, err
+				}
+				vol, err := strconv.ParseFloat(bid[1].(string), 64)
+				if err != nil {
+					log.Printf("[Warning] %v\n", err.Error())
+					return nil, err
+				}
+				bids = append(bids, []float64{price, vol})
+			}
+		}
+
+		quote := common.MessageRspCommon{
+			Message: "quote",
+			Data: common.MessageQuote{
+				Market:      "okex",
+				Exchange:    "okex",
+				Type:        channelMsg.ProductType,
+				Symbol:      channelMsg.Symbol,
+				Contract:    channelMsg.Contract,
+				InfoPrimary: channelMsg.Info1,
+				InfoExtra:   channelMsg.Info2,
+				Data: common.MessageQuoteDepth{
+					Asks:      asks,
+					Bids:      bids,
+					Timestamp: ts.Unix()*1000 + int64(ts.Nanosecond())/int64(time.Millisecond),
+				},
+			},
+		}
+
+		quotes = append(quotes, quote)
+	}
+
+	return quotes, nil
+}
