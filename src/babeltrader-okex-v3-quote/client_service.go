@@ -11,16 +11,14 @@ import (
 )
 
 type ClientService struct {
-	Hub           *cascade.Hub
-	QuoteService  *OkexQuoteService
-	PeerMsgLinker *utils.PeerMsgLinker
+	Hub          *cascade.Hub
+	QuoteService *OkexQuoteService
 }
 
 func NewClientService() *ClientService {
 	service := &ClientService{
-		Hub:           nil,
-		QuoteService:  nil,
-		PeerMsgLinker: utils.NewPeerMsgLinker(),
+		Hub:          nil,
+		QuoteService: nil,
 	}
 
 	upgrader := websocket.Upgrader{
@@ -41,12 +39,10 @@ func (this *ClientService) Run() {
 ///////////////// Slot callbacks /////////////////
 func (this *ClientService) OnActive(peer *cascade.Peer) {
 	log.Printf("peer active: %v\n", peer.Conn.RemoteAddr().String())
-	this.PeerMsgLinker.AddPeer(peer)
 }
 
 func (this *ClientService) OnInactive(peer *cascade.Peer) {
 	log.Printf("peer inactive: %v\n", peer.Conn.RemoteAddr().String())
-	this.PeerMsgLinker.DelPeer(peer)
 }
 
 func (this *ClientService) OnRead(peer *cascade.Peer, message []byte) {
