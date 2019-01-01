@@ -27,7 +27,6 @@ func NewClientService() *ClientService {
 	}
 
 	service.Hub = cascade.NewHub(service, &upgrader, 10240)
-	go service.Hub.Run()
 
 	return service
 }

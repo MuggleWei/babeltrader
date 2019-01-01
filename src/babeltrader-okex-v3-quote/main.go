@@ -12,7 +12,7 @@ import (
 
 func init() {
 	log.SetOutput(&lumberjack.Logger{
-		Filename:   "./log/babeltrader-okex-quote.log",
+		Filename:   "./log/babeltrader-okex-v3-quote.log",
 		MaxSize:    100,   // MB
 		MaxBackups: 30,    // old files
 		MaxAge:     30,    // day
