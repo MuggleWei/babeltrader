@@ -2,7 +2,7 @@ package babeltrader_okex_v3
 
 import "github.com/MuggleWei/cascade"
 
-type QuoteSpi interface {
+type TradeSpi interface {
 	OnConnected(peer *cascade.Peer)
 	OnDisconnected(peer *cascade.Peer)
 
@@ -12,8 +12,7 @@ type QuoteSpi interface {
 	OnSub(msg *RspCommon)
 	OnUnsub(msg *RspCommon)
 
-	OnKline(msg *RspCommon)
-	OnTicker(msg *RspCommon)
-	OnDepth(msg *RspCommon)
-	OnDepthL2(msg *RspCommon)
+	OnOrder(msg *RspCommon)
+	OnPosition(msg *RspCommon)
+	OnAccount(msg *RspCommon)
 }

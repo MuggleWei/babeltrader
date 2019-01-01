@@ -9,7 +9,7 @@ type RspCommon struct {
 	Event   string      `json:"event"`
 	Table   string      `json:"table"`
 	Data    interface{} `json:"data"`
-	Success string      `json:"success"` // for login response
+	Success bool        `json:"success"` // for login response
 	Channel string      `json:"channel"` // for subscribe
 }
 
@@ -59,3 +59,6 @@ type Depth struct {
 	InstrumentId string          `json:"instrument_id"`
 	Timestamp    string          `json:"timestamp"`
 }
+
+// callback function type
+type OkexMsgCallback func(msg *RspCommon)

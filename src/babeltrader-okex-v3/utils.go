@@ -412,3 +412,9 @@ func ConvertDepthToQuotes(table string, depths []Depth) ([]common.MessageRspComm
 
 	return quotes, nil
 }
+
+///////////////// sign /////////////////
+func GenWsSign(timestamp, method, requestPath, secret string) (string, error) {
+	message := timestamp + strings.ToUpper(method) + requestPath
+	return HmacSha256Base64Signer(message, secret)
+}
