@@ -45,12 +45,20 @@ func (this *OkexQuoteService) Run() {
 ///////////////// quote spi /////////////////
 func (this *OkexQuoteService) OnConnected(peer *cascade.Peer) {
 	log.Printf("[Info] okex quote connected: %v\n", peer.Conn.RemoteAddr().String())
-	this.Api.Subscribe(this.config.QuoteSubTopics)
 
 	this.channelMtx.Lock()
 	defer this.channelMtx.Unlock()
-	for _, channel := range this.config.QuoteSubTopics {
-		this.channels[channel] = false
+	if len(this.channels) == 0 {
+		for _, channel := range this.config.QuoteSubTopics {
+			this.channels[channel] = false
+		}
+		this.Api.Subscribe(this.config.QuoteSubTopics)
+	} else {
+		channels := []string{}
+		for channel, _ := range this.channels {
+			channels = append(channels, channel)
+		}
+		this.Api.Subscribe(channels)
 	}
 }
 func (this *OkexQuoteService) OnDisconnected(peer *cascade.Peer) {
@@ -58,7 +66,9 @@ func (this *OkexQuoteService) OnDisconnected(peer *cascade.Peer) {
 
 	this.channelMtx.Lock()
 	defer this.channelMtx.Unlock()
-	this.channels = make(map[string]bool)
+	for channel, _ := range this.channels {
+		this.channels[channel] = false
+	}
 }
 
 func (this *OkexQuoteService) OnLogin(msg *okex.RspCommon) {
