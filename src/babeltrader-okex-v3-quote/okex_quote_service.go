@@ -75,7 +75,7 @@ func (this *OkexQuoteService) OnLogin(msg *okex.RspCommon) {
 	log.Printf("[Info] OnLogin")
 }
 func (this *OkexQuoteService) OnError(msg *okex.RspCommon) {
-	log.Printf("[Info] OnError: %+v\n", msg)
+	log.Printf("[Warning] OnError: %+v\n", msg)
 }
 func (this *OkexQuoteService) OnSub(msg *okex.RspCommon) {
 	log.Printf("[Info] success sub channel: %v\n", msg.Channel)

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -17,6 +18,7 @@ type TradeApi struct {
 	config       *Config
 	spi          TradeSpi
 	rspCallbacks map[string]OkexMsgCallback
+	HttpClient   *http.Client
 }
 
 func NewTradeApi(config *Config) *TradeApi {
@@ -26,6 +28,11 @@ func NewTradeApi(config *Config) *TradeApi {
 		config:       config,
 		spi:          nil,
 		rspCallbacks: make(map[string]OkexMsgCallback),
+		HttpClient:   nil,
+	}
+
+	api.HttpClient = &http.Client{
+		Timeout: time.Duration(45) * time.Second,
 	}
 
 	api.hub = cascade.NewHub(api, nil, 0)
@@ -87,6 +94,8 @@ func (this *TradeApi) OnRead(peer *cascade.Peer, message []byte) {
 	if string(message) == "pong" {
 		return
 	}
+
+	log.Printf("[Info] recv message from okex: %v\n", string(message))
 
 	var rsp RspCommon
 	err := json.Unmarshal(message, &rsp)
@@ -195,6 +204,34 @@ func (this *TradeApi) Unsubscribe(topics []string) error {
 
 	this.hub.ByteMessageChannel <- &cascade.HubByteMessage{Peer: nil, Message: b}
 	return nil
+}
+
+func (this *TradeApi) InsertOrder(order *Order, okexProductType string, result interface{}) (response *http.Response, err error) {
+	var reqPath string
+	switch okexProductType {
+	case "spot":
+		reqPath = "/api/spot/v3/orders"
+	case "futures":
+		reqPath = "/api/futures/v3/order"
+	case "swap":
+		reqPath = "/api/swap/v3/order"
+	}
+	return HttpRequst(this.HttpClient, this.config, "POST", reqPath, *order, result)
+}
+
+func (this *TradeApi) CancelOrder(order *Order, okexProductType, outsideOrderId string, result interface{}) (response *http.Response, err error) {
+	var reqPath string
+	switch okexProductType {
+	case "spot":
+		reqPath = "/api/spot/v3/cancel_orders/" + outsideOrderId
+		return HttpRequst(this.HttpClient, this.config, "POST", reqPath, *order, result)
+	case "futures":
+		reqPath = "/api/futures/v3/cancel_order/" + order.InstrumentId + "/" + outsideOrderId
+	case "swap":
+		reqPath = "/api/swap/v3/cancel_order/" + order.InstrumentId + "/" + outsideOrderId
+	}
+
+	return HttpRequst(this.HttpClient, this.config, "POST", reqPath, nil, result)
 }
 
 ///////////////// response and quotes /////////////////

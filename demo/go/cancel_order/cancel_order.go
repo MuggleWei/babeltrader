@@ -13,18 +13,18 @@ func main() {
 
 	ts := time.Now().Unix()
 
-	// ctp
-	addr := "127.0.0.1:8001"
-	order := common.MessageOrder{
-		UserId:      "weidaizi",
-		OutsideId:   "104027_20181119_      163230",
-		Market:      common.Market_CTP,
-		Exchange:    common.Exchange_SHFE,
-		ProductType: common.ProductType_Future,
-		Symbol:      "rb",
-		Contract:    "1905",
-		Timestamp:   ts,
-	}
+	// // ctp
+	// addr := "127.0.0.1:8001"
+	// order := common.MessageOrder{
+	// 	UserId:      "weidaizi",
+	// 	OutsideId:   "104027_20181119_      163230",
+	// 	Market:      common.Market_CTP,
+	// 	Exchange:    common.Exchange_SHFE,
+	// 	ProductType: common.ProductType_Future,
+	// 	Symbol:      "rb",
+	// 	Contract:    "1905",
+	// 	Timestamp:   ts,
+	// }
 
 	// // xtp
 	// addr := "127.0.0.1:8002"
@@ -37,6 +37,18 @@ func main() {
 	// 	Symbol:      "600519",
 	// 	Timestamp:   ts,
 	// }
+
+	// okex spot
+	addr := "127.0.0.1:8005"
+	order := common.MessageOrder{
+		UserId:      "weidaizi",
+		OutsideId:   "2104705518083072",
+		Market:      common.Market_OKEX,
+		Exchange:    common.Exchange_OKEX,
+		ProductType: common.ProductType_Spot,
+		Symbol:      "XRP-USDT",
+		Timestamp:   ts,
+	}
 
 	service := DemoTrade.NewDemoTradeService()
 	service.Run(addr, func() {

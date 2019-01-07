@@ -37,11 +37,11 @@ func (this *ClientService) Run() {
 
 ///////////////// Slot callbacks /////////////////
 func (this *ClientService) OnActive(peer *cascade.Peer) {
-	log.Printf("peer active: %v\n", peer.Conn.RemoteAddr().String())
+	log.Printf("[Info] peer active: %v\n", peer.Conn.RemoteAddr().String())
 }
 
 func (this *ClientService) OnInactive(peer *cascade.Peer) {
-	log.Printf("peer inactive: %v\n", peer.Conn.RemoteAddr().String())
+	log.Printf("[Info] peer inactive: %v\n", peer.Conn.RemoteAddr().String())
 }
 
 func (this *ClientService) OnRead(peer *cascade.Peer, message []byte) {

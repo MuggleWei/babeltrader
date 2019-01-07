@@ -18,5 +18,15 @@
 		"spot/depth5:BTC-USDT",
 		"spot/ticker:BTC-USDT",
 		"spot/candle60s:BTC-USDT"
+	],
+	"trade_sub_topics": [
+		"swap/account:BTC-USD-SWAP",
+		"swap/order:BTC-USD-SWAP",
+		"swap/position:BTC-USD-SWAP",
+		"spot/account:BTC",
+		"spot/order:BTC-USDT",
+		"futures/account:BTC",
+		"futures/order:BTC-USD-190329",
+		"futures/position:BTC-USD-190329"
 	]
 }

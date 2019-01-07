@@ -14,6 +14,7 @@ type Config struct {
 	Passphrase     string   `json:"passphrase"`
 	RestTimeoutSec int      `json:"rest_timeout_sec"`
 	QuoteSubTopics []string `json:"quote_sub_topics"`
+	TradeSubTopics []string `json:"trade_sub_topics"`
 }
 
 func LoadConfig(conf_path string) (*Config, error) {

@@ -59,6 +59,8 @@ func initServices(router *mux.Router, conf *OkexTradeConfig) {
 	// run
 	clientService.Run()
 	tradeService.Run()
+
+	router.HandleFunc("/ws", clientService.Hub.OnAccept)
 }
 
 func initServiceDiscoveryClient(conf *OkexTradeConfig) (srd.ServiceDiscoveryClient, error) {
