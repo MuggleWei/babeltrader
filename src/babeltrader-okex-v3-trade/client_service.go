@@ -99,6 +99,9 @@ func (this *ClientService) OnHubByteMessage(msg *cascade.HubByteMessage) {
 }
 
 func (this *ClientService) OnHubObjectMessage(msg *cascade.HubObjectMessage) {
+	switch msg.ObjectName {
+	// TODO:
+	}
 }
 
 ///////////////// req callbacks /////////////////
@@ -116,9 +119,18 @@ func (this *ClientService) InsertOrder(peer *cascade.Peer, req *common.MessageRe
 		return err
 	}
 
-	log.Printf("[Info] insert order outside order id: %v\n", outsideOrderId)
+	// confirm order
+	order.OutsideId = outsideOrderId
+	rsp := common.MessageRspCommon{
+		Message: "confirmorder",
+		Data:    order,
+	}
 
-	// TODO: record order relationship
+	this.Hub.ObjectMessageChannel <- &cascade.HubObjectMessage{
+		Peer:       peer,
+		ObjectName: "confirmorder",
+		ObjectPtr:  &rsp,
+	}
 
 	return nil
 }
@@ -138,7 +150,7 @@ func (this *ClientService) CancelOrder(peer *cascade.Peer, req *common.MessageRe
 
 	log.Printf("[Info] cancel order: %v\n", outsideOrderId)
 
-	// TODO: cancel order
+	// TODO: generate order event message to notify clients
 
 	return nil
 }
