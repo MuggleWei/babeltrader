@@ -54,6 +54,8 @@ func (this *DemoTradeService) OnInactive(peer *cascade.Peer) {
 }
 
 func (this *DemoTradeService) OnRead(peer *cascade.Peer, message []byte) {
+	log.Printf("recv message: %v\n", string(message))
+
 	var msg common.MessageRspCommon
 	err := json.Unmarshal(message, &msg)
 	if err != nil {

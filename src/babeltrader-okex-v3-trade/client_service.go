@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"time"
 
 	common "github.com/MuggleWei/babel-trader/src/babeltrader-common-go"
 	utils "github.com/MuggleWei/babel-trader/src/babeltrader-utils-go"
@@ -12,20 +13,27 @@ import (
 )
 
 type ReqCallback func(*cascade.Peer, *common.MessageReqCommon) error
+type RspCallback func(*common.MessageRspCommon, *cascade.HubByteMessage)
 
 type ClientService struct {
-	Hub           *cascade.Hub
-	TradeService  *OkexTradeService
-	PeerMsgLinker *utils.PeerMsgLinker
-	ReqCallbacks  map[string]ReqCallback
+	Hub               *cascade.Hub
+	TradeService      *OkexTradeService
+	PeerMsgLinker     *utils.PeerMsgLinker
+	OrderCacheManager *utils.OrderCacheManager
+	OrderTradeCache   map[string][]*common.MessageRspCommon
+	ReqCallbacks      map[string]ReqCallback
+	RspCallbacks      map[string]RspCallback
 }
 
 func NewClientService() *ClientService {
 	service := &ClientService{
-		Hub:           nil,
-		TradeService:  nil,
-		PeerMsgLinker: utils.NewPeerMsgLinker(),
-		ReqCallbacks:  make(map[string]ReqCallback),
+		Hub:               nil,
+		TradeService:      nil,
+		PeerMsgLinker:     utils.NewPeerMsgLinker(),
+		OrderCacheManager: utils.NewOrderCacheManager(),
+		OrderTradeCache:   make(map[string][]*common.MessageRspCommon),
+		ReqCallbacks:      make(map[string]ReqCallback),
+		RspCallbacks:      make(map[string]RspCallback),
 	}
 
 	service.RegisterCallbacks()
@@ -36,6 +44,13 @@ func NewClientService() *ClientService {
 	}
 
 	service.Hub = cascade.NewHub(service, &upgrader, 10240)
+
+	go func() {
+		ticker := time.NewTicker(time.Second * 60)
+		for _ = range ticker.C {
+			service.Hub.ByteMessageChannel <- &cascade.HubByteMessage{Peer: nil, Message: []byte("{\"msg\":\"timer_ticker\"}")}
+		}
+	}()
 
 	return service
 }
@@ -48,6 +63,8 @@ func (this *ClientService) RegisterCallbacks() {
 	this.ReqCallbacks["query_position"] = this.QueryPosition
 	this.ReqCallbacks["query_tradeaccount"] = this.QueryTradeAccount
 	this.ReqCallbacks["query_product"] = this.QueryProduct
+
+	this.RspCallbacks["timer_ticker"] = this.OnTimerTicker
 }
 
 func (this *ClientService) Run() {
@@ -93,14 +110,49 @@ func (this *ClientService) OnRead(peer *cascade.Peer, message []byte) {
 }
 
 func (this *ClientService) OnHubByteMessage(msg *cascade.HubByteMessage) {
-	for peer := range this.Hub.Peers {
-		peer.SendChannel <- msg.Message
+	var rsp common.MessageRspCommon
+	err := json.Unmarshal(msg.Message, &rsp)
+	if err != nil {
+		log.Printf("failed unmarshal message: %v\n", string(msg.Message))
+		return
 	}
+
+	callback, ok := this.RspCallbacks[rsp.Message]
+	if !ok {
+		log.Printf("failed find callback of: %v", rsp.Message)
+		return
+	}
+
+	callback(&rsp, msg)
 }
 
 func (this *ClientService) OnHubObjectMessage(msg *cascade.HubObjectMessage) {
-	switch msg.ObjectName {
-	// TODO:
+	if msg.ObjectName == "confirmorder" {
+		rsp := msg.ObjectPtr.(*common.MessageRspCommon)
+		order := rsp.Data.(common.MessageOrder)
+		this.OrderCacheManager.AddCache(&order)
+
+		b, err := json.Marshal(*rsp)
+		if err != nil {
+			log.Printf("[Warning] failed marshal message: %v\n", *rsp)
+			return
+		}
+		this.BroadcastMsg(b)
+
+		orderTradeCache, ok := this.OrderTradeCache[order.OutsideId]
+		if ok {
+			for _, orderTrade := range orderTradeCache {
+				b, err := json.Marshal(*orderTrade)
+				if err != nil {
+					log.Printf("[Warning] failed marshal message: %v\n", *orderTrade)
+					continue
+				}
+				this.BroadcastMsg(b)
+			}
+			delete(this.OrderTradeCache, order.OutsideId)
+		}
+	} else {
+		log.Printf("[Warning] OnHubObjectMessage default handle %v\n", msg.ObjectName)
 	}
 }
 
@@ -173,4 +225,18 @@ func (this *ClientService) QueryTradeAccount(peer *cascade.Peer, req *common.Mes
 func (this *ClientService) QueryProduct(peer *cascade.Peer, req *common.MessageReqCommon) error {
 	// TODO:
 	return nil
+}
+
+///////////////// rsp callbacks /////////////////
+func (this *ClientService) OnTimerTicker(*common.MessageRspCommon, *cascade.HubByteMessage) {
+	this.OrderCacheManager.CleanExpire(60)
+	this.PeerMsgLinker.CleanExpire(60)
+}
+
+///////////////// utils methods /////////////////
+func (this *ClientService) BroadcastMsg(msg []byte) {
+	log.Printf("broad cast message: %v\n", string(msg))
+	for peer := range this.Hub.Peers {
+		peer.SendChannel <- msg
+	}
 }

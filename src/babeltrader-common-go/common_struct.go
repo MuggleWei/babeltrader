@@ -217,6 +217,15 @@ type MessageOrderDeal struct {
 	Order      MessageOrder `json:"order,omitempty"`
 }
 
+type MessageOrderTrade struct {
+	Status       int          `json:"status,omitempty"`
+	Timestamp    int64        `json:"ts,omitempty"`
+	Price        float64      `json:"price,omitempty"`
+	Amount       float64      `json:"amount,omitempty"`
+	DealedAmount float64      `json:"dealed_amount,omitempty"`
+	Order        MessageOrder `json:"order,omitempty"`
+}
+
 //////////////////////// system ////////////////////////
 type MessageHttpHeader struct {
 	User  string      `json:"user"`
