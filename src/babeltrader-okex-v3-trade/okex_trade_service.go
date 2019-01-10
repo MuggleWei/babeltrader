@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"sync"
@@ -41,11 +42,48 @@ func (this *OkexTradeService) Run() {
 ///////////////// req /////////////////
 func (this *OkexTradeService) InsertOrder(peer *cascade.Peer, order *common.MessageOrder) (string, error) {
 	if order.ProductType == "future" {
-		// TODO:
+		dir := "0"
+		if order.Dir == "open_long" {
+			dir = "1"
+		} else if order.Dir == "open_short" {
+			dir = "2"
+		} else if order.Dir == "close_long" {
+			dir = "3"
+		} else if order.Dir == "close_short" {
+			dir = "4"
+		} else {
+			s := fmt.Sprintf("invalid order dir: %v", order.Dir)
+			return "", errors.New(s)
+		}
+		price := fmt.Sprintf("%v", order.Price)
+		size := fmt.Sprintf("%v", order.Amount)
+		leverage := "20"
+		productType := "futures"
+		if order.Contract == "SWAP" {
+			leverage = ""
+			productType = "swap"
+			return "", errors.New("not support okex future swap")
+		}
+
+		okexOrder := okex.Order{
+			InstrumentId: order.Symbol + "-" + order.Contract,
+			Type:         dir,
+			Price:        price,
+			Size:         size,
+			Leverage:     leverage,
+		}
+
+		var ret okex.OrderRet
+		_, err := this.Api.InsertOrder(&okexOrder, productType, &ret)
+		if err != nil {
+			return "", err
+		}
+
+		return ret.OrderId, nil
 	} else if order.ProductType == "spot" {
 		okexOrder := okex.Order{
 			InstrumentId: order.Symbol,
-			OrderType:    order.OrderType,
+			Type:         order.OrderType,
 			Side:         order.Dir,
 		}
 		if order.OrderType == "limit" {
@@ -58,7 +96,7 @@ func (this *OkexTradeService) InsertOrder(peer *cascade.Peer, order *common.Mess
 				okexOrder.Size = fmt.Sprintf("%v", order.Amount)
 			}
 		}
-		var ret okex.SpotOrderRet
+		var ret okex.OrderRet
 		_, err := this.Api.InsertOrder(&okexOrder, "spot", &ret)
 		if err != nil {
 			return "", err
@@ -66,21 +104,35 @@ func (this *OkexTradeService) InsertOrder(peer *cascade.Peer, order *common.Mess
 
 		return ret.OrderId, nil
 	} else {
-		// TODO:
+		s := fmt.Sprintf("not support product type: %v", order.ProductType)
+		return "", errors.New(s)
 	}
-
-	return "", nil
 }
 
 func (this *OkexTradeService) CancelOrder(peer *cascade.Peer, order *common.MessageOrder) (string, error) {
 	if order.ProductType == "future" {
-		// TODO:
+		okexOrder := okex.Order{
+			InstrumentId: order.Symbol + "-" + order.Contract,
+		}
+
+		productType := "futures"
+		if order.Contract == "SWAP" {
+			productType = "swap"
+		}
+
+		var ret okex.OrderRet
+		_, err := this.Api.CancelOrder(&okexOrder, productType, order.OutsideId, &ret)
+		if err != nil {
+			return "", err
+		}
+
+		return ret.OrderId, nil
 	} else if order.ProductType == "spot" {
 		okexOrder := okex.Order{
 			InstrumentId: order.Symbol,
 		}
 
-		var ret okex.SpotOrderRet
+		var ret okex.OrderRet
 		_, err := this.Api.CancelOrder(&okexOrder, "spot", order.OutsideId, &ret)
 		if err != nil {
 			return "", err
@@ -88,10 +140,9 @@ func (this *OkexTradeService) CancelOrder(peer *cascade.Peer, order *common.Mess
 
 		return ret.OrderId, nil
 	} else {
-		// TODO:
+		s := fmt.Sprintf("not support product type: %v", order.ProductType)
+		return "", errors.New(s)
 	}
-
-	return "", nil
 }
 
 ///////////////// trade spi /////////////////

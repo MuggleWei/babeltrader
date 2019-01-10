@@ -63,18 +63,18 @@ type Depth struct {
 type Order struct {
 	ClientOid    string `json:"client_oid,omitempty"`
 	InstrumentId string `json:"instrument_id"`
-	OrderType    string `json:"type,omitempty"` // limit, market
-	Side         string `json:"side,omitempty"` // buy, sell,1(open_long), 2(open_short), 3(close_long), 4(close_short)
+	Type         string `json:"type,omitempty"`
+	Side         string `json:"side,omitempty"`
 	Price        string `json:"price,omitempty"`
 	Size         string `json:"size,omitempty"`
 	Notional     string `json:"notional,omitempty"`
 	Leverage     string `json:"leverage,omitempty"`
 }
 
-type SpotOrderRet struct {
+type OrderRet struct {
 	OrderId   string `json:"order_id"`
 	ClientOid string `json:"client_oid"`
-	ErrId     string `json:"error_code"`
+	ErrId     int    `json:"error_code"`
 	ErrMsg    string `json:"error_message"`
 	Result    bool   `json:"result"`
 }
