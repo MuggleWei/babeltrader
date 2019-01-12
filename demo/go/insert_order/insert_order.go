@@ -51,24 +51,7 @@ func main() {
 	// 	Timestamp:     ts,
 	// }
 
-	// okex spot
-	addr := "127.0.0.1:8005"
-	order := common.MessageOrder{
-		UserId:        "weidaizi",
-		OrderId:       orderId,
-		ClientOrderId: orderId,
-		Market:        common.Market_OKEX,
-		Exchange:      common.Exchange_OKEX,
-		ProductType:   common.ProductType_Spot,
-		Symbol:        "BTC-USDT",
-		OrderType:     common.OrderType_Limit,
-		Dir:           common.OrderAction_Buy,
-		Price:         3000,
-		Amount:        0.01,
-		Timestamp:     ts,
-	}
-
-	// // okex future
+	// // okex spot
 	// addr := "127.0.0.1:8005"
 	// order := common.MessageOrder{
 	// 	UserId:        "weidaizi",
@@ -76,15 +59,32 @@ func main() {
 	// 	ClientOrderId: orderId,
 	// 	Market:        common.Market_OKEX,
 	// 	Exchange:      common.Exchange_OKEX,
-	// 	ProductType:   common.ProductType_Future,
-	// 	Symbol:        "BTC-USD",
-	// 	Contract:      "190329",
+	// 	ProductType:   common.ProductType_Spot,
+	// 	Symbol:        "BTC-USDT",
 	// 	OrderType:     common.OrderType_Limit,
-	// 	Dir:           common.OrderAction_Open + "_" + common.OrderDir_Short,
-	// 	Price:         3700,
-	// 	Amount:        1,
+	// 	Dir:           common.OrderAction_Buy,
+	// 	Price:         3000,
+	// 	Amount:        0.01,
 	// 	Timestamp:     ts,
 	// }
+
+	// okex future
+	addr := "127.0.0.1:8005"
+	order := common.MessageOrder{
+		UserId:        "weidaizi",
+		OrderId:       orderId,
+		ClientOrderId: orderId,
+		Market:        common.Market_OKEX,
+		Exchange:      common.Exchange_OKEX,
+		ProductType:   common.ProductType_Future,
+		Symbol:        "BTC-USD",
+		Contract:      "190329",
+		OrderType:     common.OrderType_Limit,
+		Dir:           common.OrderAction_Open + "_" + common.OrderDir_Short,
+		Price:         3700,
+		Amount:        1,
+		Timestamp:     ts,
+	}
 
 	service := DemoTrade.NewDemoTradeService()
 	service.Run(addr, func() {

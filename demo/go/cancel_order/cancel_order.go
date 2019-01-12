@@ -38,30 +38,30 @@ func main() {
 	// 	Timestamp:   ts,
 	// }
 
-	// okex spot
-	addr := "127.0.0.1:8005"
-	order := common.MessageOrder{
-		UserId:      "weidaizi",
-		OutsideId:   "2123532356751360",
-		Market:      common.Market_OKEX,
-		Exchange:    common.Exchange_OKEX,
-		ProductType: common.ProductType_Spot,
-		Symbol:      "BTC-USDT",
-		Timestamp:   ts,
-	}
-
-	// // okex future
+	// // okex spot
 	// addr := "127.0.0.1:8005"
 	// order := common.MessageOrder{
 	// 	UserId:      "weidaizi",
-	// 	OutsideId:   "2123449442505728",
+	// 	OutsideId:   "2134626718854144",
 	// 	Market:      common.Market_OKEX,
 	// 	Exchange:    common.Exchange_OKEX,
-	// 	ProductType: common.ProductType_Future,
-	// 	Symbol:      "BTC-USD",
-	// 	Contract:    "190329",
+	// 	ProductType: common.ProductType_Spot,
+	// 	Symbol:      "BTC-USDT",
 	// 	Timestamp:   ts,
 	// }
+
+	// okex future
+	addr := "127.0.0.1:8005"
+	order := common.MessageOrder{
+		UserId:      "weidaizi",
+		OutsideId:   "2134631595348992",
+		Market:      common.Market_OKEX,
+		Exchange:    common.Exchange_OKEX,
+		ProductType: common.ProductType_Future,
+		Symbol:      "BTC-USD",
+		Contract:    "190329",
+		Timestamp:   ts,
+	}
 
 	service := DemoTrade.NewDemoTradeService()
 	service.Run(addr, func() {

@@ -49,6 +49,7 @@ const (
 	QuoteInfo1_OrderBook  = "orderbook"
 	QuoteInfo1_Level2     = "level2"
 	QuoteInfo1_Depth      = "depth"
+	QuoteInfo1_DepthL2    = "depthL2"
 	QuoteInfo1_Ticker     = "ticker"
 )
 
@@ -72,7 +73,7 @@ const (
 
 const (
 	OrderAction_Open         = "open"
-	OrderAction_Close        = "clost"
+	OrderAction_Close        = "close"
 	OrderAction_CloseToday   = "closetoday"
 	OrderAction_CloseHistory = "closehistory"
 	OrderAction_ForceClose   = "forceclose"

@@ -169,6 +169,7 @@ type MessageOrder struct {
 	Price         float64 `json:"price,omitempty"`
 	Amount        float64 `json:"amount,omitempty"`
 	TotalPrice    float64 `json:"total_price,omitempty"`
+	Leverage      float64 `json:"leverage"`
 	Timestamp     int64   `json:"ts,omitempty"`
 }
 

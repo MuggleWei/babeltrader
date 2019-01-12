@@ -51,22 +51,22 @@ func SplitChannel(channel string) (*ChannelSplit, error) {
 	}
 
 	if msg.ProductType == "futures" || msg.ProductType == "swap" {
-		msg.ProductType = "future"
+		msg.ProductType = common.ProductType_Future
 	}
 
 	if strings.HasPrefix(msg.Info1, "candle") {
 		if strings.HasSuffix(msg.Info1, "60s") {
-			msg.Info2 = "1m"
+			msg.Info2 = common.QuoteInfo2_1Min
 		} else {
 			s := fmt.Sprintf("unsupport channel: %v", channel)
 			log.Println(s)
 			return nil, errors.New(s)
 		}
-		msg.Info1 = "kline"
+		msg.Info1 = common.QuoteInfo1_Kline
 	} else if msg.Info1 == "depth5" {
-		msg.Info1 = "depth"
+		msg.Info1 = common.QuoteInfo1_Depth
 	} else if msg.Info1 == "depth" {
-		msg.Info1 = "depthL2"
+		msg.Info1 = common.QuoteInfo1_DepthL2
 	}
 
 	return &msg, nil
@@ -93,13 +93,13 @@ func ConvertChannelToSubUnsub(channel string) (*common.MessageSubUnsub, error) {
 func ConvertQuoteToChannel(quote *common.MessageQuote) (string, error) {
 	productType := ""
 	switch quote.Type {
-	case "future":
-		if quote.Type == "future" && quote.Contract == "SWAP" {
+	case common.ProductType_Future:
+		if quote.Type == common.ProductType_Future && quote.Contract == "SWAP" {
 			productType = "swap"
 		} else {
 			productType = "futures"
 		}
-	case "spot":
+	case common.ProductType_Spot:
 		productType = "spot"
 	default:
 		s := fmt.Sprintf("not support type: %v", quote.Type)
@@ -108,14 +108,14 @@ func ConvertQuoteToChannel(quote *common.MessageQuote) (string, error) {
 
 	info := ""
 	switch quote.InfoPrimary {
-	case "ticker":
+	case common.QuoteInfo1_Ticker:
 		info = "ticker"
-	case "depth":
+	case common.QuoteInfo1_Depth:
 		info = "depth5"
-	case "depthL2":
+	case common.QuoteInfo1_DepthL2:
 		info = "depth"
-	case "kline":
-		if quote.InfoExtra == "1m" {
+	case common.QuoteInfo1_Kline:
+		if quote.InfoExtra == common.QuoteInfo2_1Min {
 			info = "candle60s"
 		} else {
 			s := fmt.Sprintf("not support kline with info2: %v", quote.InfoExtra)
@@ -238,7 +238,7 @@ func ConvertTickerToQuotes(table string, tickers []Ticker) ([]common.MessageRspC
 	var quotes []common.MessageRspCommon
 
 	for _, ticker := range tickers {
-		if channelMsg.ProductType == "future" {
+		if channelMsg.ProductType == common.ProductType_Future {
 			idx := strings.LastIndex(ticker.InstrumentId, "-")
 			if idx <= 0 || idx >= len(ticker.InstrumentId)-1 {
 				s := fmt.Sprintf("invalid instrument id: %v", ticker.InstrumentId)
@@ -247,7 +247,7 @@ func ConvertTickerToQuotes(table string, tickers []Ticker) ([]common.MessageRspC
 			}
 			channelMsg.Symbol = ticker.InstrumentId[:idx]
 			channelMsg.Contract = ticker.InstrumentId[idx+1:]
-		} else if channelMsg.ProductType == "spot" {
+		} else if channelMsg.ProductType == common.ProductType_Spot {
 			channelMsg.Symbol = ticker.InstrumentId
 		}
 
@@ -288,7 +288,7 @@ func ConvertTickerToQuotes(table string, tickers []Ticker) ([]common.MessageRspC
 		}
 
 		vol := 0.0
-		if channelMsg.ProductType == "spot" {
+		if channelMsg.ProductType == common.ProductType_Spot {
 			vol, err = strconv.ParseFloat(ticker.BaseVol24H, 64)
 		} else {
 			vol, err = strconv.ParseFloat(ticker.Vol24H, 64)
@@ -331,7 +331,7 @@ func ConvertDepthToQuotes(table string, depths []Depth) ([]common.MessageRspComm
 	var quotes []common.MessageRspCommon
 
 	for _, depth := range depths {
-		if channelMsg.ProductType == "future" {
+		if channelMsg.ProductType == common.ProductType_Future {
 			idx := strings.LastIndex(depth.InstrumentId, "-")
 			if idx <= 0 || idx >= len(depth.InstrumentId)-1 {
 				s := fmt.Sprintf("invalid instrument id: %v", depth.InstrumentId)
@@ -340,7 +340,7 @@ func ConvertDepthToQuotes(table string, depths []Depth) ([]common.MessageRspComm
 			}
 			channelMsg.Symbol = depth.InstrumentId[:idx]
 			channelMsg.Contract = depth.InstrumentId[idx+1:]
-		} else if channelMsg.ProductType == "spot" {
+		} else if channelMsg.ProductType == common.ProductType_Spot {
 			channelMsg.Symbol = depth.InstrumentId
 		}
 
@@ -411,6 +411,101 @@ func ConvertDepthToQuotes(table string, depths []Depth) ([]common.MessageRspComm
 	}
 
 	return quotes, nil
+}
+
+/*
+RETURN: productType, okex.Order, error
+*/
+func ConvertInsertOrderCommon2Okex(order *common.MessageOrder) (string, *Order, error) {
+	if order.ProductType == common.ProductType_Future {
+		if order.OrderType == common.OrderType_Market {
+			s := fmt.Sprintf("invalid order type '%v' for okex future ", order.OrderType)
+			return "", nil, errors.New(s)
+		}
+
+		dir := "0"
+		if order.Dir == common.OrderAction_Open+"_"+common.OrderDir_Long {
+			dir = "1"
+		} else if order.Dir == common.OrderAction_Open+"_"+common.OrderDir_Short {
+			dir = "2"
+		} else if order.Dir == common.OrderAction_Close+"_"+common.OrderDir_Long {
+			dir = "3"
+		} else if order.Dir == common.OrderAction_Close+"_"+common.OrderDir_Short {
+			dir = "4"
+		} else {
+			s := fmt.Sprintf("invalid order dir: %v", order.Dir)
+			return "", nil, errors.New(s)
+		}
+
+		price := fmt.Sprintf("%v", order.Price)
+		size := fmt.Sprintf("%v", order.Amount)
+		leverage := "20"
+		productType := "futures"
+		if order.Contract == "SWAP" {
+			leverage = ""
+			productType = "swap"
+		} else {
+			if order.Leverage > 0 {
+				leverage = strconv.Itoa(int(order.Leverage))
+			}
+		}
+
+		return productType, &Order{
+			InstrumentId: order.Symbol + "-" + order.Contract,
+			Type:         dir,
+			Price:        price,
+			Size:         size,
+			Leverage:     leverage,
+		}, nil
+	} else if order.ProductType == common.ProductType_Spot {
+		okexOrder := Order{
+			InstrumentId: order.Symbol,
+			Type:         order.OrderType,
+			Side:         order.Dir,
+		}
+		if order.OrderType == common.OrderType_Limit {
+			okexOrder.Price = fmt.Sprintf("%v", order.Price)
+			okexOrder.Size = fmt.Sprintf("%v", order.Amount)
+		} else if order.OrderType == common.OrderType_Market {
+			if order.Dir == common.OrderAction_Buy {
+				okexOrder.Notional = fmt.Sprintf("%v", order.TotalPrice)
+			} else {
+				okexOrder.Size = fmt.Sprintf("%v", order.Amount)
+			}
+		}
+
+		return "spot", &okexOrder, nil
+	} else {
+		s := fmt.Sprintf("not support product type: %v", order.ProductType)
+		return "", nil, errors.New(s)
+	}
+}
+
+/*
+RETURN: productType, okex.Order, error
+*/
+func ConvertCancelOrderCommon2Okex(order *common.MessageOrder) (string, *Order, error) {
+	if order.ProductType == common.ProductType_Future {
+		okexOrder := Order{
+			InstrumentId: order.Symbol + "-" + order.Contract,
+		}
+
+		productType := "futures"
+		if order.Contract == "SWAP" {
+			productType = "swap"
+		}
+
+		return productType, &okexOrder, nil
+	} else if order.ProductType == common.ProductType_Spot {
+		okexOrder := Order{
+			InstrumentId: order.Symbol,
+		}
+
+		return "spot", &okexOrder, nil
+	} else {
+		s := fmt.Sprintf("not support product type: %v", order.ProductType)
+		return "", nil, errors.New(s)
+	}
 }
 
 ///////////////// sign /////////////////

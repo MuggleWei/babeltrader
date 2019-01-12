@@ -13,7 +13,7 @@ import (
 )
 
 type ReqCallback func(*cascade.Peer, *common.MessageReqCommon) error
-type RspCallback func(*common.MessageRspCommon, *cascade.HubByteMessage)
+type RspCallback func(*common.MessageRspCommon)
 
 type ClientService struct {
 	Hub               *cascade.Hub
@@ -65,6 +65,7 @@ func (this *ClientService) RegisterCallbacks() {
 	this.ReqCallbacks["query_product"] = this.QueryProduct
 
 	this.RspCallbacks["timer_ticker"] = this.OnTimerTicker
+	this.RspCallbacks["confirmorder"] = this.OnConfirmOrder
 }
 
 func (this *ClientService) Run() {
@@ -123,37 +124,18 @@ func (this *ClientService) OnHubByteMessage(msg *cascade.HubByteMessage) {
 		return
 	}
 
-	callback(&rsp, msg)
+	callback(&rsp)
 }
 
 func (this *ClientService) OnHubObjectMessage(msg *cascade.HubObjectMessage) {
-	if msg.ObjectName == "confirmorder" {
-		rsp := msg.ObjectPtr.(*common.MessageRspCommon)
-		order := rsp.Data.(common.MessageOrder)
-		this.OrderCacheManager.AddCache(&order)
-
-		b, err := json.Marshal(*rsp)
-		if err != nil {
-			log.Printf("[Warning] failed marshal message: %v\n", *rsp)
-			return
-		}
-		this.BroadcastMsg(b)
-
-		orderTradeCache, ok := this.OrderTradeCache[order.OutsideId]
-		if ok {
-			for _, orderTrade := range orderTradeCache {
-				b, err := json.Marshal(*orderTrade)
-				if err != nil {
-					log.Printf("[Warning] failed marshal message: %v\n", *orderTrade)
-					continue
-				}
-				this.BroadcastMsg(b)
-			}
-			delete(this.OrderTradeCache, order.OutsideId)
-		}
-	} else {
+	callback, ok := this.RspCallbacks[msg.ObjectName]
+	if !ok {
 		log.Printf("[Warning] OnHubObjectMessage default handle %v\n", msg.ObjectName)
+		return
 	}
+
+	rsp := msg.ObjectPtr.(*common.MessageRspCommon)
+	callback(rsp)
 }
 
 ///////////////// req callbacks /////////////////
@@ -202,8 +184,6 @@ func (this *ClientService) CancelOrder(peer *cascade.Peer, req *common.MessageRe
 
 	log.Printf("[Info] cancel order: %v\n", outsideOrderId)
 
-	// TODO: generate order event message to notify clients
-
 	return nil
 }
 func (this *ClientService) QueryOrder(peer *cascade.Peer, req *common.MessageReqCommon) error {
@@ -228,14 +208,39 @@ func (this *ClientService) QueryProduct(peer *cascade.Peer, req *common.MessageR
 }
 
 ///////////////// rsp callbacks /////////////////
-func (this *ClientService) OnTimerTicker(*common.MessageRspCommon, *cascade.HubByteMessage) {
+func (this *ClientService) OnTimerTicker(*common.MessageRspCommon) {
 	this.OrderCacheManager.CleanExpire(60)
 	this.PeerMsgLinker.CleanExpire(60)
 }
 
+func (this *ClientService) OnConfirmOrder(rsp *common.MessageRspCommon) {
+	order := rsp.Data.(common.MessageOrder)
+	this.OrderCacheManager.AddCache(&order)
+
+	b, err := json.Marshal(*rsp)
+	if err != nil {
+		log.Printf("[Warning] failed marshal message: %v\n", *rsp)
+		return
+	}
+	this.BroadcastMsg(b)
+
+	orderTradeCache, ok := this.OrderTradeCache[order.OutsideId]
+	if ok {
+		for _, orderTrade := range orderTradeCache {
+			b, err := json.Marshal(*orderTrade)
+			if err != nil {
+				log.Printf("[Warning] failed marshal message: %v\n", *orderTrade)
+				continue
+			}
+			this.BroadcastMsg(b)
+		}
+		delete(this.OrderTradeCache, order.OutsideId)
+	}
+}
+
 ///////////////// utils methods /////////////////
 func (this *ClientService) BroadcastMsg(msg []byte) {
-	log.Printf("broad cast message: %v\n", string(msg))
+	log.Printf("broadcast message: %v\n", string(msg))
 	for peer := range this.Hub.Peers {
 		peer.SendChannel <- msg
 	}
