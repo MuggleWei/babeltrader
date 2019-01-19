@@ -42,7 +42,7 @@ func main() {
 	// addr := "127.0.0.1:8005"
 	// order := common.MessageOrder{
 	// 	UserId:      "weidaizi",
-	// 	OutsideId:   "2134626718854144",
+	// 	OutsideId:   "2174354053598208",
 	// 	Market:      common.Market_OKEX,
 	// 	Exchange:    common.Exchange_OKEX,
 	// 	ProductType: common.ProductType_Spot,
@@ -54,7 +54,7 @@ func main() {
 	addr := "127.0.0.1:8005"
 	order := common.MessageOrder{
 		UserId:      "weidaizi",
-		OutsideId:   "2134631595348992",
+		OutsideId:   "2174372788575232",
 		Market:      common.Market_OKEX,
 		Exchange:    common.Exchange_OKEX,
 		ProductType: common.ProductType_Future,

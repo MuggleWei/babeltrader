@@ -2,10 +2,12 @@ package main
 
 import (
 	"log"
+	"strings"
 	"sync"
 
 	common "github.com/MuggleWei/babel-trader/src/babeltrader-common-go"
 	okex "github.com/MuggleWei/babel-trader/src/babeltrader-okex-v3"
+	utils "github.com/MuggleWei/babel-trader/src/babeltrader-utils-go"
 	"github.com/MuggleWei/cascade"
 )
 
@@ -126,6 +128,29 @@ func (this *OkexTradeService) OnUnsub(msg *okex.RspCommon) {
 }
 
 func (this *OkexTradeService) OnOrder(msg *okex.RspCommon) {
+	idx := strings.Index(msg.Table, "/")
+	productType := msg.Table[:idx]
+
+	var okexTrades []okex.OrderTrade
+	err := utils.DecodeInterfaceByJson(msg.Data, &okexTrades)
+	if err != nil {
+		log.Printf("[Error] failed decode data: %v\n", *msg)
+		return
+	}
+
+	for _, okexTrade := range okexTrades {
+		rsp, err := okex.ConvertOrderTradeOkex2Common(productType, &okexTrade)
+		if err != nil {
+			log.Printf("[Error] failed convert order trade okex to common: %v\n", okexTrade)
+			continue
+		}
+
+		this.ClientService.Hub.ObjectMessageChannel <- &cascade.HubObjectMessage{
+			Peer:       nil,
+			ObjectName: "ordertrade",
+			ObjectPtr:  rsp,
+		}
+	}
 }
 func (this *OkexTradeService) OnPosition(msg *okex.RspCommon) {
 	// TODO:

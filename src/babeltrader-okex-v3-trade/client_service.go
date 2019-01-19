@@ -20,7 +20,7 @@ type ClientService struct {
 	TradeService      *OkexTradeService
 	PeerMsgLinker     *utils.PeerMsgLinker
 	OrderCacheManager *utils.OrderCacheManager
-	OrderTradeCache   map[string][]*common.MessageRspCommon
+	OrderTradeCache   map[string][]*common.MessageOrderTrade
 	ReqCallbacks      map[string]ReqCallback
 	RspCallbacks      map[string]RspCallback
 }
@@ -31,7 +31,7 @@ func NewClientService() *ClientService {
 		TradeService:      nil,
 		PeerMsgLinker:     utils.NewPeerMsgLinker(),
 		OrderCacheManager: utils.NewOrderCacheManager(),
-		OrderTradeCache:   make(map[string][]*common.MessageRspCommon),
+		OrderTradeCache:   make(map[string][]*common.MessageOrderTrade),
 		ReqCallbacks:      make(map[string]ReqCallback),
 		RspCallbacks:      make(map[string]RspCallback),
 	}
@@ -66,6 +66,7 @@ func (this *ClientService) RegisterCallbacks() {
 
 	this.RspCallbacks["timer_ticker"] = this.OnTimerTicker
 	this.RspCallbacks["confirmorder"] = this.OnConfirmOrder
+	this.RspCallbacks["ordertrade"] = this.OnOrderTrade
 }
 
 func (this *ClientService) Run() {
@@ -214,7 +215,11 @@ func (this *ClientService) OnTimerTicker(*common.MessageRspCommon) {
 }
 
 func (this *ClientService) OnConfirmOrder(rsp *common.MessageRspCommon) {
-	order := rsp.Data.(common.MessageOrder)
+	order, ok := rsp.Data.(common.MessageOrder)
+	if !ok {
+		log.Printf("[Error] failed get order form MessageRspCommon: %v\n", *rsp)
+		return
+	}
 	this.OrderCacheManager.AddCache(&order)
 
 	b, err := json.Marshal(*rsp)
@@ -227,14 +232,59 @@ func (this *ClientService) OnConfirmOrder(rsp *common.MessageRspCommon) {
 	orderTradeCache, ok := this.OrderTradeCache[order.OutsideId]
 	if ok {
 		for _, orderTrade := range orderTradeCache {
-			b, err := json.Marshal(*orderTrade)
+			orderTrade.Order.UserId = order.UserId
+			orderTrade.Order.OrderId = order.OrderId
+			orderTrade.Order.ClientOrderId = order.ClientOrderId
+
+			rsp := common.MessageRspCommon{
+				Message: "ordertrade",
+				Data:    *orderTrade,
+			}
+
+			b, err := json.Marshal(rsp)
 			if err != nil {
-				log.Printf("[Warning] failed marshal message: %v\n", *orderTrade)
+				log.Printf("[Error] failed marshal message: %v\n", rsp)
 				continue
 			}
 			this.BroadcastMsg(b)
 		}
 		delete(this.OrderTradeCache, order.OutsideId)
+	}
+}
+
+func (this *ClientService) OnOrderTrade(rsp *common.MessageRspCommon) {
+	orderTrade, ok := rsp.Data.(common.MessageOrderTrade)
+	if !ok {
+		log.Printf("[Error] failed get order trade form MessageRspCommon: %v\n", *rsp)
+		return
+	}
+
+	cacheOrder, err := this.OrderCacheManager.GetOrder(orderTrade.Order.OutsideId)
+	if err != nil {
+		_, ok := this.OrderTradeCache[orderTrade.Order.OutsideId]
+		if !ok {
+			this.OrderTradeCache[orderTrade.Order.OutsideId] = []*common.MessageOrderTrade{&orderTrade}
+		} else {
+			this.OrderTradeCache[orderTrade.Order.OutsideId] = append(this.OrderTradeCache[orderTrade.Order.OutsideId], &orderTrade)
+		}
+		log.Printf("[Info] cache order trade: %v\n", orderTrade)
+	} else {
+		orderTrade.Order.UserId = cacheOrder.UserId
+		orderTrade.Order.OrderId = cacheOrder.OrderId
+		orderTrade.Order.ClientOrderId = cacheOrder.ClientOrderId
+
+		rsp := common.MessageRspCommon{
+			Message: "ordertrade",
+			Data:    orderTrade,
+		}
+
+		b, err := json.Marshal(rsp)
+		if err != nil {
+			log.Printf("[Error] failed marshal message: %v\n", rsp)
+		}
+		this.BroadcastMsg(b)
+
+		this.OrderCacheManager.UpdateOrderStatus(orderTrade.Order.OutsideId, orderTrade.Status)
 	}
 }
 

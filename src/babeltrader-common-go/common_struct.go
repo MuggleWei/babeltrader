@@ -169,7 +169,7 @@ type MessageOrder struct {
 	Price         float64 `json:"price,omitempty"`
 	Amount        float64 `json:"amount,omitempty"`
 	TotalPrice    float64 `json:"total_price,omitempty"`
-	Leverage      float64 `json:"leverage"`
+	Leverage      float64 `json:"leverage,omitempty"`
 	Timestamp     int64   `json:"ts,omitempty"`
 }
 
@@ -221,9 +221,8 @@ type MessageOrderDeal struct {
 type MessageOrderTrade struct {
 	Status       int          `json:"status,omitempty"`
 	Timestamp    int64        `json:"ts,omitempty"`
-	Price        float64      `json:"price,omitempty"`
-	Amount       float64      `json:"amount,omitempty"`
 	DealedAmount float64      `json:"dealed_amount,omitempty"`
+	AvgPrice     float64      `json:"avgprice,omitempty"`
 	Order        MessageOrder `json:"order,omitempty"`
 }
 

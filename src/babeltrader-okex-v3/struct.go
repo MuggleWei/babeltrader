@@ -79,5 +79,27 @@ type OrderRet struct {
 	Result    bool   `json:"result"`
 }
 
+type OrderTrade struct {
+	InstrumentId string `json:"instrument_id"`
+	OrderId      string `json:"order_id"`
+	Price        string `json:"price"`
+	Size         string `json:"size"`
+	Timestamp    string `json:"timestamp"`
+
+	Notional       string `json:"notional"`
+	Side           string `json:"side"`
+	Type           string `json:"type"`
+	FilledSize     string `json:"filled_size"`
+	FilledNotional string `json:"filled_notional"`
+	Status         string `json:"status"`
+	MarginTrading  string `json:"margin_trading"`
+
+	FilledQty   string `json:"filled_qty"`
+	Fee         string `json:"fee"`
+	PriceAvg    string `json:"price_avg"`
+	ContractVal string `json:"contract_val"`
+	Leverage    string `json:"leverage"`
+}
+
 // callback function type
 type OkexMsgCallback func(msg *RspCommon)

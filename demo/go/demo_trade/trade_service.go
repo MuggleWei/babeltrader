@@ -92,6 +92,7 @@ func (this *DemoTradeService) RegisterCallbacks() {
 	this.Callbacks["confirmorder"] = this.OnConfirmOrder
 	this.Callbacks["orderstatus"] = this.OnOrderStatus
 	this.Callbacks["orderdeal"] = this.OnOrderDeal
+	this.Callbacks["ordertrade"] = this.OnOrderTrade
 	this.Callbacks["rsp_qryorder"] = this.OnRspQryOrder
 	this.Callbacks["rsp_qrytrade"] = this.OnRspQryTrade
 	this.Callbacks["rsp_qryposition"] = this.OnRspQryPosition
@@ -115,6 +116,10 @@ func (this *DemoTradeService) OnOrderStatus(data interface{}) {
 func (this *DemoTradeService) OnOrderDeal(data interface{}) {
 	s, _ := json.Marshal(data)
 	log.Printf("orderdeal: %v\n", string(s))
+}
+func (this *DemoTradeService) OnOrderTrade(data interface{}) {
+	s, _ := json.Marshal(data)
+	log.Printf("ordertrade: %v\n", string(s))
 }
 
 func (this *DemoTradeService) OnRspQryOrder(data interface{}) {

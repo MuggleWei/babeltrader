@@ -151,7 +151,7 @@ func ConvertCandleToQuotes(table string, candles []Candle) ([]common.MessageRspC
 	var quotes []common.MessageRspCommon
 
 	for _, candle := range candles {
-		if channelMsg.ProductType == "future" {
+		if channelMsg.ProductType == common.ProductType_Future {
 			idx := strings.LastIndex(candle.InstrumentId, "-")
 			if idx <= 0 || idx >= len(candle.InstrumentId)-1 {
 				s := fmt.Sprintf("invalid instrument id: %v", candle.InstrumentId)
@@ -160,7 +160,7 @@ func ConvertCandleToQuotes(table string, candles []Candle) ([]common.MessageRspC
 			}
 			channelMsg.Symbol = candle.InstrumentId[:idx]
 			channelMsg.Contract = candle.InstrumentId[idx+1:]
-		} else if channelMsg.ProductType == "spot" {
+		} else if channelMsg.ProductType == common.ProductType_Spot {
 			channelMsg.Symbol = candle.InstrumentId
 		}
 
@@ -505,6 +505,215 @@ func ConvertCancelOrderCommon2Okex(order *common.MessageOrder) (string, *Order, 
 	} else {
 		s := fmt.Sprintf("not support product type: %v", order.ProductType)
 		return "", nil, errors.New(s)
+	}
+}
+
+func ConvertOrderTradeOkex2Common(productType string, okexTrade *OrderTrade) (*common.MessageRspCommon, error) {
+	var err error
+
+	if productType == "spot" {
+		// order field
+		price := 0.0
+		amount := 0.0
+		total_price := 0.0
+		if okexTrade.Type == "limit" {
+			price, err = strconv.ParseFloat(okexTrade.Price, 64)
+			if err != nil {
+				log.Printf("[Error] %v\n", err.Error())
+				return nil, err
+			}
+
+			amount, err = strconv.ParseFloat(okexTrade.Size, 64)
+			if err != nil {
+				log.Printf("[Error] %v\n", err.Error())
+				return nil, err
+			}
+		} else if okexTrade.Type == "market" {
+			if okexTrade.Side == "buy" {
+				total_price, err = strconv.ParseFloat(okexTrade.Notional, 64)
+				if err != nil {
+					log.Printf("[Error] %v\n", err.Error())
+					return nil, err
+				}
+			} else if okexTrade.Side == "sell" {
+				amount, err = strconv.ParseFloat(okexTrade.Size, 64)
+				if err != nil {
+					log.Printf("[Error] %v\n", err.Error())
+					return nil, err
+				}
+			}
+		}
+
+		// ordertrade field
+		status := common.OrderStatus_Unknown
+		switch okexTrade.Status {
+		case "open":
+			status = common.OrderStatus_Unknown
+		case "part_filled":
+			status = common.OrderStatus_PartDealed
+		case "filled":
+			status = common.OrderStatus_AllDealed
+		case "cancelled":
+			status = common.OrderStatus_Canceled
+		case "failure":
+			status = common.OrderStatus_Rejected
+		default:
+			s := fmt.Sprintf("invalid spot order status: %v\n", okexTrade.Status)
+			log.Printf("[Error] %v", s)
+			return nil, errors.New(s)
+		}
+
+		ts, err := time.Parse(time.RFC3339, okexTrade.Timestamp)
+		if err != nil {
+			log.Printf("[Error] %v\n", err.Error())
+			return nil, err
+		}
+
+		dealedNotional, err := strconv.ParseFloat(okexTrade.FilledNotional, 64)
+		if err != nil {
+			log.Printf("[Error] %v\n", err.Error())
+			return nil, err
+		}
+
+		dealedAmount, err := strconv.ParseFloat(okexTrade.FilledSize, 64)
+		if err != nil {
+			log.Printf("[Error] %v\n", err.Error())
+			return nil, err
+		}
+
+		avgPrice := 0.0
+		if dealedAmount > 0 {
+			avgPrice = dealedNotional / dealedAmount
+		}
+
+		rsp := common.MessageRspCommon{
+			Message: "ordertrade",
+			Data: common.MessageOrderTrade{
+				Status:       status,
+				Timestamp:    ts.Unix()*1000 + int64(ts.Nanosecond())/int64(time.Millisecond),
+				DealedAmount: dealedAmount,
+				AvgPrice:     avgPrice,
+				Order: common.MessageOrder{
+					OutsideId:   okexTrade.OrderId,
+					Market:      common.Market_OKEX,
+					Exchange:    common.Exchange_OKEX,
+					ProductType: common.ProductType_Spot,
+					Symbol:      okexTrade.InstrumentId,
+					OrderType:   okexTrade.Type,
+					Dir:         okexTrade.Side,
+					Price:       price,
+					Amount:      amount,
+					TotalPrice:  total_price,
+				},
+			},
+		}
+
+		return &rsp, nil
+	} else if productType == "futures" || productType == "swap" {
+		// order field
+		splitSymbol := strings.LastIndex(okexTrade.InstrumentId, "-")
+		if splitSymbol == -1 || splitSymbol >= len(okexTrade.InstrumentId)-1 {
+			s := fmt.Sprintf("invalid instrument id for future: %v", okexTrade.InstrumentId)
+			log.Printf("[Error] %v\n", s)
+			return nil, errors.New(s)
+		}
+
+		symbol := okexTrade.InstrumentId[:splitSymbol]
+		contract := okexTrade.InstrumentId[splitSymbol+1:]
+		orderType := common.OrderType_Limit
+
+		dir := ""
+		switch okexTrade.Type {
+		case "1":
+			dir = common.OrderAction_Open + "_" + common.OrderDir_Long
+		case "2":
+			dir = common.OrderAction_Open + "_" + common.OrderDir_Short
+		case "3":
+			dir = common.OrderAction_Close + "_" + common.OrderDir_Long
+		case "4":
+			dir = common.OrderAction_Close + "_" + common.OrderDir_Short
+		default:
+			s := fmt.Sprintf("invalid future order dir: %v\n", okexTrade.Type)
+			log.Printf("[Error] %v", s)
+			return nil, errors.New(s)
+		}
+
+		price, err := strconv.ParseFloat(okexTrade.Price, 64)
+		if err != nil {
+			log.Printf("[Error] %v\n", err.Error())
+			return nil, err
+		}
+
+		amount, err := strconv.ParseFloat(okexTrade.Size, 64)
+		if err != nil {
+			log.Printf("[Error] %v\n", err.Error())
+			return nil, err
+		}
+
+		leverage, err := strconv.ParseFloat(okexTrade.Leverage, 64)
+
+		// ordertrade field
+		status := common.OrderStatus_Unknown
+		switch okexTrade.Status {
+		case "-1":
+			status = common.OrderStatus_Canceled
+		case "0":
+			status = common.OrderStatus_Unknown
+		case "1":
+			status = common.OrderStatus_PartDealed
+		case "2":
+			status = common.OrderStatus_AllDealed
+		default:
+			s := fmt.Sprintf("invalid future order status: %v\n", okexTrade.Status)
+			log.Printf("[Error] %v", s)
+			return nil, errors.New(s)
+		}
+
+		ts, err := time.Parse(time.RFC3339, okexTrade.Timestamp)
+		if err != nil {
+			log.Printf("[Error] %v\n", err.Error())
+			return nil, err
+		}
+
+		dealedAmount, err := strconv.ParseFloat(okexTrade.FilledQty, 64)
+		if err != nil {
+			log.Printf("[Error] %v\n", err.Error())
+			return nil, err
+		}
+
+		avgPrice, err := strconv.ParseFloat(okexTrade.PriceAvg, 64)
+		if err != nil {
+			log.Printf("[Error] %v\n", err.Error())
+			avgPrice = 0.0
+		}
+
+		rsp := common.MessageRspCommon{
+			Message: "ordertrade",
+			Data: common.MessageOrderTrade{
+				Status:       status,
+				Timestamp:    ts.Unix()*1000 + int64(ts.Nanosecond())/int64(time.Millisecond),
+				DealedAmount: dealedAmount,
+				AvgPrice:     avgPrice,
+				Order: common.MessageOrder{
+					OutsideId:   okexTrade.OrderId,
+					Market:      common.Market_OKEX,
+					Exchange:    common.Exchange_OKEX,
+					ProductType: common.ProductType_Future,
+					Symbol:      symbol,
+					Contract:    contract,
+					OrderType:   orderType,
+					Dir:         dir,
+					Price:       price,
+					Amount:      amount,
+					Leverage:    leverage,
+				},
+			},
+		}
+
+		return &rsp, nil
+	} else {
+		s := fmt.Sprintf("invalid product type: %v", productType)
+		return nil, errors.New(s)
 	}
 }
 
