@@ -611,12 +611,13 @@ func ConvertOrderTradeOkex2Common(productType string, okexTrade *OrderTrade) (*c
 		}
 
 		rsp := common.MessageRspCommon{
-			Message: "ordertrade",
-			Data: common.MessageOrderTrade{
+			Message: "orderstatus",
+			Data: common.MessageOrderStatus{
 				Status:       status,
-				Timestamp:    ts.Unix()*1000 + int64(ts.Nanosecond())/int64(time.Millisecond),
+				Amount:       amount,
 				DealedAmount: dealedAmount,
 				AvgPrice:     avgPrice,
+				Timestamp:    ts.Unix()*1000 + int64(ts.Nanosecond())/int64(time.Millisecond),
 				Order: common.MessageOrder{
 					OutsideId:   okexTrade.OrderId,
 					Market:      common.Market_OKEX,
@@ -712,10 +713,11 @@ func ConvertOrderTradeOkex2Common(productType string, okexTrade *OrderTrade) (*c
 		}
 
 		rsp := common.MessageRspCommon{
-			Message: "ordertrade",
-			Data: common.MessageOrderTrade{
+			Message: "orderstatus",
+			Data: common.MessageOrderStatus{
 				Status:       status,
 				Timestamp:    ts.Unix()*1000 + int64(ts.Nanosecond())/int64(time.Millisecond),
+				Amount:       amount,
 				DealedAmount: dealedAmount,
 				AvgPrice:     avgPrice,
 				Order: common.MessageOrder{

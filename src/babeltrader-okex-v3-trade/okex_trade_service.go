@@ -92,7 +92,7 @@ func (this *OkexTradeService) QueryOrder(peer *cascade.Peer, qry *common.Message
 		return nil, err
 	}
 
-	orderTrade, ok := rspOrderTrade.Data.(common.MessageOrderTrade)
+	orderTrade, ok := rspOrderTrade.Data.(common.MessageOrderStatus)
 	if !ok {
 		s := fmt.Sprintf("failed get order trade from common rsp message: %v\n", rspOrderTrade)
 		log.Printf("[Error] %v\n", s)
@@ -105,6 +105,8 @@ func (this *OkexTradeService) QueryOrder(peer *cascade.Peer, qry *common.Message
 			SubmitStatus: common.OrderStatus_Unknown,
 			Amount:       orderTrade.Order.Amount,
 			DealedAmount: orderTrade.DealedAmount,
+			AvgPrice:     orderTrade.AvgPrice,
+			Timestamp:    orderTrade.Timestamp,
 			Order:        orderTrade.Order,
 		},
 	}
@@ -193,7 +195,7 @@ func (this *OkexTradeService) OnOrder(msg *okex.RspCommon) {
 
 		this.ClientService.Hub.ObjectMessageChannel <- &cascade.HubObjectMessage{
 			Peer:       nil,
-			ObjectName: "ordertrade",
+			ObjectName: "orderstatus",
 			ObjectPtr:  rsp,
 		}
 	}

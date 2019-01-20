@@ -21,7 +21,7 @@ type ClientService struct {
 	TradeService      *OkexTradeService
 	PeerMsgLinker     *utils.PeerMsgLinker
 	OrderCacheManager *utils.OrderCacheManager
-	OrderTradeCache   map[string][]*common.MessageOrderTrade
+	OrderTradeCache   map[string][]*common.MessageOrderStatus
 	ReqCallbacks      map[string]ReqCallback
 	RspCallbacks      map[string]RspCallback
 }
@@ -32,7 +32,7 @@ func NewClientService() *ClientService {
 		TradeService:      nil,
 		PeerMsgLinker:     utils.NewPeerMsgLinker(),
 		OrderCacheManager: utils.NewOrderCacheManager(),
-		OrderTradeCache:   make(map[string][]*common.MessageOrderTrade),
+		OrderTradeCache:   make(map[string][]*common.MessageOrderStatus),
 		ReqCallbacks:      make(map[string]ReqCallback),
 		RspCallbacks:      make(map[string]RspCallback),
 	}
@@ -67,7 +67,7 @@ func (this *ClientService) RegisterCallbacks() {
 
 	this.RspCallbacks["timer_ticker"] = this.OnTimerTicker
 	this.RspCallbacks["confirmorder"] = this.OnConfirmOrder
-	this.RspCallbacks["ordertrade"] = this.OnOrderTrade
+	this.RspCallbacks["orderstatus"] = this.OnOrderTrade
 }
 
 func (this *ClientService) Run() {
@@ -265,7 +265,7 @@ func (this *ClientService) OnConfirmOrder(rsp *common.MessageRspCommon) {
 			orderTrade.Order.ClientOrderId = order.ClientOrderId
 
 			rsp := common.MessageRspCommon{
-				Message: "ordertrade",
+				Message: "orderstatus",
 				Data:    *orderTrade,
 			}
 
@@ -281,7 +281,7 @@ func (this *ClientService) OnConfirmOrder(rsp *common.MessageRspCommon) {
 }
 
 func (this *ClientService) OnOrderTrade(rsp *common.MessageRspCommon) {
-	orderTrade, ok := rsp.Data.(common.MessageOrderTrade)
+	orderTrade, ok := rsp.Data.(common.MessageOrderStatus)
 	if !ok {
 		log.Printf("[Error] failed get order trade form MessageRspCommon: %v\n", *rsp)
 		return
@@ -291,7 +291,7 @@ func (this *ClientService) OnOrderTrade(rsp *common.MessageRspCommon) {
 	if err != nil {
 		_, ok := this.OrderTradeCache[orderTrade.Order.OutsideId]
 		if !ok {
-			this.OrderTradeCache[orderTrade.Order.OutsideId] = []*common.MessageOrderTrade{&orderTrade}
+			this.OrderTradeCache[orderTrade.Order.OutsideId] = []*common.MessageOrderStatus{&orderTrade}
 		} else {
 			this.OrderTradeCache[orderTrade.Order.OutsideId] = append(this.OrderTradeCache[orderTrade.Order.OutsideId], &orderTrade)
 		}
@@ -302,7 +302,7 @@ func (this *ClientService) OnOrderTrade(rsp *common.MessageRspCommon) {
 		orderTrade.Order.ClientOrderId = cacheOrder.ClientOrderId
 
 		rsp := common.MessageRspCommon{
-			Message: "ordertrade",
+			Message: "orderstatus",
 			Data:    orderTrade,
 		}
 

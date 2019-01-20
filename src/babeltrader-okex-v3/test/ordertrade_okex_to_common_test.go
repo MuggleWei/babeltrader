@@ -53,7 +53,7 @@ func TestConvertOrderTradeOkexToCommon_Spot(t *testing.T) {
 
 		assert.Equal(t, "ordertrade", rsp.Message, "message id is wrong")
 
-		orderTrade := rsp.Data.(common.MessageOrderTrade)
+		orderTrade := rsp.Data.(common.MessageOrderStatus)
 		assert.Equal(t, common.OrderStatus_Canceled, orderTrade.Status, "status is wrong")
 		assert.Equal(t, int64(1547560529000), orderTrade.Timestamp, "ts is wrong")
 		assert.Equal(t, 0.0, orderTrade.DealedAmount, "dealed amount is wrong")
@@ -87,7 +87,7 @@ func TestConvertOrderTradeOkexToCommon_Future(t *testing.T) {
 		}
 
 		assert.Equal(t, "ordertrade", rsp.Message, "message id is wrong")
-		orderTrade := rsp.Data.(common.MessageOrderTrade)
+		orderTrade := rsp.Data.(common.MessageOrderStatus)
 		assert.Equal(t, common.OrderStatus_Canceled, orderTrade.Status, "status is wrong")
 		assert.Equal(t, int64(1547560604000), orderTrade.Timestamp, "ts is wrong")
 		assert.Equal(t, 0.0, orderTrade.DealedAmount, "dealed amount is wrong")
