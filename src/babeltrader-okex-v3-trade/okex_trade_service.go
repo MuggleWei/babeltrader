@@ -118,6 +118,29 @@ func (this *OkexTradeService) QueryOrder(peer *cascade.Peer, qry *common.Message
 	}, nil
 }
 
+func (this *OkexTradeService) QueryPosition(peer *cascade.Peer, qry *common.MessageQuery) (*common.MessageRspCommon, error) {
+	okexQry, err := okex.ConvertQryCommon2Okex(qry)
+	if err != nil {
+		log.Printf("[Error] failed convert query common to okex: %v, %v\n", *qry, err.Error())
+		return nil, err
+	}
+
+	var position okex.Position
+	_, err = this.Api.QueryPosition(okexQry, &position)
+	if err != nil {
+		log.Printf("[Error] failed query position: %v, %v\n", okexQry, err.Error())
+		return nil, err
+	}
+
+	qry.PositionSummaryType = "type3"
+	qry.Data = position.Holding
+
+	return &common.MessageRspCommon{
+		Message: "rsp_qryposition",
+		Data:    *qry,
+	}, nil
+}
+
 ///////////////// trade spi /////////////////
 func (this *OkexTradeService) OnConnected(peer *cascade.Peer) {
 	log.Printf("[Info] okex trade connected: %v\n", peer.Conn.RemoteAddr().String())

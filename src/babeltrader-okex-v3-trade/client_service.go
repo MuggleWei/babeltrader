@@ -220,11 +220,38 @@ func (this *ClientService) QueryOrder(peer *cascade.Peer, req *common.MessageReq
 	return nil
 }
 func (this *ClientService) QueryTrade(peer *cascade.Peer, req *common.MessageReqCommon) error {
-	// TODO:
-	return nil
+	s := fmt.Sprintf("okex not support query trade by trade id, use query_order to query order status and avgprice")
+	log.Printf("[Warning] %v\n", s)
+	return errors.New(s)
 }
 func (this *ClientService) QueryPosition(peer *cascade.Peer, req *common.MessageReqCommon) error {
-	// TODO:
+	var qry common.MessageQuery
+	err := utils.DecodeInterfaceByJson(req.Data, &qry)
+	if err != nil {
+		log.Printf("[Error] failed to decode data: %v, %v\n", *req, err.Error())
+		return err
+	}
+
+	if qry.ProductType == common.ProductType_Spot {
+		s := fmt.Sprintf("there is no position concept in spot account of coin")
+		log.Printf("[Error] %v\n", s)
+		return errors.New(s)
+	}
+
+	rsp, err := this.TradeService.QueryPosition(peer, &qry)
+	if err != nil {
+		log.Printf("[Error] failed to query position: %v, %v\n", qry, err.Error())
+		return err
+	}
+
+	b, err := json.Marshal(*rsp)
+	if err != nil {
+		log.Printf("[Error] failed to marshal MessageRspCommon: %v, %v\n", *rsp, err.Error())
+		return err
+	}
+
+	peer.SendChannel <- b
+
 	return nil
 }
 func (this *ClientService) QueryTradeAccount(peer *cascade.Peer, req *common.MessageReqCommon) error {

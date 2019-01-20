@@ -107,5 +107,25 @@ type OrderTrade struct {
 	Leverage    string `json:"leverage"`
 }
 
+type PositionHolding struct {
+	MarginMode           string `json:"margin_mode"`
+	LongQty              string `json:"long_qty"`
+	LongAvailQty         string `json:"long_avail_qty"`
+	LongAvgCost          string `json:"long_avg_cost"`
+	LongSettlementPrice  string `json:"long_settlement_price"`
+	ShortQty             string `json:"short_qty"`
+	ShortAvailQty        string `json:"short_avail_qty"`
+	ShortAvgCost         string `json:"short_avg_cost"`
+	ShortSettlementPrice string `json:"short_settlement_price"`
+	InstrumentId         string `json:"instrument_id"`
+	Leverage             string `json:"leverage"`
+}
+
+type Position struct {
+	MarginMode string            `json:"margin_mode"`
+	Result     bool              `json:"result"`
+	Holding    []PositionHolding `json:"holding"`
+}
+
 // callback function type
 type OkexMsgCallback func(msg *RspCommon)

@@ -249,6 +249,24 @@ func (this *TradeApi) QueryOrder(qry *Query, result interface{}) (response *http
 	return HttpRequst(this.HttpClient, this.config, "GET", reqPath, nil, result)
 }
 
+func (this *TradeApi) QueryPosition(qry *Query, result interface{}) (response *http.Response, err error) {
+	var reqPath string
+	switch qry.ProductType {
+	case "spot":
+		return nil, errors.New("there is no position concept in spot account of coin")
+	case "futures":
+		if qry.InstrumentId == "" {
+			return nil, errors.New("okex not support query all positions")
+		} else {
+			reqPath = "/api/futures/v3/" + qry.InstrumentId + "/position"
+		}
+	case "swap":
+		return nil, errors.New("babeltrade-okex-v3 temporarily not support query position of swap, to be continued...")
+	}
+
+	return HttpRequst(this.HttpClient, this.config, "GET", reqPath, nil, result)
+}
+
 ///////////////// response and quotes /////////////////
 func (this *TradeApi) OnLogin(msg *RspCommon) {
 	this.spi.OnLogin(msg)
