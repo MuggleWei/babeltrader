@@ -62,6 +62,7 @@ func (this *ClientService) RegisterCallbacks() {
 	this.ReqCallbacks["query_order"] = this.QueryOrder
 	this.ReqCallbacks["query_trade"] = this.QueryTrade
 	this.ReqCallbacks["query_position"] = this.QueryPosition
+	this.ReqCallbacks["rsp_qrypositiondetail"] = this.QueryPositionDetail
 	this.ReqCallbacks["query_tradeaccount"] = this.QueryTradeAccount
 	this.ReqCallbacks["query_product"] = this.QueryProduct
 
@@ -254,8 +255,34 @@ func (this *ClientService) QueryPosition(peer *cascade.Peer, req *common.Message
 
 	return nil
 }
+func (this *ClientService) QueryPositionDetail(peer *cascade.Peer, req *common.MessageReqCommon) error {
+	s := fmt.Sprintf("okex not support query position detail")
+	log.Printf("[Warning] %v\n", s)
+	return errors.New(s)
+}
+
 func (this *ClientService) QueryTradeAccount(peer *cascade.Peer, req *common.MessageReqCommon) error {
-	// TODO:
+	var qry common.MessageQuery
+	err := utils.DecodeInterfaceByJson(req.Data, &qry)
+	if err != nil {
+		log.Printf("[Error] failed to decode data: %v, %v\n", *req, err.Error())
+		return err
+	}
+
+	rsp, err := this.TradeService.QueryAccount(peer, &qry)
+	if err != nil {
+		log.Printf("[Error] failed to query account: %v, %v\n", qry, err.Error())
+		return err
+	}
+
+	b, err := json.Marshal(*rsp)
+	if err != nil {
+		log.Printf("[Error] failed to marshal MessageRspCommon: %v, %v\n", *rsp, err.Error())
+		return err
+	}
+
+	peer.SendChannel <- b
+
 	return nil
 }
 func (this *ClientService) QueryProduct(peer *cascade.Peer, req *common.MessageReqCommon) error {

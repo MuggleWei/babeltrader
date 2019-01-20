@@ -72,6 +72,7 @@ type Order struct {
 }
 
 type Query struct {
+	CurrencyId   string
 	InstrumentId string
 	ProductType  string
 	OrderId      string
@@ -125,6 +126,19 @@ type Position struct {
 	MarginMode string            `json:"margin_mode"`
 	Result     bool              `json:"result"`
 	Holding    []PositionHolding `json:"holding"`
+}
+
+type TradeAccount struct {
+	// futures
+	MarginMode        string `json:"margin_mode"`
+	TotalAvailBalance string `json:"total_avail_balance"`
+	Equity            string `json:"equity"`
+	MarginRatio       string `json:"margin_ratio"`
+
+	// spot
+	Balance   string `json:"balance"`
+	Hold      string `json:"hold"`
+	Available string `json:"available"`
 }
 
 // callback function type

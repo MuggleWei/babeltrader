@@ -141,6 +141,35 @@ func (this *OkexTradeService) QueryPosition(peer *cascade.Peer, qry *common.Mess
 	}, nil
 }
 
+func (this *OkexTradeService) QueryAccount(peer *cascade.Peer, qry *common.MessageQuery) (*common.MessageRspCommon, error) {
+	okexQry, err := okex.ConvertQryCommon2Okex(qry)
+	if err != nil {
+		log.Printf("[Error] failed convert query common to okex: %v, %v\n", *qry, err.Error())
+		return nil, err
+	}
+
+	if okexQry.CurrencyId == "" {
+		s := fmt.Sprintf("okex only support query account with single currency")
+		log.Printf("[Error] %v\n", s)
+		return nil, errors.New(s)
+	}
+
+	var account okex.TradeAccount
+	_, err = this.Api.QueryAccount(okexQry, &account)
+	if err != nil {
+		log.Printf("[Error] failed query account: %v, %v\n", okexQry, err.Error())
+		return nil, err
+	}
+
+	qry.TradeAccountType = "type3"
+	qry.Data = account
+
+	return &common.MessageRspCommon{
+		Message: "rsp_qrytradeaccount",
+		Data:    *qry,
+	}, nil
+}
+
 ///////////////// trade spi /////////////////
 func (this *OkexTradeService) OnConnected(peer *cascade.Peer) {
 	log.Printf("[Info] okex trade connected: %v\n", peer.Conn.RemoteAddr().String())

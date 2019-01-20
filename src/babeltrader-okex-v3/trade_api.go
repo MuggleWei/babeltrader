@@ -267,6 +267,20 @@ func (this *TradeApi) QueryPosition(qry *Query, result interface{}) (response *h
 	return HttpRequst(this.HttpClient, this.config, "GET", reqPath, nil, result)
 }
 
+func (this *TradeApi) QueryAccount(qry *Query, result interface{}) (response *http.Response, err error) {
+	var reqPath string
+	switch qry.ProductType {
+	case "spot":
+		reqPath = "/api/spot/v3/accounts/" + qry.CurrencyId
+	case "futures":
+		reqPath = "/api/futures/v3/accounts/" + qry.CurrencyId
+	case "swap":
+		return nil, errors.New("babeltrade-okex-v3 temporarily not support query trade account of swap, to be continued...")
+	}
+
+	return HttpRequst(this.HttpClient, this.config, "GET", reqPath, nil, result)
+}
+
 ///////////////// response and quotes /////////////////
 func (this *TradeApi) OnLogin(msg *RspCommon) {
 	this.spi.OnLogin(msg)

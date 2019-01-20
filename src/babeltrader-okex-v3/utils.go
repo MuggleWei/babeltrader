@@ -516,12 +516,14 @@ func ConvertQryCommon2Okex(qry *common.MessageQuery) (*Query, error) {
 		}
 
 		return &Query{
+			CurrencyId:   qry.CurrencyId,
 			InstrumentId: qry.Symbol + "-" + qry.Contract,
 			ProductType:  productType,
 			OrderId:      qry.OutsideId,
 		}, nil
 	} else if qry.ProductType == common.ProductType_Spot {
 		return &Query{
+			CurrencyId:   qry.CurrencyId,
 			InstrumentId: qry.Symbol,
 			ProductType:  "spot",
 			OrderId:      qry.OutsideId,
