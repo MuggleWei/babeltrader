@@ -508,6 +508,30 @@ func ConvertCancelOrderCommon2Okex(order *common.MessageOrder) (string, *Order, 
 	}
 }
 
+func ConvertQryCommon2Okex(qry *common.MessageQuery) (*Query, error) {
+	if qry.ProductType == common.ProductType_Future {
+		productType := "futures"
+		if qry.Contract == "SWAP" {
+			productType = "swap"
+		}
+
+		return &Query{
+			InstrumentId: qry.Symbol + "-" + qry.Contract,
+			ProductType:  productType,
+			OrderId:      qry.OutsideId,
+		}, nil
+	} else if qry.ProductType == common.ProductType_Spot {
+		return &Query{
+			InstrumentId: qry.Symbol,
+			ProductType:  "spot",
+			OrderId:      qry.OutsideId,
+		}, nil
+	} else {
+		s := fmt.Sprintf("not support product type: %v", qry.ProductType)
+		return nil, errors.New(s)
+	}
+}
+
 func ConvertOrderTradeOkex2Common(productType string, okexTrade *OrderTrade) (*common.MessageRspCommon, error) {
 	var err error
 

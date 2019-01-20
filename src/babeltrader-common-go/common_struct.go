@@ -202,10 +202,10 @@ type MessageQuery struct {
 }
 
 type MessageOrderStatus struct {
-	Status       int          `json:"status,omitempty"`
-	SubmitStatus int          `json:"submit_status,omitempty"`
-	Amount       float64      `json:"amount,omitempty"`
-	DealedAmount float64      `json:"dealed_amount,omitempty"`
+	Status       int          `json:"status"`
+	SubmitStatus int          `json:"submit_status"`
+	Amount       float64      `json:"amount"`
+	DealedAmount float64      `json:"dealed_amount"`
 	Order        MessageOrder `json:"order,omitempty"`
 }
 

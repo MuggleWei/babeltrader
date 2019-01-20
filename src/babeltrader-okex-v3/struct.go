@@ -71,6 +71,12 @@ type Order struct {
 	Leverage     string `json:"leverage,omitempty"`
 }
 
+type Query struct {
+	InstrumentId string
+	ProductType  string
+	OrderId      string
+}
+
 type OrderRet struct {
 	OrderId   string `json:"order_id"`
 	ClientOid string `json:"client_oid"`

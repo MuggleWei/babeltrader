@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -187,8 +188,35 @@ func (this *ClientService) CancelOrder(peer *cascade.Peer, req *common.MessageRe
 
 	return nil
 }
+
 func (this *ClientService) QueryOrder(peer *cascade.Peer, req *common.MessageReqCommon) error {
-	// TODO:
+	var qry common.MessageQuery
+	err := utils.DecodeInterfaceByJson(req.Data, &qry)
+	if err != nil {
+		log.Printf("[Error] failed to decode data: %v, %v\n", *req, err.Error())
+		return err
+	}
+
+	if qry.OutsideId == "" {
+		s := fmt.Sprintf("babeltrade-okex-v3-trade not support query order without outside order id")
+		log.Printf("[Error] %v\n", s)
+		return errors.New(s)
+	}
+
+	rsp, err := this.TradeService.QueryOrder(peer, &qry)
+	if err != nil {
+		log.Printf("[Error] failed to query order: %v, %v\n", qry, err.Error())
+		return err
+	}
+
+	b, err := json.Marshal(*rsp)
+	if err != nil {
+		log.Printf("[Error] failed to marshal MessageRspCommon: %v, %v\n", *rsp, err.Error())
+		return err
+	}
+
+	peer.SendChannel <- b
+
 	return nil
 }
 func (this *ClientService) QueryTrade(peer *cascade.Peer, req *common.MessageReqCommon) error {

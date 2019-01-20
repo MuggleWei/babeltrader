@@ -234,6 +234,21 @@ func (this *TradeApi) CancelOrder(order *Order, okexProductType, outsideOrderId 
 	return HttpRequst(this.HttpClient, this.config, "POST", reqPath, nil, result)
 }
 
+func (this *TradeApi) QueryOrder(qry *Query, result interface{}) (response *http.Response, err error) {
+	var reqPath string
+	switch qry.ProductType {
+	case "spot":
+		reqPath = "/api/spot/v3/orders/" + qry.OrderId + "?instrument_id=" + qry.InstrumentId
+		return HttpRequst(this.HttpClient, this.config, "GET", reqPath, nil, result)
+	case "futures":
+		reqPath = "/api/futures/v3/orders/" + qry.InstrumentId + "/" + qry.OrderId
+	case "swap":
+		reqPath = "/api/swap/v3/orders/" + qry.InstrumentId + "/" + qry.OrderId
+	}
+
+	return HttpRequst(this.HttpClient, this.config, "GET", reqPath, nil, result)
+}
+
 ///////////////// response and quotes /////////////////
 func (this *TradeApi) OnLogin(msg *RspCommon) {
 	this.spi.OnLogin(msg)

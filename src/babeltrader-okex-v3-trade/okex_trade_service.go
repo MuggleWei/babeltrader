@@ -1,6 +1,8 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"log"
 	"strings"
 	"sync"
@@ -68,6 +70,50 @@ func (this *OkexTradeService) CancelOrder(peer *cascade.Peer, order *common.Mess
 	}
 
 	return ret.OrderId, nil
+}
+
+func (this *OkexTradeService) QueryOrder(peer *cascade.Peer, qry *common.MessageQuery) (*common.MessageRspCommon, error) {
+	okexQry, err := okex.ConvertQryCommon2Okex(qry)
+	if err != nil {
+		log.Printf("[Error] failed convert query common to okex: %v, %v\n", *qry, err.Error())
+		return nil, err
+	}
+
+	var okexOrderTrade okex.OrderTrade
+	_, err = this.Api.QueryOrder(okexQry, &okexOrderTrade)
+	if err != nil {
+		log.Printf("[Error] failed query order: %v, %v\n", okexQry, err.Error())
+		return nil, err
+	}
+
+	rspOrderTrade, err := okex.ConvertOrderTradeOkex2Common(okexQry.ProductType, &okexOrderTrade)
+	if err != nil {
+		log.Printf("[Error] failed convert query return order trade okex to common: %v, %v\n", okexOrderTrade, err.Error())
+		return nil, err
+	}
+
+	orderTrade, ok := rspOrderTrade.Data.(common.MessageOrderTrade)
+	if !ok {
+		s := fmt.Sprintf("failed get order trade from common rsp message: %v\n", rspOrderTrade)
+		log.Printf("[Error] %v\n", s)
+		return nil, errors.New(s)
+	}
+
+	status := []common.MessageOrderStatus{
+		common.MessageOrderStatus{
+			Status:       orderTrade.Status,
+			SubmitStatus: common.OrderStatus_Unknown,
+			Amount:       orderTrade.Order.Amount,
+			DealedAmount: orderTrade.DealedAmount,
+			Order:        orderTrade.Order,
+		},
+	}
+	qry.Data = status
+
+	return &common.MessageRspCommon{
+		Message: "rsp_qryorder",
+		Data:    *qry,
+	}, nil
 }
 
 ///////////////// trade spi /////////////////
