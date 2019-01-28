@@ -121,6 +121,7 @@ void WsService::RegisterCallbacks()
 		callbacks_["query_positiondetail"] = std::bind(&TradeService::OnReqQueryPositionDetail, trade_, std::placeholders::_1, std::placeholders::_2);
 		callbacks_["query_tradeaccount"] = std::bind(&TradeService::OnReqQueryTradeAccount, trade_, std::placeholders::_1, std::placeholders::_2);
 		callbacks_["query_product"] = std::bind(&TradeService::OnReqQueryProduct, trade_, std::placeholders::_1, std::placeholders::_2);
+		callbacks_["query_tradingday"] = std::bind(&TradeService::OnReqQueryTradingDay, trade_, std::placeholders::_1, std::placeholders::_2);
 	}
 	
 }

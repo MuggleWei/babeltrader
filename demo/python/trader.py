@@ -17,6 +17,8 @@ class Trader:
         self.rsp_callbacks["rsp_qrytrade"] = self.on_qrytrade
         self.rsp_callbacks["rsp_qryposition"] = self.on_qryposition
 
+        self.rsp_callbacks["rsp_qrytradingday"] = self.on_qrytradingday
+
         self.ws = websocket.create_connection("ws://" + addr + "/ws")
 
     def on_confirmorder(self, msg):
@@ -38,6 +40,9 @@ class Trader:
         pass
 
     def on_qryposition(self, msg):
+        pass
+
+    def on_qrytradingday(self, msg):
         pass
 
     def insert_order(self, user_id,
@@ -193,6 +198,17 @@ class Trader:
         })
         self.ws.send(qry)
         print("send query product: " + str(qry))
+
+    def query_tradingday(self, qry_id, market):
+        qry = json.dumps({
+            "msg": "query_tradingday",
+            "data": {
+                "qry_id": qry_id,
+                "market": market,
+            }
+        })
+        self.ws.send(qry)
+        print("send query trading day: " + str(qry))
 
     def message_loop(self):
         try:

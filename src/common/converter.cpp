@@ -861,6 +861,19 @@ TradeAccountQuery ConvertTradeAccountJson2Common(rapidjson::Value &msg)
 
 	return std::move(tradeaccount_qry);
 }
+TradingDayQuery ConvertTradingDayJson2Common(rapidjson::Value &msg)
+{
+	TradingDayQuery tradingday_qry;
+
+	if (msg.HasMember("qry_id") && msg["qry_id"].IsString()) {
+		tradingday_qry.qry_id = msg["qry_id"].GetString();
+	}
+	if (msg.HasMember("market") && msg["market"].IsString()) {
+		tradingday_qry.market = msg["market"].GetString();
+	}
+
+	return std::move(tradingday_qry);
+}
 
 
 bool SplitOrderDir(const char *order_dir, int len, const char **action, const char **dir)

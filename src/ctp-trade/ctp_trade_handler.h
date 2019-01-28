@@ -34,6 +34,7 @@ public:
 	virtual void QueryPositionDetail(uWS::WebSocket<uWS::SERVER> *ws, PositionQuery &position_query) override;
 	virtual void QueryTradeAccount(uWS::WebSocket<uWS::SERVER> *ws, TradeAccountQuery &tradeaccount_query) override;
 	virtual void QueryProduct(uWS::WebSocket<uWS::SERVER> *ws, ProductQuery &query_product) override;
+	virtual void QueryTradingDay(uWS::WebSocket<uWS::SERVER> *ws, TradingDayQuery &tradingday_qry) override;
 
 	////////////////////////////////////////
 	// spi virtual function
@@ -196,6 +197,7 @@ private:
 	int order_action_ref_;
 
 	// connection info
+	std::mutex conn_info_mtx_;
 	std::string ctp_tradeing_day_;
 	std::string ctp_login_time_;
 	int ctp_front_id_;

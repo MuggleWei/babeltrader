@@ -42,6 +42,7 @@ TradeQuery ConvertTradeQueryJson2Common(rapidjson::Value &msg);
 PositionQuery ConvertPositionQueryJson2Common(rapidjson::Value &msg);
 ProductQuery ConvertProductQueryJson2Common(rapidjson::Value &msg);
 TradeAccountQuery ConvertTradeAccountJson2Common(rapidjson::Value &msg);
+TradingDayQuery ConvertTradingDayJson2Common(rapidjson::Value &msg);
 
 
 bool SplitOrderDir(const char *order_dir, int len, const char **action, const char **dir);

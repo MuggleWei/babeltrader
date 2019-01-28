@@ -25,6 +25,7 @@ public:
 	virtual void QueryPositionDetail(uWS::WebSocket<uWS::SERVER> *ws, PositionQuery &query_position) { throw std::runtime_error("'QueryPositionDetail' not implement"); }
 	virtual void QueryTradeAccount(uWS::WebSocket<uWS::SERVER> *ws, TradeAccountQuery &query_tradeaccount) { throw std::runtime_error("'QueryTradeAccount' not implement"); }
 	virtual void QueryProduct(uWS::WebSocket<uWS::SERVER> *ws, ProductQuery &query_product) { throw std::runtime_error("'QueryProduct' not implement"); }
+	virtual void QueryTradingDay(uWS::WebSocket<uWS::SERVER> *ws, TradingDayQuery &tradingday_qry) { throw std::runtime_error("'QueryTradingDay' not implement"); }
 
 public:
 	// request
@@ -36,6 +37,7 @@ public:
 	void OnReqQueryPositionDetail(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Document &doc);
 	void OnReqQueryTradeAccount(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Document &doc);
 	void OnReqQueryProduct(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Document &doc);
+	void OnReqQueryTradingDay(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Document &doc);
 
 	// response
 	void BroadcastConfirmOrder(Order &order, int error_id, const char *error_msg);
@@ -51,6 +53,8 @@ public:
 
 	void RspPositionQryType2(uWS::WebSocket<uWS::SERVER>* ws, PositionQuery &position_qry, std::vector<PositionSummaryType2> &positions, int error_id);
 	void RspTradeAccountQryType2(uWS::WebSocket<uWS::SERVER>* ws, TradeAccountQuery &tradeaccount_qry, std::vector<TradeAccountType2> &trade_accounts, int error_id);
+
+	void RspTradingDayQry(uWS::WebSocket<uWS::SERVER>* ws, const char *qry_id, const char *market, const char *trading_day);
 
 public:
 	uWS::Hub uws_hub_;

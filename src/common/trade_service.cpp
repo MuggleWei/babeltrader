@@ -80,6 +80,15 @@ void TradeService::OnReqQueryProduct(uWS::WebSocket<uWS::SERVER> *ws, rapidjson:
 	ProductQuery product_qry = ConvertProductQueryJson2Common(doc["data"]);
 	this->QueryProduct(ws, product_qry);
 }
+void TradeService::OnReqQueryTradingDay(uWS::WebSocket<uWS::SERVER> *ws, rapidjson::Document &doc)
+{
+	if (!(doc.HasMember("data") && doc["data"].IsObject())) {
+		throw std::runtime_error("field \"data\" need object");
+	}
+
+	TradingDayQuery tradingday_qry = ConvertTradingDayJson2Common(doc["data"]);
+	this->QueryTradingDay(ws, tradingday_qry);
+}
 
 
 void TradeService::BroadcastConfirmOrder(Order &order, int error_id, const char *error_msg)
@@ -477,6 +486,36 @@ void TradeService::RspTradeAccountQryType2(uWS::WebSocket<uWS::SERVER>* ws, Trad
 	}
 
 	writer.EndArray();  // positions
+
+	writer.EndObject();  // data end
+
+	writer.EndObject();  // object end
+
+	LOG(INFO) << s.GetString();
+
+	ws_service_->SendMsgToClient(ws, s.GetString());
+}
+
+void TradeService::RspTradingDayQry(uWS::WebSocket<uWS::SERVER>* ws, const char *qry_id, const char *market, const char *trading_day)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("rsp_qrytradingday");
+	writer.Key("error_id");
+	writer.Int(0);
+
+	writer.Key("data");
+	writer.StartObject();
+
+	writer.Key("qry_id");
+	writer.String(qry_id);
+	writer.Key("market");
+	writer.String(market);
+	writer.Key("trading_day");
+	writer.String(trading_day);
 
 	writer.EndObject();  // data end
 

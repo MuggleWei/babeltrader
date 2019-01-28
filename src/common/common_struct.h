@@ -284,6 +284,12 @@ struct ProductQuery
 	std::string contract;
 };
 
+struct TradingDayQuery
+{
+	std::string qry_id;
+	std::string market;
+};
+
 struct PositionSummaryType1
 {
 	std::string market;
@@ -508,7 +514,6 @@ struct ProductType1
 		, short_margin_ratio(0)
 	{}
 };
-
 
 #define TradeBlockSize 1024
 

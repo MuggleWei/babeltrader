@@ -273,6 +273,19 @@ void CTPTradeHandler::QueryProduct(uWS::WebSocket<uWS::SERVER> *ws, ProductQuery
 		}
 	}
 }
+void CTPTradeHandler::QueryTradingDay(uWS::WebSocket<uWS::SERVER> *ws, TradingDayQuery &tradingday_qry)
+{
+	char trading_day[16] = { 0 };
+	{
+		std::unique_lock<std::mutex> lock(conn_info_mtx_);
+		if (ctp_tradeing_day_.size() > 0)
+		{
+			strncpy(trading_day, ctp_tradeing_day_.c_str(), sizeof(trading_day)-1);
+		}
+	}
+
+	RspTradingDayQry(ws, tradingday_qry.qry_id.c_str(), g_markets[Market_CTP], trading_day);
+}
 
 void CTPTradeHandler::OnFrontConnected()
 {
@@ -327,10 +340,6 @@ void CTPTradeHandler::OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin,
 
 	// confirm settlement
 	DoSettlementConfirm();
-
-	ctp_tradeing_day_ = pRspUserLogin->TradingDay;
-	ctp_login_time_ = pRspUserLogin->LoginTime;
-	api_ready_ = true;
 }
 void CTPTradeHandler::OnRspUserLogout(CThostFtdcUserLogoutField *pUserLogout, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
@@ -860,13 +869,19 @@ void CTPTradeHandler::OnOrderDeal(TradeBlock &msg)
 
 void CTPTradeHandler::FillConnectionInfo(const char *tradeing_day, const char *login_time, int front_id, int session_id)
 {
+	std::unique_lock<std::mutex> lock(conn_info_mtx_);
+
 	ctp_tradeing_day_ = tradeing_day;
 	ctp_login_time_ = login_time;
 	ctp_front_id_ = front_id;
 	ctp_session_id_ = session_id;
+
+	api_ready_ = true;
 }
 void CTPTradeHandler::ClearConnectionInfo()
 {
+	std::unique_lock<std::mutex> lock(conn_info_mtx_);
+
 	api_ready_ = false;
 
 	ctp_tradeing_day_ = "";
