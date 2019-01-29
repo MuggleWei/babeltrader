@@ -198,6 +198,7 @@ type MessageQuery struct {
 	Amount              float64     `json:"amount,omitempty"`
 	TotalPrice          float64     `json:"total_price,omitempty"`
 	Timestamp           int64       `json:"ts,omitempty"`
+	TradingDay          string      `json:"trading_day,omitempty"`
 	Data                interface{} `json:"data,omitempty"`
 }
 
