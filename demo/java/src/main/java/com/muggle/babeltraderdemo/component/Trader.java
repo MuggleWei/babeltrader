@@ -288,4 +288,22 @@ public class Trader {
         client.sendMessage(s);
         logger.info("查询产品信息: {}", s);
     }
+
+    public void QueryTradingDay(
+            String qry_id,
+            String market
+    ) throws IOException {
+        QueryMsg qry = new QueryMsg();
+        qry.setQry_id(qry_id);
+        qry.setMarket(market);
+
+        CommonMsg commonMsg = new CommonMsg();
+        commonMsg.setMsg("query_tradingday");
+        commonMsg.setData(qry);
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        String s = objectMapper.writeValueAsString(commonMsg);
+        client.sendMessage(s);
+        logger.info("查询交易日信息: {}", s);
+    }
 }
