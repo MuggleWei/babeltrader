@@ -99,6 +99,7 @@ func (this *DemoTradeService) RegisterCallbacks() {
 	this.Callbacks["rsp_qrypositiondetail"] = this.OnRspQryPositionDetail
 	this.Callbacks["rsp_qrytradeaccount"] = this.OnRspQryTradeAccount
 	this.Callbacks["rsp_qryproduct"] = this.OnRspQryProduct
+	this.Callbacks["rsp_qrytradingday"] = this.OnRspQryTradingDay
 }
 
 func (this *DemoTradeService) OnError(data interface{}) {
@@ -145,6 +146,10 @@ func (this *DemoTradeService) OnRspQryTradeAccount(data interface{}) {
 func (this *DemoTradeService) OnRspQryProduct(data interface{}) {
 	s, _ := json.Marshal(data)
 	log.Printf("rsp_qryproduct: %v\n", string(s))
+}
+func (this *DemoTradeService) OnRspQryTradingDay(data interface{}) {
+	s, _ := json.Marshal(data)
+	log.Printf("rsp_qrytradingday: %v\n", string(s))
 }
 
 func (this *DemoTradeService) ReqInsertOrder(order *common.MessageOrder) {
@@ -225,6 +230,13 @@ func (this *DemoTradeService) ReqQueryTradeAccount(qry *common.MessageQuery) {
 func (this *DemoTradeService) ReqQueryProduct(qry *common.MessageQuery) {
 	req := common.MessageReqCommon{
 		Message: "query_product",
+		Data:    *qry,
+	}
+	this.DoQuery(&req)
+}
+func (this *DemoTradeService) ReqQueryTradingDay(qry *common.MessageQuery) {
+	req := common.MessageReqCommon{
+		Message: "query_tradingday",
 		Data:    *qry,
 	}
 	this.DoQuery(&req)
