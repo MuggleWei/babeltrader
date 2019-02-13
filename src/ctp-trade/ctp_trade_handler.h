@@ -186,6 +186,7 @@ private:
 private:
 	CThostFtdcTraderApi *api_;
 	bool api_ready_;
+	int req_login_cnt_;
 
 	CTPTradeConf conf_;
 

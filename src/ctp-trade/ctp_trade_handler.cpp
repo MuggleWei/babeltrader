@@ -23,6 +23,7 @@ struct TradeBlockOrderDeal
 CTPTradeHandler::CTPTradeHandler(CTPTradeConf &conf)
 	: api_(nullptr)
 	, api_ready_(false)
+	, req_login_cnt_(0)
 	, conf_(conf)
 	, ws_service_(nullptr, this)
 	, http_service_(nullptr, this)
@@ -335,11 +336,40 @@ void CTPTradeHandler::OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin,
 	// output
 	OutputRspUserLogin(pRspUserLogin, pRspInfo, nRequestID, bIsLast);
 
-	// record connection information
-	FillConnectionInfo(pRspUserLogin->TradingDay, pRspUserLogin->LoginTime, pRspUserLogin->FrontID, pRspUserLogin->SessionID);
+	if (pRspInfo != nullptr && pRspInfo->ErrorID != 0)
+	{
+		auto th = std::thread([&] {
+			if (req_login_cnt_ < 3)
+			{
+				LOG(WARNING) << "failed login trade service, sleep!";
 
-	// confirm settlement
-	DoSettlementConfirm();
+				int ms = 1000 * 60;
+#if WIN32
+				Sleep(ms);
+#else
+				usleep((double)(ms) * 1000.0);
+#endif
+
+				LOG(INFO) << "try to login trade service again";
+				req_login_cnt_++;
+				DoLogin();
+			}
+			else
+			{
+				LOG(ERROR) << "failed login trade service! exit!!!";
+				exit(1);
+			}
+		});
+		th.detach();
+	}
+	else
+	{
+		// record connection information
+		FillConnectionInfo(pRspUserLogin->TradingDay, pRspUserLogin->LoginTime, pRspUserLogin->FrontID, pRspUserLogin->SessionID);
+
+		// confirm settlement
+		DoSettlementConfirm();
+	}
 }
 void CTPTradeHandler::OnRspUserLogout(CThostFtdcUserLogoutField *pUserLogout, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
@@ -876,6 +906,7 @@ void CTPTradeHandler::FillConnectionInfo(const char *tradeing_day, const char *l
 	ctp_front_id_ = front_id;
 	ctp_session_id_ = session_id;
 
+	req_login_cnt_ = 0;
 	api_ready_ = true;
 }
 void CTPTradeHandler::ClearConnectionInfo()
