@@ -135,7 +135,7 @@ ts(int64): 时间戳
     "amount": 5,
     "dealed_amount": 5,
     "avg_price": 0.0,
-    "face_val": 100.0,
+    "face_value": 100.0,
     "ts": 0,
     "order": { 订单结构 }
 }
@@ -148,7 +148,7 @@ submit_status(int): 订单提交状态 - 0(未知), 1(已提交), 2(已接受), 
 amount(int/double): 订单总数量
 dealed_amount(int/double): 订单已成交量
 avg_price(double): 订单的成交均价 (此字段只在虚拟货币交易所有效, 其他交易所可忽略)
-face_val(double): 合约面值 (此字段只在虚拟货币交易所有效, 其他交易所可忽略)
+face_value(double): 合约面值 (此字段只在虚拟货币交易所有效, 其他交易所可忽略)
 ts(int64): 时间戳 (此字段只在虚拟货币交易所有效, 其他交易所可忽略)
 ```
 
