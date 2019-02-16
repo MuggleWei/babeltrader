@@ -208,6 +208,7 @@ type MessageOrderStatus struct {
 	Amount       float64      `json:"amount"`
 	DealedAmount float64      `json:"dealed_amount"`
 	AvgPrice     float64      `json:"avg_price"`
+	FaceVal      float64      `json:"face_value"`
 	Timestamp    int64        `json:"ts,omitempty"`
 	Order        MessageOrder `json:"order,omitempty"`
 }

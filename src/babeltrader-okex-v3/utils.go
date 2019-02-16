@@ -714,6 +714,12 @@ func ConvertOrderTradeOkex2Common(productType string, okexTrade *OrderTrade) (*c
 			avgPrice = 0.0
 		}
 
+		faceVal, err := strconv.ParseFloat(okexTrade.ContractVal, 64)
+		if err != nil {
+			log.Printf("[Error] %v\n", err.Error())
+			faceVal = 0.0
+		}
+
 		rsp := common.MessageRspCommon{
 			Message: "orderstatus",
 			Data: common.MessageOrderStatus{
@@ -722,6 +728,7 @@ func ConvertOrderTradeOkex2Common(productType string, okexTrade *OrderTrade) (*c
 				Amount:       amount,
 				DealedAmount: dealedAmount,
 				AvgPrice:     avgPrice,
+				FaceVal:      faceVal,
 				Order: common.MessageOrder{
 					OutsideId:   okexTrade.OrderId,
 					Market:      common.Market_OKEX,
