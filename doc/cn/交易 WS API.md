@@ -86,7 +86,6 @@ data: 根据msg, 对应不同的类型
     "type": "future",
     "symbol": "rb",
     "contract": "1901",
-    "contract_id": "1901",
     "order_type": "limit",
     "order_flag1": "speculation",
     "dir": "open_long",
@@ -107,8 +106,7 @@ market(string): 市场API - 例如: ctp, xtp, ib, bitmex, okex
 exchange(string): 交易所 - 例如：SHFE, SSE, NYMEX, bitmex, okex (使用公认的交易所缩写)
 type(string): 主题类型 - spot(现货), future(期货), option(期权)
 symbol(string): 符号 - 例如: rb, CL, btc, btc_usdt
-contract(string): 合约类型 - 例如: 1901, this_week
-contract_id(string): 合约id - 例如: 1901, 20181901
+contract(string): 合约类型 - 例如: 1901
 order_type(string): 订单类型 - limit(限价单), market(市价单)
 order_flag1(string): 订单标识 - speculation(投机), hedge(套保), arbitrage(套利), marketmaker(做市商)
 dir(string): 订单方向 - buy(买), sell(卖), open_long(开多), open_short(开空), close_long(平多), close_short(平空), closetoday_long(平今多), closetoday_short(平今空), closehistory_long(平昨多), closehistory_short(平昨空), forceclose_long(强平多), forceclose_short(强平空)
@@ -137,6 +135,7 @@ ts(int64): 时间戳
     "amount": 5,
     "dealed_amount": 5,
     "avg_price": 0.0,
+    "face_val": 100.0,
     "ts": 0,
     "order": { 订单结构 }
 }
@@ -149,6 +148,7 @@ submit_status(int): 订单提交状态 - 0(未知), 1(已提交), 2(已接受), 
 amount(int/double): 订单总数量
 dealed_amount(int/double): 订单已成交量
 avg_price(double): 订单的成交均价 (此字段只在虚拟货币交易所有效, 其他交易所可忽略)
+face_val(double): 合约面值 (此字段只在虚拟货币交易所有效, 其他交易所可忽略)
 ts(int64): 时间戳 (此字段只在虚拟货币交易所有效, 其他交易所可忽略)
 ```
 
@@ -189,7 +189,6 @@ ts(int64): 成交时间戳
     "type":"",
     "symbol":"rb",
     "contract":"1901",
-    "contract_id":"1901",
     "dir":"long",
     "order_flag1":"speculation",
     "date_type":"history",
@@ -220,8 +219,7 @@ outside_user_id(string): 上手交易账户id
 exchange(string): 交易所 - 例如：SHFE, SSE, NYMEX, bitmex, okex (使用公认的交易所缩写)
 type(string): 主题类型 - spot(现货), future(期货), option(期权)
 symbol(string): 符号 - 例如: rb, CL, btc, btc_usdt
-contract(string): 合约类型 - 例如: 1901, this_week
-contract_id(string): 合约id - 例如: 1901, 20181901
+contract(string): 合约类型 - 例如: 1901
 dir(string): 持仓方向 - long(多头), short(空头)
 date_type(string): 持仓的日期类型 - today(今仓), history(昨仓)
 amount(double/int): 当前仓位
@@ -335,7 +333,6 @@ short_settlement_price(string): 空头仓位结算基准价
     "type":"",
     "symbol":"rb",
     "contract":"1901",
-    "contract_id":"1901",
     "dir":"long",
     "order_flag1":"speculation",
     "open_date":"20181102",
@@ -364,8 +361,7 @@ outside_user_id(string): 上手交易账户id
 exchange(string): 交易所 - 例如：SHFE, SSE, NYMEX, bitmex, okex (使用公认的交易所缩写)
 type(string): 主题类型 - spot(现货), future(期货), option(期权)
 symbol(string): 符号 - 例如: rb, CL, btc, btc_usdt
-contract(string): 合约类型 - 例如: 1901, this_week
-contract_id(string): 合约id - 例如: 1901, 20181901
+contract(string): 合约类型 - 例如: 1901
 dir(string): 持仓方向 - long(多头), short(空头)
 order_flag1(string): 订单标识 - speculation(投机), hedge(套保), arbitrage(套利), marketmaker(做市商)
 open_date(string): 开仓日期
@@ -547,7 +543,6 @@ margin_ratio: 期货账户全仓模式下的保证金率
     "type":"future",
     "symbol":"rb",
     "contract":"1901",
-    "contract_id":"1901",
     "vol_multiple":10.0,
     "price_tick":1.0,
     "long_margin_ratio":0.1,
@@ -562,8 +557,7 @@ outside_user_id(string): 上手交易账户id
 exchange(string): 交易所 - 例如：SHFE, SSE, NYMEX, bitmex, okex (使用公认的交易所缩写)
 type(string): 主题类型 - spot(现货), future(期货), option(期权)
 symbol(string): 符号 - 例如: rb, CL, btc, btc_usdt
-contract(string): 合约类型 - 例如: 1901, this_week
-contract_id(string): 合约id - 例如: 1901, 20181901
+contract(string): 合约类型 - 例如: 1901
 vol_multiple(double): 合约乘数
 price_tick(double): 最小变动价
 long_margin_ratio(double): 多头保证金比例 (当contract为空时, 此字段无效)
@@ -598,7 +592,6 @@ short_margin_ratio(double): 空头保证金比例 (当contract为空时, 此字�
         "type": "future",
         "symbol": "rb",
         "contract": "1901",
-        "contract_id": "1901"
     }
 }
 ```
@@ -611,8 +604,7 @@ market(string): 市场API - 例如: ctp, xtp, ib, bitmex, okex
 exchange(string): 交易所 - 例如：SHFE, SSE, NYMEX, bitmex, okex (使用公认的交易所缩写)
 type(string): 主题类型 - spot(现货), future(期货), option(期权)
 symbol(string): 符号 - 例如: rb, CL, btc, btc_usdt
-contract(string): 合约类型 - 例如: 1901, this_week
-contract_id(string): 合约id - 例如: 1901, 20181901
+contract(string): 合约类型 - 例如: 1901
 ```
 
 
@@ -631,7 +623,6 @@ contract_id(string): 合约id - 例如: 1901, 20181901
         "type": "future",
         "symbol": "rb",
         "contract": "1901",
-        "contract_id": "1901"
     }
 }
 ```
@@ -645,8 +636,7 @@ market(string): 市场API - 例如: ctp, xtp, ib, bitmex, okex
 exchange(string): 交易所 - 例如：SHFE, SSE, NYMEX, bitmex, okex (使用公认的交易所缩写)
 type(string): 主题类型 - spot(现货), future(期货), option(期权)
 symbol(string): 符号 - 例如: rb, CL, btc, btc_usdt
-contract(string): 合约类型 - 例如: 1901, this_week
-contract_id(string): 合约id - 例如: 1901, 20181901
+contract(string): 合约类型 - 例如: 1901
 ```
 
 说明:   
@@ -667,7 +657,6 @@ contract_id(string): 合约id - 例如: 1901, 20181901
         "type": "future",
         "symbol": "rb",
         "contract": "1901",
-        "contract_id": "1901"
     }
 }
 ```
@@ -681,8 +670,7 @@ market(string): 市场API - 例如: ctp, xtp, ib, bitmex, okex
 exchange(string): 交易所 - 例如：SHFE, SSE, NYMEX, bitmex, okex (使用公认的交易所缩写)
 type(string): 主题类型 - spot(现货), future(期货), option(期权)
 symbol(string): 符号 - 例如: rb, CL, btc, btc_usdt
-contract(string): 合约类型 - 例如: 1901, this_week
-contract_id(string): 合约id - 例如: 1901, 20181901
+contract(string): 合约类型 - 例如: 1901
 ```
 
 #### 查询持仓
@@ -699,7 +687,6 @@ contract_id(string): 合约id - 例如: 1901, 20181901
         "type": "future",
         "symbol": "rb",
         "contract": "1901",
-        "contract_id": "1901"
     }
 }
 ```
@@ -711,8 +698,7 @@ market(string): 市场API - 例如: ctp, xtp, ib, bitmex, okex
 exchange(string): 交易所 - 例如：SHFE, SSE, NYMEX, bitmex, okex (使用公认的交易所缩写)
 type(string): 主题类型 - spot(现货), future(期货), option(期权)
 symbol(string): 符号 - 例如: rb, CL, btc, btc_usdt
-contract(string): 合约类型 - 例如: 1901, this_week
-contract_id(string): 合约id - 例如: 1901, 20181901
+contract(string): 合约类型 - 例如: 1901
 ```
 
 #### 查询持仓明细
@@ -729,7 +715,6 @@ contract_id(string): 合约id - 例如: 1901, 20181901
         "type": "future",
         "symbol": "rb",
         "contract": "1901",
-        "contract_id": "1901"
     }
 }
 ```
@@ -741,8 +726,7 @@ market(string): 市场API - 例如: ctp, xtp, ib, bitmex, okex
 exchange(string): 交易所 - 例如：SHFE, SSE, NYMEX, bitmex, okex (使用公认的交易所缩写)
 type(string): 主题类型 - spot(现货), future(期货), option(期权)
 symbol(string): 符号 - 例如: rb, CL, btc, btc_usdt
-contract(string): 合约类型 - 例如: 1901, this_week
-contract_id(string): 合约id - 例如: 1901, 20181901
+contract(string): 合约类型 - 例如: 1901
 ```
 
 #### 查询交易账户
@@ -794,7 +778,7 @@ market(string): 市场API
 exchange(string): 交易所 - 例如：SHFE, SSE, NYMEX, bitmex, okex (使用公认的交易所缩写)
 type(string): 主题类型 - spot(现货), future(期货), option(期权)
 symbol(string): 符号 - 例如: rb, CL, btc, btc_usdt
-contract(string): 合约类型 - 例如: 1901, this_week
+contract(string): 合约类型 - 例如: 1901
 ```
 
 说明:  
@@ -890,7 +874,6 @@ market(string): 市场API
         "type":"future",
         "symbol":"rb",
         "contract":"1901",
-        "contract_id":"1901"
         "data":[
             { 订单状态结构 },
             { 订单状态结构 },
@@ -916,8 +899,7 @@ market(string): 市场API
         "exchange":"SHFE",
         "type":"future",
         "symbol":"rb",
-        "contract":"1901",
-        "contract_id":"1901",
+        "contract":"1901",        
         "data":[
             { 订单成交结构 },
             { 订单成交结构 },
@@ -943,7 +925,6 @@ market(string): 市场API
         "type":"future",
         "symbol":"rb",
         "contract":"1901",
-        "contract_id":"1901",
         "position_summary_type":"type1",
         "data":
         [
@@ -971,7 +952,6 @@ market(string): 市场API
         "type":"",
         "symbol":"",
         "contract":"",
-        "contract_id":"",
         "position_detail_type":"type1",
         "data":
         [
