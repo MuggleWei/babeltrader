@@ -215,7 +215,7 @@ void TradeService::RspOrderQry(uWS::WebSocket<uWS::SERVER>* ws, OrderQuery &orde
 
 	LOG(INFO) << s.GetString();
 
-	ws_service_->SendMsgToClient(ws, s.GetString());
+	p_ws_service_->SendMsgToClient(ws, s.GetString());
 }
 void TradeService::RspTradeQry(uWS::WebSocket<uWS::SERVER>* ws, TradeQuery &trade_qry, std::vector<Order> &orders, std::vector<OrderDealNotify> &order_deal, int error_id)
 {
@@ -257,7 +257,7 @@ void TradeService::RspTradeQry(uWS::WebSocket<uWS::SERVER>* ws, TradeQuery &trad
 
 	LOG(INFO) << s.GetString();
 
-	ws_service_->SendMsgToClient(ws, s.GetString());
+	p_ws_service_->SendMsgToClient(ws, s.GetString());
 }
 
 void TradeService::RspPositionQryType1(uWS::WebSocket<uWS::SERVER>* ws, PositionQuery &position_qry, std::vector<PositionSummaryType1> &positions, int error_id)
@@ -297,7 +297,7 @@ void TradeService::RspPositionQryType1(uWS::WebSocket<uWS::SERVER>* ws, Position
 
 	LOG(INFO) << s.GetString();
 
-	ws_service_->SendMsgToClient(ws, s.GetString());
+	p_ws_service_->SendMsgToClient(ws, s.GetString());
 }
 void TradeService::RspPositionDetailQryType1(uWS::WebSocket<uWS::SERVER>* ws, PositionQuery &position_qry, std::vector<PositionDetailType1> &positions, int error_id)
 {
@@ -336,7 +336,7 @@ void TradeService::RspPositionDetailQryType1(uWS::WebSocket<uWS::SERVER>* ws, Po
 
 	LOG(INFO) << s.GetString();
 
-	ws_service_->SendMsgToClient(ws, s.GetString());
+	p_ws_service_->SendMsgToClient(ws, s.GetString());
 }
 void TradeService::RspTradeAccountQryType1(uWS::WebSocket<uWS::SERVER>* ws, TradeAccountQuery &tradeaccount_qry, std::vector<TradeAccountType1> &trade_accounts, int error_id)
 {
@@ -375,7 +375,7 @@ void TradeService::RspTradeAccountQryType1(uWS::WebSocket<uWS::SERVER>* ws, Trad
 
 	LOG(INFO) << s.GetString();
 
-	ws_service_->SendMsgToClient(ws, s.GetString());
+	p_ws_service_->SendMsgToClient(ws, s.GetString());
 }
 void TradeService::RspProductQryType1(uWS::WebSocket<uWS::SERVER>* ws, ProductQuery &product_qry, std::vector<ProductType1> &product_types, int error_id)
 {
@@ -414,7 +414,7 @@ void TradeService::RspProductQryType1(uWS::WebSocket<uWS::SERVER>* ws, ProductQu
 
 	LOG(INFO) << s.GetString();
 
-	ws_service_->SendMsgToClient(ws, s.GetString());
+	p_ws_service_->SendMsgToClient(ws, s.GetString());
 }
 
 void TradeService::RspPositionQryType2(uWS::WebSocket<uWS::SERVER>* ws, PositionQuery &position_qry, std::vector<PositionSummaryType2> &positions, int error_id)
@@ -454,7 +454,7 @@ void TradeService::RspPositionQryType2(uWS::WebSocket<uWS::SERVER>* ws, Position
 
 	LOG(INFO) << s.GetString();
 
-	ws_service_->SendMsgToClient(ws, s.GetString());
+	p_ws_service_->SendMsgToClient(ws, s.GetString());
 }
 void TradeService::RspTradeAccountQryType2(uWS::WebSocket<uWS::SERVER>* ws, TradeAccountQuery &tradeaccount_qry, std::vector<TradeAccountType2> &trade_accounts, int error_id)
 {
@@ -493,7 +493,7 @@ void TradeService::RspTradeAccountQryType2(uWS::WebSocket<uWS::SERVER>* ws, Trad
 
 	LOG(INFO) << s.GetString();
 
-	ws_service_->SendMsgToClient(ws, s.GetString());
+	p_ws_service_->SendMsgToClient(ws, s.GetString());
 }
 
 void TradeService::RspTradingDayQry(uWS::WebSocket<uWS::SERVER>* ws, const char *qry_id, const char *market, const char *trading_day)
@@ -523,7 +523,7 @@ void TradeService::RspTradingDayQry(uWS::WebSocket<uWS::SERVER>* ws, const char 
 
 	LOG(INFO) << s.GetString();
 
-	ws_service_->SendMsgToClient(ws, s.GetString());
+	p_ws_service_->SendMsgToClient(ws, s.GetString());
 }
 
 

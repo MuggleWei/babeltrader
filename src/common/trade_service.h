@@ -58,7 +58,7 @@ public:
 
 public:
 	uWS::Hub uws_hub_;
-	WsService *ws_service_;
+	WsService *p_ws_service_;
 };
 
 

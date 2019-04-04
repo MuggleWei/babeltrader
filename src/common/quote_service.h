@@ -37,7 +37,7 @@ private:
 
 public:
 	uWS::Hub uws_hub_;
-	WsService *ws_service_;
+	WsService *p_ws_service_;
 	muggle::Tunnel<QuoteBlock> tunnel_;
 };
 

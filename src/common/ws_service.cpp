@@ -20,11 +20,11 @@ WsService::WsService(QuoteService *quote_service, TradeService *trade_service)
 {
 	if (quote_)
 	{
-		quote_->ws_service_ = this;
+		quote_->p_ws_service_ = this;
 	}
 	if (trade_)
 	{
-		trade_->ws_service_ = this;
+		trade_->p_ws_service_ = this;
 	}
 
 	RegisterCallbacks();
