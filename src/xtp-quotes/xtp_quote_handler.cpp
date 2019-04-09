@@ -244,8 +244,7 @@ void XTPQuoteHandler::OnDepthMarketData(XTPMD *market_data, int64_t bid1_qty[], 
 	static QuoteTransferMonitor monitor;
 	monitor.start();
 
-	auto t = monitor.ts_.time_since_epoch();
-	msg.quote.ts = std::chrono::duration_cast<std::chrono::milliseconds>(t).count();
+	msg.quote.ts[0] = monitor.ts_;
 #endif
 
 	ConvertMarketData(market_data, msg.quote, msg.market_data);
@@ -274,8 +273,7 @@ void XTPQuoteHandler::OnOrderBook(XTPOB *order_book)
 	static QuoteTransferMonitor monitor;
 	monitor.start();
 
-	auto t = monitor.ts_.time_since_epoch();
-	msg.quote.ts = std::chrono::duration_cast<std::chrono::milliseconds>(t).count();
+	msg.quote.ts[0] = monitor.ts_;
 #endif
 
 	ConvertOrderBook(order_book, msg.quote, msg.order_book);
@@ -294,8 +292,7 @@ void XTPQuoteHandler::OnTickByTick(XTPTBT *tbt_data)
 	static QuoteTransferMonitor monitor;
 	monitor.start();
 
-	auto t = monitor.ts_.time_since_epoch();
-	msg.quote.ts = std::chrono::duration_cast<std::chrono::milliseconds>(t).count();
+	msg.quote.ts[0] = monitor.ts_;
 #endif
 	
 	ConvertTickByTick(tbt_data, msg.quote, msg.level2);

@@ -86,11 +86,13 @@ void QuoteService::AsyncLoop()
 
 	// avg cache pkgs and avg elapsed time monitor
 	static int64_t total_pkg = 0;
-	static int64_t step = 10000;
+	static int64_t step = 1024;
 
 	static int64_t rec_cnt = 0;
 
 	static int64_t total_elapsed_time = 0;
+
+	struct timespec ts;
 #endif
 
 	std::queue<QuoteBlock> queue;
@@ -121,10 +123,12 @@ void QuoteService::AsyncLoop()
 			QuoteBlock &msg = queue.front();
 
 #if ENABLE_PERFORMANCE_TEST
-			auto t = std::chrono::system_clock::now().time_since_epoch();
-			auto cur_ms = std::chrono::duration_cast<std::chrono::milliseconds>(t).count();
 			QuoteBlockCommon *p = (QuoteBlockCommon*)&msg;
-			total_elapsed_time += (cur_ms - p->quote.ts);
+			timespec_get(&p->quote.ts[1], TIME_UTC);
+
+			struct timespec *ts0 = &p->quote.ts[0];
+			struct timespec *ts1 = &p->quote.ts[1];
+			total_elapsed_time += (ts1->tv_sec - ts0->tv_sec) * 1000000000 + ts1->tv_nsec - ts0->tv_nsec;
 #endif
 
 			// Dispatch(msg);
@@ -171,8 +175,8 @@ void QuoteService::AsyncLoop()
 				<< "tunnel read: " << rec_cnt << " times"
 				<< ", total pkg: " << total_pkg
 				<< ", avg cache pkg: " << avg_tunnel_cache
-				<< ", total elapsed mill seconds: " << total_elapsed_time
-				<< ", avg elapsed mill seconds: " << avg_elapsed_time;
+				<< ", total elapsed: " << total_elapsed_time
+				<< ", avg elapsed: " << avg_elapsed_time;
 			total_pkg = 0;
 			rec_cnt = 0;
 			total_elapsed_time = 0;

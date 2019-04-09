@@ -2,6 +2,9 @@
 #define BABELTRADER_KLINE_H_
 
 #include <stdint.h>
+#if ENABLE_PERFORMANCE_TEST
+#include <time.h>
+#endif
 #include <string>
 #include <vector>
 
@@ -34,7 +37,7 @@ struct Quote
 	char contract_id[QUOTE_CONTRACT_LEN];
 	uint8_t info2;		// QuoteInfo2Enum
 #if ENABLE_PERFORMANCE_TEST
-	int64_t ts;
+	struct timespec ts[4];
 #endif
 };
 

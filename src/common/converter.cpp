@@ -32,8 +32,14 @@ void SerializeQuoteBegin(rapidjson::Writer<rapidjson::StringBuffer> &writer, con
 	writer.String(g_quote_info2[quote.info2]);
 
 #if ENABLE_PERFORMANCE_TEST
-	writer.Key("ts");
-	writer.Int64(quote.ts);
+	writer.Key("t0_s");
+	writer.Int64(quote.ts[0].tv_sec);
+	writer.Key("t0_ns");
+	writer.Int64(quote.ts[0].tv_nsec);
+	writer.Key("t1_s");
+	writer.Int64(quote.ts[1].tv_sec);
+	writer.Key("t1_ns");
+	writer.Int64(quote.ts[1].tv_nsec);
 #endif
 	
 	// inner data

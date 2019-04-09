@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <time.h>
 #include "common/common_struct.h"
 #include "uWS/uWS.h"
 #include "rapidjson/document.h"
@@ -13,21 +14,21 @@
 
 const char *addr = "ws://127.0.0.1:6002/ws";
 
-void TimeDiff(int64_t ts, int64_t cur_ms)
+void TimeDiff(struct timespec t0, struct timespec t1, struct timespec ts)
 {
 	static int64_t total_elapsed = 0;
 	static int64_t total_pkg = 0;
-	const static int64_t step = 10000;
+	const static int64_t step = 1024;
 
-	total_elapsed += (cur_ms - ts);
+	total_elapsed += (ts.tv_sec - t0.tv_sec) * 1000000000 + ts.tv_nsec - t0.tv_nsec;
 	total_pkg += 1;
 	if (total_pkg >= step)
 	{
 		double avg_elapsed_ms = (double)total_elapsed / total_pkg;
 		LOG(INFO)
 			<< "receive quotes - total pkg: " << total_pkg
-			<< ", total use mill seconds: " << total_elapsed
-			<< ", avg elapsed mill seconds: " << avg_elapsed_ms;
+			<< ", total use: " << total_elapsed
+			<< ", avg elapsed: " << avg_elapsed_ms;
 		total_elapsed = 0;
 		total_pkg = 0;
 	}
@@ -54,8 +55,8 @@ int main(int argc, char *argv[])
 
 	h.onMessage([](uWS::WebSocket<uWS::CLIENT> *ws, char *message, size_t length, uWS::OpCode opCode) {
 #if ENABLE_PERFORMANCE_TEST
-		auto t = std::chrono::system_clock::now().time_since_epoch();
-		auto cur_ms = std::chrono::duration_cast<std::chrono::milliseconds>(t).count();
+		struct timespec ts;
+		timespec_get(&ts, TIME_UTC);
 
 		rapidjson::Document doc;
 		doc.Parse(message, length);
@@ -72,11 +73,13 @@ int main(int argc, char *argv[])
 				return;
 			}
 
-			if (quote["data"].HasMember("ts") && quote["data"]["ts"].IsInt64())
-			{
-				int64_t ts = quote["data"]["ts"].GetInt64();
-				TimeDiff(ts, cur_ms);
-			}
+			struct timespec t0;
+			struct timespec t1;
+			t0.tv_sec = quote["data"]["t0_s"].GetInt64();
+			t0.tv_nsec = quote["data"]["t0_ns"].GetInt64();
+			t1.tv_sec = quote["data"]["t1_s"].GetInt64();
+			t1.tv_nsec = quote["data"]["t1_ns"].GetInt64();
+			TimeDiff(t0, t1, ts);
 		}
 #else
 		LOG(INFO).write(message, length);

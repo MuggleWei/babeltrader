@@ -206,8 +206,7 @@ void CTPQuoteHandler::OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDept
 	static QuoteTransferMonitor monitor;
 	monitor.start();
 
-	auto t = monitor.ts_.time_since_epoch();
-	msg.quote.ts = std::chrono::duration_cast<std::chrono::milliseconds>(t).count();
+	msg.quote.ts[0] = monitor.ts_;
 #endif
 
 	ConvertMarketData(pDepthMarketData, msg.quote, msg.market_data);

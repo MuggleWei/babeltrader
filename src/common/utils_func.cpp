@@ -84,19 +84,20 @@ int64_t XTPGetTimestamp(int64_t xtp_ts)
 
 void QuoteTransferMonitor::start()
 {
-	ts_ = std::chrono::system_clock::now();
+	timespec_get(&ts_, TIME_UTC);
 }
 void QuoteTransferMonitor::end(const char *title)
 {
-	auto end = std::chrono::system_clock::now();
+	struct timespec end;
+	timespec_get(&end, TIME_UTC);
 	total_pkg_ += 1;
-	total_elapsed_time_ += std::chrono::duration_cast<std::chrono::microseconds>(end - ts_).count();
+	total_elapsed_time_ += (end.tv_sec - ts_.tv_sec) * 1000000000 + end.tv_nsec - ts_.tv_nsec;
 	if (total_pkg_ >= step_) {
 		double avg_elapsed_time = (double)total_elapsed_time_ / total_pkg_;
 		LOG(INFO) << title
 			<< " handle pkg count: " << total_pkg_
-			<< ", total use micro seconds: " << total_elapsed_time_
-			<< ", avarage elapsed micro seconds: " << avg_elapsed_time;
+			<< ", total use: " << total_elapsed_time_
+			<< ", avarage elapsed: " << avg_elapsed_time;
 		total_elapsed_time_ = 0;
 		total_pkg_ = 0;
 	}

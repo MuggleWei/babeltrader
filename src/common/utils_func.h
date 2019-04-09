@@ -1,8 +1,8 @@
 #ifndef BABELTRADER_COMMON_FUNC_H_
 #define BABELTRADER_COMMON_FUNC_H_
 
+#include <time.h>
 #include <string>
-#include <chrono>
 
 namespace babeltrader
 {
@@ -16,7 +16,7 @@ int64_t XTPGetTimestamp(int64_t xtp_ts);
 class QuoteTransferMonitor
 {
 public:
-	QuoteTransferMonitor(int64_t step = 10000)
+	QuoteTransferMonitor(int64_t step = 1024)
 		: step_(step)
 	{}
 
@@ -28,7 +28,7 @@ public:
 	int64_t total_elapsed_time_;
 	int64_t step_;
 
-	std::chrono::time_point<std::chrono::system_clock> ts_;
+	struct timespec ts_;
 };
 
 }
