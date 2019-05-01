@@ -122,7 +122,6 @@ func (this *OkexQuoteService) OnKline(msg *okex.RspCommon) {
 func (this *OkexQuoteService) OnTicker(msg *okex.RspCommon) {
 	var tickers []okex.Ticker
 
-	// NOTE: the fucking okex v3 api, spot/swap ticker's price/vol fields use string, futures's price/vol fields use double?!!! :(
 	if strings.HasPrefix(msg.Table, "futures") {
 		var futuresTickers []okex.FuturesTicker
 		err := utils.DecodeInterfaceByJson(msg.Data, &futuresTickers)
@@ -134,13 +133,13 @@ func (this *OkexQuoteService) OnTicker(msg *okex.RspCommon) {
 		for _, futureTicker := range futuresTickers {
 			tickers = append(tickers, okex.Ticker{
 				InstrumentId: futureTicker.InstrumentId,
-				Last:         fmt.Sprintf("%v", futureTicker.Last),
-				BestBid:      fmt.Sprintf("%v", futureTicker.BestBid),
-				BestAsk:      fmt.Sprintf("%v", futureTicker.BestAsk),
-				Open24H:      fmt.Sprintf("%v", futureTicker.Open24H),
-				High24H:      fmt.Sprintf("%v", futureTicker.High24H),
-				Low24H:       fmt.Sprintf("%v", futureTicker.Low24H),
-				Vol24H:       fmt.Sprintf("%v", futureTicker.Vol24H),
+				Last:         futureTicker.Last,
+				BestBid:      futureTicker.BestBid,
+				BestAsk:      futureTicker.BestAsk,
+				Open24H:      futureTicker.Open24H,
+				High24H:      futureTicker.High24H,
+				Low24H:       futureTicker.Low24H,
+				Vol24H:       futureTicker.Vol24H,
 				Timestamp:    futureTicker.Timestamp,
 			})
 		}
