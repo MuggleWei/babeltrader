@@ -353,40 +353,31 @@ func ConvertDepthToQuotes(table string, depths []Depth) ([]common.MessageRspComm
 		asks := [][]float64{}
 		bids := [][]float64{}
 
-		if strings.HasPrefix(table, "futures") {
-			for _, ask := range depth.Asks {
-				asks = append(asks, []float64{ask[0].(float64), ask[1].(float64)})
+		for _, ask := range depth.Asks {
+			price, err := strconv.ParseFloat(ask[0].(string), 64)
+			if err != nil {
+				log.Printf("[Warning] %v\n", err.Error())
+				return nil, err
 			}
-			for _, bid := range depth.Bids {
-				bids = append(bids, []float64{bid[0].(float64), bid[1].(float64)})
+			vol, err := strconv.ParseFloat(ask[1].(string), 64)
+			if err != nil {
+				log.Printf("[Warning] %v\n", err.Error())
+				return nil, err
 			}
-		} else {
-			for _, ask := range depth.Asks {
-				price, err := strconv.ParseFloat(ask[0].(string), 64)
-				if err != nil {
-					log.Printf("[Warning] %v\n", err.Error())
-					return nil, err
-				}
-				vol, err := strconv.ParseFloat(ask[1].(string), 64)
-				if err != nil {
-					log.Printf("[Warning] %v\n", err.Error())
-					return nil, err
-				}
-				asks = append(asks, []float64{price, vol})
+			asks = append(asks, []float64{price, vol})
+		}
+		for _, bid := range depth.Bids {
+			price, err := strconv.ParseFloat(bid[0].(string), 64)
+			if err != nil {
+				log.Printf("[Warning] %v\n", err.Error())
+				return nil, err
 			}
-			for _, bid := range depth.Bids {
-				price, err := strconv.ParseFloat(bid[0].(string), 64)
-				if err != nil {
-					log.Printf("[Warning] %v\n", err.Error())
-					return nil, err
-				}
-				vol, err := strconv.ParseFloat(bid[1].(string), 64)
-				if err != nil {
-					log.Printf("[Warning] %v\n", err.Error())
-					return nil, err
-				}
-				bids = append(bids, []float64{price, vol})
+			vol, err := strconv.ParseFloat(bid[1].(string), 64)
+			if err != nil {
+				log.Printf("[Warning] %v\n", err.Error())
+				return nil, err
 			}
+			bids = append(bids, []float64{price, vol})
 		}
 
 		quote := common.MessageRspCommon{
