@@ -80,7 +80,7 @@ type Query struct {
 type OrderRet struct {
 	OrderId   string `json:"order_id"`
 	ClientOid string `json:"client_oid"`
-	ErrId     int    `json:"error_code"`
+	ErrId     string `json:"error_code"`
 	ErrMsg    string `json:"error_message"`
 	Result    bool   `json:"result"`
 }
@@ -97,7 +97,7 @@ type OrderTrade struct {
 	Type           string `json:"type"`
 	FilledSize     string `json:"filled_size"`
 	FilledNotional string `json:"filled_notional"`
-	Status         string `json:"status"`
+	Status         string `json:"state"`
 	MarginTrading  string `json:"margin_trading"`
 
 	FilledQty   string `json:"filled_qty"`

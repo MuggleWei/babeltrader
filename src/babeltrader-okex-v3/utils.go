@@ -564,16 +564,16 @@ func ConvertOrderTradeOkex2Common(productType string, okexTrade *OrderTrade) (*c
 		// ordertrade field
 		status := common.OrderStatus_Unknown
 		switch okexTrade.Status {
-		case "open":
-			status = common.OrderStatus_Unknown
-		case "part_filled":
-			status = common.OrderStatus_PartDealed
-		case "filled":
-			status = common.OrderStatus_AllDealed
-		case "cancelled":
-			status = common.OrderStatus_Canceled
-		case "failure":
+		case "-2":
 			status = common.OrderStatus_Rejected
+		case "-1":
+			status = common.OrderStatus_Canceled
+		case "0":
+			status = common.OrderStatus_Unknown
+		case "1":
+			status = common.OrderStatus_PartDealed
+		case "2":
+			status = common.OrderStatus_AllDealed
 		default:
 			s := fmt.Sprintf("invalid spot order status: %v\n", okexTrade.Status)
 			log.Printf("[Error] %v", s)
@@ -673,6 +673,8 @@ func ConvertOrderTradeOkex2Common(productType string, okexTrade *OrderTrade) (*c
 		// ordertrade field
 		status := common.OrderStatus_Unknown
 		switch okexTrade.Status {
+		case "-2":
+			status = common.OrderStatus_Rejected
 		case "-1":
 			status = common.OrderStatus_Canceled
 		case "0":
