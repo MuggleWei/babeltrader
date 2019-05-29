@@ -92,14 +92,31 @@ bool LoadConfig(const std::string &file_path, CTPTradeConf &conf)
 			throw(std::runtime_error("can't find 'trade_listen_port' in config file"));
 		}
 
-		if (doc.HasMember("product_info") && doc["product_info"].IsInt())
+		if (doc.HasMember("product_info") && doc["product_info"].IsString())
 		{
 			conf.product_info = doc["product_info"].GetString();
 		}
+		else
+		{
+			throw(std::runtime_error("can't find 'product_info' in config file"));
+		}
 
-		if (doc.HasMember("auth_code") && doc["auth_code"].IsInt())
+		if (doc.HasMember("app_id") && doc["app_id"].IsString())
+		{
+			conf.app_id = doc["app_id"].GetString();
+		}
+		else
+		{
+			throw(std::runtime_error("can't find 'app_id' in config file"));
+		}
+
+		if (doc.HasMember("auth_code") && doc["auth_code"].IsString())
 		{
 			conf.auth_code = doc["auth_code"].GetString();
+		}
+		else
+		{
+			throw(std::runtime_error("can't find 'auth_code' in config file"));
 		}
 	}
 	catch (std::exception e) {

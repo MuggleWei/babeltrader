@@ -12,6 +12,7 @@ struct CTPTradeConf
 	std::string trade_ip;
 	int trade_port;
 	std::string product_info;
+	std::string app_id;
 	std::string auth_code;
 };
 

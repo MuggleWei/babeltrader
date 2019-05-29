@@ -323,10 +323,21 @@ void CTPTradeHandler::OnHeartBeatWarning(int nTimeLapse)
 	LOG(INFO) << s.GetString();
 }
 
+void CTPTradeHandler::OnRspUserPasswordUpdate(CThostFtdcUserPasswordUpdateField *pUserPasswordUpdate, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+{
+	// output
+	OutputPasswordUpdate(pUserPasswordUpdate, pRspInfo, nRequestID, bIsLast);
+}
 void CTPTradeHandler::OnRspAuthenticate(CThostFtdcRspAuthenticateField *pRspAuthenticateField, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
 	// output
 	OutputAuthenticate(pRspAuthenticateField, pRspInfo, nRequestID, bIsLast);
+
+	if (pRspInfo != nullptr && pRspInfo->ErrorID != 0)
+	{
+		LOG(ERROR) << "failed auth! exit!!!";
+		exit(1);
+	}
 
 	// login
 	DoLogin();
@@ -927,7 +938,8 @@ void CTPTradeHandler::DoAuthenticate()
 	CThostFtdcReqAuthenticateField auth = { 0 };
 	strncpy(auth.BrokerID, conf_.broker_id.c_str(), sizeof(auth.BrokerID) - 1);
 	strncpy(auth.UserID, conf_.user_id.c_str(), sizeof(auth.UserID) - 1);
-	strncpy(auth.UserProductInfo, conf_.product_info.c_str(), sizeof(auth.UserProductInfo) - 1);
+	// strncpy(auth.UserProductInfo, conf_.product_info.c_str(), sizeof(auth.UserProductInfo) - 1);
+	strncpy(auth.AppID, conf_.app_id.c_str(), sizeof(auth.AppID) - 1);
 	strncpy(auth.AuthCode, conf_.auth_code.c_str(), sizeof(auth.AuthCode) - 1);
 	api_->ReqAuthenticate(&auth, req_id_++);
 }
@@ -937,8 +949,7 @@ void CTPTradeHandler::DoLogin()
 	strncpy(req_user_login.BrokerID, conf_.broker_id.c_str(), sizeof(req_user_login.BrokerID) - 1);
 	strncpy(req_user_login.UserID, conf_.user_id.c_str(), sizeof(req_user_login.UserID) - 1);
 	strncpy(req_user_login.Password, conf_.password.c_str(), sizeof(req_user_login.Password) - 1);
-	// api_->ReqUserLogin(&req_user_login, req_id_++);
-	api_->ReqUserLogin2(&req_user_login, req_id_++);
+	api_->ReqUserLogin(&req_user_login, req_id_++);
 }
 void CTPTradeHandler::DoSettlementConfirm()
 {
@@ -3040,6 +3051,36 @@ void CTPTradeHandler::OutputRsperror(CThostFtdcRspInfoField *pRspInfo, int nRequ
 	writer.EndObject();
 	LOG(INFO) << s.GetString();
 }
+void CTPTradeHandler::OutputPasswordUpdate(CThostFtdcUserPasswordUpdateField *pUserPasswordUpdate, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+{
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+	writer.StartObject();
+	writer.Key("msg");
+	writer.String("password_update");
+	writer.Key("req_id");
+	writer.Int(nRequestID);
+	writer.Key("error_id");
+	writer.Int(pRspInfo->ErrorID);
+	writer.Key("error_msg");
+	writer.String(pRspInfo->ErrorMsg);
+
+	writer.Key("data");
+	writer.StartObject();
+	writer.Key("BrokerID");
+	writer.String(pUserPasswordUpdate->BrokerID);
+	writer.Key("UserID");
+	writer.String(pUserPasswordUpdate->UserID);
+	writer.Key("OldPassword");
+	writer.String(pUserPasswordUpdate->OldPassword);
+	writer.Key("NewPassword");
+	writer.String(pUserPasswordUpdate->NewPassword);
+	writer.EndObject(); // data
+
+	writer.EndObject();
+	LOG(INFO) << s.GetString();
+}
 void CTPTradeHandler::OutputAuthenticate(CThostFtdcRspAuthenticateField *pRspAuthenticateField, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
 	rapidjson::StringBuffer s;
@@ -3063,6 +3104,8 @@ void CTPTradeHandler::OutputAuthenticate(CThostFtdcRspAuthenticateField *pRspAut
 	writer.String(pRspAuthenticateField->UserID);
 	writer.Key("UserProductInfo");
 	writer.String(pRspAuthenticateField->UserProductInfo);
+	writer.Key("AppID");
+	writer.String(pRspAuthenticateField->AppID);
 	writer.EndObject(); // data
 
 	writer.EndObject(); // object

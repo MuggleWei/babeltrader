@@ -10,5 +10,6 @@
 	"quote_listen_port": 6001,
 	"default_sub_topics": ["rb1901", "al1901", "cu1901"],
 	"product_info": "",
+	"app_id": "",
 	"auth_code": ""
 }
