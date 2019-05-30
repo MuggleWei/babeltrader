@@ -52,6 +52,10 @@ linux:
 1. 运行babeltrader开头的文件, 便得到了对应市场的上手服务
 
 
+#### 特别注意
+在使用CTP行情时, 由于郑商所ActionDay不能代表自然日, 所以在babeltrader-ctp-quote中, 自然日是取决于连接成功时的UTC时间. 所以强烈不建议依靠CTP的重连机制做每日连接, 使用定时任务, 在每天早上8点之后启动, 便可保证CTP行情服务的时间戳正常生成  
+
+
 ## 文档和demo
 文档: doc目录  
 demo: demo目录中, 有不同语言的例子: python, java, golang 等  

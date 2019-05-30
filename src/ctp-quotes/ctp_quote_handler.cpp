@@ -98,6 +98,9 @@ void CTPQuoteHandler::OnFrontConnected()
 	// output
 	OutputFrontConnected();
 
+	// init DCE action day
+	initActionDay();
+
 	// user login
 	DoLogin();
 }
@@ -209,11 +212,35 @@ void CTPQuoteHandler::OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDept
 	msg.quote.ts[0] = monitor.ts_;
 #endif
 
+	// convert
 	ConvertMarketData(pDepthMarketData, msg.quote, msg.market_data);
+
+	// ignore abnormal data
+	static const int64_t max_diff = 180;
+	int64_t sec = (int64_t)time(nullptr);
+	int64_t ctp_sec = msg.market_data.ts / 1000;
+	int64_t diff = sec - ctp_sec;
+	if (diff > max_diff || diff < -max_diff)
+	{
+		rapidjson::StringBuffer s;
+		rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+
+		writer.StartArray();
+		SerializeQuoteBegin(writer, msg.quote);
+		SerializeMarketData(writer, msg.market_data);
+		SerializeQuoteEnd(writer, msg.quote);
+		writer.EndArray();
+
+		LOG(WARNING)
+			<< "ignore abnormal data: "
+			<< s.GetString();
+		return;
+	}
+
+	// broadcast
 	BroadcastMarketData(msg);
 
 	// try update kline
-	int64_t sec = (int64_t)time(nullptr);
 	QuoteKline kline_msg = { 0 };
 	if (kline_builder_.updateMarketData(sec, pDepthMarketData->InstrumentID, msg.market_data, kline_msg.kline)) {
 		memcpy(&kline_msg.quote, &msg.quote, sizeof(kline_msg.quote));
@@ -580,7 +607,50 @@ void CTPQuoteHandler::ConvertMarketData(CThostFtdcDepthMarketDataField *pDepthMa
 
 int64_t CTPQuoteHandler::GetUpdateTimeMs(CThostFtdcDepthMarketDataField *pDepthMarketData)
 {
-	return CTPGetTimestamp(pDepthMarketData->ActionDay, pDepthMarketData->UpdateTime, pDepthMarketData->UpdateMillisec);
+	const char *action_day = pDepthMarketData->TradingDay;
+	if (strlen(pDepthMarketData->UpdateTime) == 8)
+	{
+		char buf[4] = { 0 };
+		strncpy(buf, pDepthMarketData->UpdateTime, 2);
+		int hour = atoi(buf);
+		if (hour > 20)
+		{
+			action_day = action_day_;
+		}
+		else if (hour < 8)
+		{
+			action_day = next_action_day_;
+		}
+	}
+
+	return CTPGetTimestamp(action_day, pDepthMarketData->UpdateTime, pDepthMarketData->UpdateMillisec);
+}
+
+void CTPQuoteHandler::initActionDay()
+{
+	struct tm time_info = { 0 }, next_time_info = { 0 };
+	time_t now = time(NULL);
+	time_t next_day_now = now + 24 * 60 * 60;
+
+	// convert to UTC date, cause timestamp (Beijing 9:00 - 23:59, 00:00 - 02:30) in
+	// the same UTC date (01:00 - 18:30). so need start CTP quote at 08:50 am
+#if WIN32
+	gmtime_s(&time_info, &now);
+	gmtime_s(&next_time_info, &next_day_now);
+#else
+	gmtime_r(&now, &time_info);
+	gmtime_s(&next_day_now, &next_time_info);
+#endif
+
+	memset(action_day_, 0, sizeof(action_day_));
+	memset(next_action_day_, 0, sizeof(next_action_day_));
+
+	snprintf(action_day_, sizeof(action_day_) - 1, "%d%02d%02d",
+		time_info.tm_year + 1900, time_info.tm_mon + 1, time_info.tm_mday);
+	snprintf(next_action_day_, sizeof(next_action_day_) - 1, "%d%02d%02d",
+		next_time_info.tm_year + 1900, next_time_info.tm_mon + 1, next_time_info.tm_mday);
+
+	LOG(INFO) << "init action day and next action day: " << action_day_ << ", " << next_action_day_;
 }
 
 void CTPQuoteHandler::SubTopics()

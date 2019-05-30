@@ -68,6 +68,8 @@ private:
 
 	int64_t GetUpdateTimeMs(CThostFtdcDepthMarketDataField *pDepthMarketData);
 
+	void initActionDay();
+
 	void SubTopics();
 
 private:
@@ -82,6 +84,9 @@ private:
 	std::mutex topic_mtx_;
 	std::map<std::string, bool> sub_topics_;
 	KlineBuilder kline_builder_;
+
+	char action_day_[32];
+	char next_action_day_[32];
 };
 
 #endif

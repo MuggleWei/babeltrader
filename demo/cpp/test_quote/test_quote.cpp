@@ -12,7 +12,7 @@
 #include <sys/types.h>
 #endif
 
-const char *addr = "ws://127.0.0.1:6002/ws";
+const char *addr = "ws://127.0.0.1:6001/ws";
 
 void TimeDiff(struct timespec t0, struct timespec t1, struct timespec ts)
 {
