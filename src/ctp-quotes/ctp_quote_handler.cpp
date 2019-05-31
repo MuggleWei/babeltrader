@@ -639,7 +639,7 @@ void CTPQuoteHandler::initActionDay()
 	gmtime_s(&next_time_info, &next_day_now);
 #else
 	gmtime_r(&now, &time_info);
-	gmtime_s(&next_day_now, &next_time_info);
+	gmtime_r(&next_day_now, &next_time_info);
 #endif
 
 	memset(action_day_, 0, sizeof(action_day_));
