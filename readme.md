@@ -27,10 +27,10 @@ Babel Trader 将一些常用的交易API统一变为ws/restful服务的形式，
 ## Babel Trader的做法
 推荐架构：
 ```
-client1 ------> |================================| ---> BabelTrader service 1 ---> API1 server
-client2 ------> |         系统其他service         | ---> BabelTrader service 2 ---> API2 server
-        ......  |  网关, 风控，分账户,行情落库...  |    ......
-clientn ------> |================================| ---> BabelTrader service n ---> APIn server
+strategy1 ------> |================================| ---> BabelTrader service 1 ---> API1 server
+strategy2 ------> |         系统其他service         | ---> BabelTrader service 2 ---> API2 server
+        ......    |  网关,风控,交易记录,行情落库...  |    ......
+strategyN ------> |================================| ---> BabelTrader service n ---> APIn server
 ```
 使用Babel Trader的服务，提供了统一的 ws/restful 接口，方便开发者实现代码解耦和自己的分布式系统。  
 缺点:   
